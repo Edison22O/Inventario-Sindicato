@@ -55,6 +55,17 @@ const Dashboard = () => {
   }).sort((a, b) => a.ubicacion.localeCompare(b.ubicacion))
     .map((dep, index) => ({ ...dep, nro: index + 1 }));
 
+  const categorySummary = categories.map((cat) => {
+    const catProducts = products.filter(p => p.category === cat.id);
+    const totalEquipos = catProducts.reduce((acc, curr) => acc + curr.cantidad, 0);
+    const totalCosto = catProducts.reduce((acc, curr) => acc + (Number(curr.costo) * curr.cantidad), 0);
+    return {
+      categoria: cat.name,
+      costo: totalCosto,
+      equipos: totalEquipos
+    };
+  }).filter(c => c.costo > 0 || c.equipos > 0).sort((a, b) => b.costo - a.costo);
+
   const grandTotalCosto = departmentSummary.reduce((acc, curr) => acc + curr.costo, 0);
   const grandTotalEquipos = departmentSummary.reduce((acc, curr) => acc + curr.equipos, 0);
 
@@ -165,24 +176,53 @@ const Dashboard = () => {
           <p className="text-xs text-center text-gray-400 mt-4">Mostrando las 8 ubicaciones principales.</p>
         </div>
 
-        {/* Gráfica Circular: Estado Físico */}
+        {/* Gráfica de Barras: Inversión por Categoría */}
         <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white p-8 flex flex-col hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
           <h2 className="text-2xl font-bold text-gray-900 mb-8 flex items-center gap-3">
-            <div className="p-2.5 bg-emerald-50 rounded-xl"><Package className="w-6 h-6 text-emerald-600" /></div>
-            Estado Físico de Equipos
+            <div className="p-2.5 bg-blue-50 rounded-xl"><Tags className="w-6 h-6 text-blue-600" /></div>
+            Inversión por Categoría
           </h2>
           <div className="flex-1 min-h-[320px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={categorySummary.slice(0, 8)} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                <XAxis dataKey="categoria" tick={{ fontSize: 11 }} tickMargin={10} axisLine={false} tickLine={false} />
+                <YAxis tickFormatter={(val) => `$${val}`} axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                <Tooltip 
+                  formatter={(value: number) => [`$${value.toLocaleString('es-EC', { minimumFractionDigits: 2 })}`, 'Inversión']}
+                  labelStyle={{ fontWeight: 'bold', color: '#374151' }}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  cursor={{ fill: '#f9fafb' }}
+                />
+                <Bar dataKey="costo" fill="#3b82f6" radius={[6, 6, 0, 0]} barSize={40} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <p className="text-xs text-center text-gray-400 mt-4">Mostrando las 8 categorías principales.</p>
+        </div>
+      </div>
+
+      {/* Fila 3: Estado, Alertas y Recientes (3 columnas) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
+        {/* Gráfica Circular: Estado Físico */}
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white p-6 flex flex-col hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 h-[420px]">
+          <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+            <div className="p-2 bg-emerald-50 rounded-xl"><Package className="w-5 h-5 text-emerald-600" /></div>
+            Estado de Equipos
+          </h2>
+          <div className="flex-1 w-full relative">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={estadoData}
                   cx="50%"
-                  cy="50%"
-                  innerRadius={80}
-                  outerRadius={120}
+                  cy="45%"
+                  innerRadius={60}
+                  outerRadius={90}
                   paddingAngle={5}
                   dataKey="value"
                   label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  labelLine={false}
                 >
                   {estadoData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={
@@ -196,36 +236,36 @@ const Dashboard = () => {
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                   itemStyle={{ fontWeight: 'medium' }}
                 />
-                <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '20px' }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
-        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white p-8 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
-          <h2 className="text-2xl font-bold text-gray-900 mb-8 flex items-center gap-3">
-            <div className="p-2.5 bg-amber-50 rounded-xl"><AlertTriangle className="w-6 h-6 text-amber-600" /></div>
-            Alertas de Mantenimiento
+        {/* Alertas de Mantenimiento */}
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white p-6 flex flex-col hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 h-[420px]">
+          <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+            <div className="p-2 bg-amber-50 rounded-xl"><AlertTriangle className="w-5 h-5 text-amber-600" /></div>
+            Alertas
           </h2>
-          <div className="space-y-4">
+          <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar flex-1">
             {badStateProducts.length === 0 && regularStateProducts.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">Todos los equipos están en buen estado.</p>
+              <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
+                <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center"><AlertTriangle className="w-6 h-6 opacity-20" /></div>
+                <p className="text-sm">Todo en buen estado.</p>
+              </div>
             ) : (
               <>
                 {badStateProducts.map(p => (
                   <div 
                     key={p.id} 
                     onClick={() => handleOpenMaintenance(p)}
-                    className="flex items-center justify-between p-4 bg-red-50 rounded-xl border border-red-100 hover:bg-red-100 cursor-pointer transition-colors"
+                    className="flex items-center gap-3 p-3 bg-red-50/50 rounded-xl border border-red-100 hover:bg-red-100 cursor-pointer transition-colors"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-red-200 flex items-center justify-center text-red-700 font-bold">!</div>
-                      <div>
-                        <p className="font-semibold text-gray-900">{p.nombre}</p>
-                        <p className="text-sm text-red-600 font-medium">{p.estado || 'Malo'} - Clic para resolver</p>
-                      </div>
+                    <div className="w-8 h-8 rounded-full bg-red-200 flex items-center justify-center text-red-700 font-bold shrink-0">!</div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-gray-900 text-sm truncate">{p.nombre}</p>
+                      <p className="text-xs text-red-600 font-medium">{p.estado || 'Malo'}</p>
                     </div>
                   </div>
                 ))}
@@ -233,14 +273,12 @@ const Dashboard = () => {
                   <div 
                     key={p.id} 
                     onClick={() => handleOpenMaintenance(p)}
-                    className="flex items-center justify-between p-4 bg-amber-50 rounded-xl border border-amber-100 hover:bg-amber-100 cursor-pointer transition-colors"
+                    className="flex items-center gap-3 p-3 bg-amber-50/50 rounded-xl border border-amber-100 hover:bg-amber-100 cursor-pointer transition-colors"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-amber-200 flex items-center justify-center text-amber-700 font-bold">!</div>
-                      <div>
-                        <p className="font-semibold text-gray-900">{p.nombre}</p>
-                        <p className="text-sm text-amber-600 font-medium">{p.estado || 'Regular'} - Clic para revisar</p>
-                      </div>
+                    <div className="w-8 h-8 rounded-full bg-amber-200 flex items-center justify-center text-amber-700 font-bold shrink-0">!</div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-gray-900 text-sm truncate">{p.nombre}</p>
+                      <p className="text-xs text-amber-600 font-medium">{p.estado || 'Regular'}</p>
                     </div>
                   </div>
                 ))}
@@ -249,81 +287,125 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white p-8 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
-          <h2 className="text-2xl font-bold text-gray-900 mb-8 flex items-center gap-3">
-            <div className="p-2.5 bg-emerald-50 rounded-xl"><Package className="w-6 h-6 text-emerald-600" /></div>
-            Activos Recientes
+        {/* Activos Recientes */}
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white p-6 flex flex-col hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 h-[420px]">
+          <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+            <div className="p-2 bg-emerald-50 rounded-xl"><Package className="w-5 h-5 text-emerald-600" /></div>
+            Recientes
           </h2>
-          <div className="space-y-4">
-            {products.slice(0, 5).map(p => (
-              <div key={p.id} className="flex items-center justify-between p-4 hover:bg-gray-50 rounded-xl transition-colors border border-transparent hover:border-gray-100">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center">
-                    <Package className="w-6 h-6 text-gray-400" />
+          <div className="space-y-2 overflow-y-auto pr-2 custom-scrollbar flex-1">
+            {products.slice(0, 6).map(p => (
+              <div key={p.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl transition-colors border border-transparent hover:border-gray-100">
+                <div className="flex items-center gap-3 min-w-0 flex-1 pr-4">
+                  <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
+                    <Package className="w-5 h-5 text-gray-400" />
                   </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">{p.nombre}</p>
-                    <p className="text-sm text-gray-500">{p.marca || 'Sin marca'} - {p.department_name || p.department}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-gray-900 text-sm truncate">{p.nombre}</p>
+                    <p className="text-xs text-gray-500 truncate">{p.department_name || p.department}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-semibold text-gray-900">${p.costo}</p>
-                  <p className="text-sm text-gray-500">Cant: {p.cantidad}</p>
+                <div className="text-right shrink-0">
+                  <p className="font-semibold text-emerald-700 text-sm">${p.costo}</p>
+                  <p className="text-xs text-gray-500">x{p.cantidad}</p>
                 </div>
               </div>
             ))}
             {products.length === 0 && (
-              <p className="text-gray-500 text-center py-4">No hay activos registrados aún.</p>
+              <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
+                <p className="text-sm">Sin registros.</p>
+              </div>
             )}
           </div>
         </div>
       </div>
 
-      <div className="bg-white/90 backdrop-blur-2xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white overflow-hidden mb-10">
-        <div className="p-8 border-b border-gray-100 bg-gradient-to-r from-gray-50/80 to-white/50">
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-            <div className="p-2.5 bg-emerald-50 rounded-xl"><Layers className="w-6 h-6 text-emerald-600" /></div>
-            Resumen de Costos por Ubicación
-          </h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-emerald-600 text-white">
-                <th className="px-6 py-4 text-center text-sm font-semibold uppercase tracking-wider w-20 border-r border-emerald-500">NRO</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider border-r border-emerald-500">Ubicación</th>
-                <th className="px-6 py-4 text-right text-sm font-semibold uppercase tracking-wider w-40 border-r border-emerald-500">Costo</th>
-                <th className="px-6 py-4 text-center text-sm font-semibold uppercase tracking-wider w-32"># Equipos</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {departmentSummary.map((dep) => (
-                <tr key={dep.nro} className="hover:bg-emerald-50/30 transition-colors">
-                  <td className="px-6 py-3 text-center text-sm font-medium text-gray-900 border-r border-gray-100">{dep.nro}</td>
-                  <td className="px-6 py-3 text-sm text-gray-700 uppercase font-medium border-r border-gray-100">{dep.ubicacion}</td>
-                  <td className="px-6 py-3 text-sm text-gray-900 text-right font-mono border-r border-gray-100">
-                    {dep.costo.toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </td>
-                  <td className="px-6 py-3 text-sm text-gray-900 text-center font-mono">
-                    {dep.equipos}
-                  </td>
+      {/* Fila 4: Tablas de Resumen */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+        {/* Tabla Ubicación */}
+        <div className="bg-white/90 backdrop-blur-2xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white overflow-hidden flex flex-col h-[400px]">
+          <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-emerald-50/80 to-white/50 shrink-0">
+            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-3">
+              <div className="p-2 bg-emerald-100 rounded-xl"><Layers className="w-5 h-5 text-emerald-700" /></div>
+              Costos por Ubicación
+            </h2>
+          </div>
+          <div className="flex-1 overflow-y-auto custom-scrollbar relative">
+            <table className="w-full text-left border-collapse">
+              <thead className="sticky top-0 bg-white/95 backdrop-blur-md z-10 shadow-sm">
+                <tr>
+                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100">Ubicación</th>
+                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100">Costo</th>
+                  <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100"># Equipos</th>
                 </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr className="bg-gray-100 font-bold border-t-2 border-gray-300">
-                <td colSpan={2} className="px-6 py-4 text-right text-sm text-gray-900 uppercase border-r border-gray-200">
-                  TOTAL:
-                </td>
-                <td className="px-6 py-4 text-right text-sm text-gray-900 font-mono border-r border-gray-200">
-                  {grandTotalCosto.toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </td>
-                <td className="px-6 py-4 text-center text-sm text-gray-900 font-mono">
-                  {grandTotalEquipos}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {departmentSummary.map((dep, idx) => (
+                  <tr key={idx} className="hover:bg-emerald-50/30 transition-colors">
+                    <td className="px-6 py-4 text-sm font-medium text-gray-800">{dep.ubicacion}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900 text-right font-mono">${dep.costo.toLocaleString('es-EC', { minimumFractionDigits: 2 })}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500 text-center">{dep.equipos}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="p-5 border-t border-gray-100 bg-gray-50/80 shrink-0 flex justify-between items-center">
+             <span className="font-bold text-gray-500 text-sm uppercase tracking-wider">Total General</span>
+             <div className="flex items-center gap-6">
+                <div className="text-right">
+                  <p className="text-xs text-gray-400 font-medium uppercase mb-0.5">Equipos</p>
+                  <span className="font-medium text-gray-600">{grandTotalEquipos} unid.</span>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-emerald-500 font-medium uppercase mb-0.5">Inversión</p>
+                  <span className="font-mono font-bold text-emerald-600 text-lg">${grandTotalCosto.toLocaleString('es-EC', { minimumFractionDigits: 2 })}</span>
+                </div>
+             </div>
+          </div>
+        </div>
+
+        {/* Tabla Categoría */}
+        <div className="bg-white/90 backdrop-blur-2xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white overflow-hidden flex flex-col h-[400px]">
+          <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-blue-50/80 to-white/50 shrink-0">
+            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-xl"><Tags className="w-5 h-5 text-blue-700" /></div>
+              Costos por Categoría
+            </h2>
+          </div>
+          <div className="flex-1 overflow-y-auto custom-scrollbar relative">
+            <table className="w-full text-left border-collapse">
+              <thead className="sticky top-0 bg-white/95 backdrop-blur-md z-10 shadow-sm">
+                <tr>
+                  <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100">Categoría</th>
+                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100">Costo</th>
+                  <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100"># Equipos</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {categorySummary.map((cat, idx) => (
+                  <tr key={idx} className="hover:bg-blue-50/30 transition-colors">
+                    <td className="px-6 py-4 text-sm font-medium text-gray-800">{cat.categoria}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900 text-right font-mono">${cat.costo.toLocaleString('es-EC', { minimumFractionDigits: 2 })}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500 text-center">{cat.equipos}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="p-5 border-t border-gray-100 bg-gray-50/80 shrink-0 flex justify-between items-center">
+             <span className="font-bold text-gray-500 text-sm uppercase tracking-wider">Total General</span>
+             <div className="flex items-center gap-6">
+                <div className="text-right">
+                  <p className="text-xs text-gray-400 font-medium uppercase mb-0.5">Equipos</p>
+                  <span className="font-medium text-gray-600">{categorySummary.reduce((acc, curr) => acc + curr.equipos, 0)} unid.</span>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-blue-500 font-medium uppercase mb-0.5">Inversión</p>
+                  <span className="font-mono font-bold text-blue-600 text-lg">${categorySummary.reduce((acc, curr) => acc + curr.costo, 0).toLocaleString('es-EC', { minimumFractionDigits: 2 })}</span>
+                </div>
+             </div>
+          </div>
         </div>
       </div>
 

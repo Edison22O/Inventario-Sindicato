@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Upload, Image as ImageIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
-import type { Department, Product, Category } from '../types';
+import type { Department, Product, Category, Supplier } from '../types';
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -10,15 +10,17 @@ interface ProductModalProps {
   product?: Product | null;
   departments: Department[];
   categories: Category[];
+  suppliers: Supplier[];
 }
 
-const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSave, product, departments, categories }) => {
+const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSave, product, departments, categories, suppliers }) => {
   const [formData, setFormData] = useState<Partial<Product>>({
     codigo: '',
     nombre: '',
     cantidad: 1,
     department: departments[0]?.id || 1,
     category: categories[0]?.id || undefined,
+    supplier: suppliers[0]?.id || undefined,
     estado: 'Bueno',
     costo: '0.00',
     marca: '',
@@ -35,30 +37,33 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSave, pr
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    const initialState: Partial<Product> = {
+      codigo: '',
+      nombre: '',
+      cantidad: 1,
+      department: departments[0]?.id || 1,
+      category: categories[0]?.id || undefined,
+      supplier: suppliers[0]?.id || undefined,
+      estado: 'Bueno',
+      costo: '0.00',
+      marca: '',
+      modelo: '',
+      serie: '',
+      color: '',
+      fecha_compra: '',
+      fecha_ultimo_mantenimiento: '',
+      caracteristicas: '',
+    };
+
     if (product) {
       setFormData(product);
       setPreviewUrl(product.image || null);
     } else {
-      setFormData({
-        codigo: '',
-        nombre: '',
-        cantidad: 1,
-        department: departments[0]?.id || 1,
-        category: categories[0]?.id || undefined,
-        estado: 'Bueno',
-        costo: '0.00',
-        marca: '',
-        modelo: '',
-        serie: '',
-        color: '',
-        fecha_compra: '',
-        fecha_ultimo_mantenimiento: '',
-        caracteristicas: '',
-      });
+      setFormData(initialState);
       setPreviewUrl(null);
     }
     setImageFile(null);
-  }, [product, departments, categories, isOpen]);
+  }, [product, departments, categories, suppliers, isOpen]);
 
   if (!isOpen) return null;
 
@@ -212,6 +217,16 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSave, pr
                   <option value="Regular">Regular</option>
                   <option value="Malo">Malo</option>
                   <option value="De Baja">De Baja</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor</label>
+                <select name="supplier" value={formData.supplier || ''} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500">
+                  <option value="">Sin proveedor</option>
+                  {suppliers.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
                 </select>
               </div>
 

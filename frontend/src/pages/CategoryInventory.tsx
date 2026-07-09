@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Package, Search, ArrowLeft, Download, Filter, Plus, Edit2, Trash2, Image as ImageIcon } from 'lucide-react';
+import { Package, Search, ArrowLeft, Download, Filter, Plus, Edit2, Trash2, Image as ImageIcon, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 import type { Product, Department, Category } from '../types';
 import ProductModal from '../components/ProductModal';
+import ProductViewModal from '../components/ProductViewModal';
 
 const CategoryInventory = () => {
   const { id } = useParams();
@@ -12,11 +13,13 @@ const CategoryInventory = () => {
   const [category, setCategory] = useState<Category | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   // Pagination state
@@ -27,18 +30,30 @@ const CategoryInventory = () => {
     fetchData();
   }, [id]);
 
+  const handleOpenViewModal = (product: Product) => {
+    setSelectedProduct(product);
+    setIsViewModalOpen(true);
+  };
+
+  const handleCloseViewModal = () => {
+    setIsViewModalOpen(false);
+    setSelectedProduct(null);
+  };
+
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [catRes, allCatsRes, prodRes, allDeptsRes] = await Promise.all([
+      const [catRes, allCatsRes, prodRes, depRes, supRes] = await Promise.all([
         api.get(`/categories/${id}/`),
         api.get('/categories/'),
         api.get('/products/'),
-        api.get('/departments/')
+        api.get('/departments/'),
+        api.get('/suppliers/')
       ]);
       setCategory(catRes.data);
       setCategories(allCatsRes.data);
-      setDepartments(allDeptsRes.data);
+      setDepartments(depRes.data);
+      setSuppliers(supRes.data);
       
       // Filter products by this category
       const catProducts = prodRes.data.filter((p: Product) => p.category === Number(id));
@@ -167,6 +182,7 @@ const CategoryInventory = () => {
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Marca/Modelo</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Ubicación</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
+                <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Precio</th>
                 <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Cant.</th>
                 <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Acciones</th>
               </tr>
@@ -226,10 +242,20 @@ const CategoryInventory = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
+                      ${Number(product.costo || 0).toLocaleString('es-EC', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
                       {product.cantidad}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end gap-2">
+                        <button 
+                          onClick={() => handleOpenViewModal(product)}
+                          className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                          title="Ver Detalles"
+                        >
+                          <Eye className="w-5 h-5" />
+                        </button>
                         <button 
                           onClick={() => handleOpenModal(product)}
                           className="p-1 text-gray-400 hover:text-emerald-600 transition-colors"
@@ -289,6 +315,13 @@ const CategoryInventory = () => {
         product={selectedProduct}
         departments={departments}
         categories={categories}
+        suppliers={suppliers}
+      />
+      
+      <ProductViewModal
+        isOpen={isViewModalOpen}
+        onClose={handleCloseViewModal}
+        product={selectedProduct}
       />
     </div>
   );

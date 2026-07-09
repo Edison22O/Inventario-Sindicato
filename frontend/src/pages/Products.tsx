@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
 import * as xlsx from 'xlsx';
-import { Package, Plus, Search, Filter, Download, Upload, Edit2, Trash2, Image as ImageIcon } from 'lucide-react';
+import { Package, Plus, Search, Filter, Download, Upload, Edit2, Trash2, Image as ImageIcon, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
-import type { Product, Department, Category } from '../types';
+import type { Product, Department, Category, Supplier } from '../types';
 import ProductModal from '../components/ProductModal';
+import ProductViewModal from '../components/ProductViewModal';
 
 const Products = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -19,6 +21,7 @@ const Products = () => {
   
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   // Pagination state
@@ -29,17 +32,30 @@ const Products = () => {
     fetchData();
   }, []);
 
+  // ... (keeping fetchData as is, adding view handlers after handleCloseModal)
+  const handleOpenViewModal = (product: Product) => {
+    setSelectedProduct(product);
+    setIsViewModalOpen(true);
+  };
+
+  const handleCloseViewModal = () => {
+    setIsViewModalOpen(false);
+    setSelectedProduct(null);
+  };
+
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [prodRes, depRes, catRes] = await Promise.all([
+      const [prodRes, depRes, catRes, supRes] = await Promise.all([
         api.get('/products/'),
         api.get('/departments/'),
-        api.get('/categories/')
+        api.get('/categories/'),
+        api.get('/suppliers/')
       ]);
       setProducts(prodRes.data);
       setDepartments(depRes.data);
       setCategories(catRes.data);
+      setSuppliers(supRes.data);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -80,7 +96,7 @@ const Products = () => {
   };
 
   const handleExport = () => {
-    const headers = ['Código', 'Nombre', 'Marca', 'Modelo', 'Serie', 'Color', 'Departamento', 'Categoría', 'Estado', 'Cantidad', 'Costo'];
+    const headers = ['Código', 'Nombre', 'Marca', 'Modelo', 'Serie', 'Color', 'Departamento', 'Categoría', 'Proveedor', 'Estado', 'Cantidad', 'Costo'];
     
     const csvRows = [
       headers.join(','),
@@ -94,6 +110,7 @@ const Products = () => {
           `"${p.color || ''}"`,
           `"${p.department_name || p.department}"`,
           `"${p.category_name || p.category || ''}"`,
+          `"${p.supplier_name || ''}"`,
           `"${p.estado || ''}"`,
           p.cantidad,
           p.costo || 0
@@ -403,7 +420,9 @@ const Products = () => {
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Marca/Modelo</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Serie</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Ubicación</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Proveedor</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
+                <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Precio</th>
                 <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Cant.</th>
                 <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Acciones</th>
               </tr>
@@ -456,6 +475,9 @@ const Products = () => {
                         {product.department_name || product.department}
                       </span>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {product.supplier_name || <span className="text-gray-300 italic">No asignado</span>}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         product.estado?.toLowerCase() === 'bueno' ? 'bg-emerald-100 text-emerald-800' :
@@ -466,10 +488,20 @@ const Products = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
+                      ${Number(product.costo || 0).toLocaleString('es-EC', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
                       {product.cantidad}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end gap-2">
+                        <button 
+                          onClick={() => handleOpenViewModal(product)}
+                          className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                          title="Ver Detalles"
+                        >
+                          <Eye className="w-5 h-5" />
+                        </button>
                         <button 
                           onClick={() => handleOpenModal(product)}
                           className="p-1 text-gray-400 hover:text-emerald-600 transition-colors"
@@ -529,6 +561,13 @@ const Products = () => {
         product={selectedProduct}
         departments={departments}
         categories={categories}
+        suppliers={suppliers}
+      />
+
+      <ProductViewModal
+        isOpen={isViewModalOpen}
+        onClose={handleCloseViewModal}
+        product={selectedProduct}
       />
     </div>
   );

@@ -42,6 +42,16 @@ class Media(models.Model):
     file_type = models.CharField(max_length=100)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
+class Supplier(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    contact_name = models.CharField(max_length=255, blank=True, null=True)
+    phone = models.CharField(max_length=50, blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
+    address = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
 class Department(models.Model):
     name = models.CharField(max_length=255, unique=True)
 
@@ -65,6 +75,7 @@ class Product(models.Model):
     fecha_ultimo_mantenimiento = models.DateField(blank=True, null=True)
     
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name='products')
+    supplier = models.ForeignKey(Supplier, on_delete=models.SET_NULL, null=True, blank=True, related_name='products')
     image = models.ImageField(upload_to='products/', null=True, blank=True)
     media = models.ForeignKey(Media, on_delete=models.SET_NULL, null=True, blank=True)
 

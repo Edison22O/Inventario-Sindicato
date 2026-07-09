@@ -18,6 +18,15 @@ export interface Category {
   name: string;
 }
 
+export interface Supplier {
+  id: number;
+  name: string;
+  contact_name?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+}
+
 export interface Product {
   id: number;
   codigo: string;
@@ -38,6 +47,8 @@ export interface Product {
   fecha_ingreso?: string;
   fecha_compra?: string;
   fecha_ultimo_mantenimiento?: string;
+  supplier?: number;
+  supplier_name?: string;
   media_url?: string;
   image?: string | null;
 }

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Role, User, Category, Media, Product, Department
+from .models import Role, User, Category, Media, Product, Department, Supplier
 
 class RoleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -30,6 +30,11 @@ class DepartmentSerializer(serializers.ModelSerializer):
         model = Department
         fields = '__all__'
 
+class SupplierSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Supplier
+        fields = '__all__'
+
 class MediaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Media
@@ -38,6 +43,7 @@ class MediaSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
     department_name = serializers.CharField(source='department.name', read_only=True)
+    supplier_name = serializers.CharField(source='supplier.name', read_only=True)
     media_url = serializers.CharField(source='media.file.url', read_only=True)
 
     class Meta:

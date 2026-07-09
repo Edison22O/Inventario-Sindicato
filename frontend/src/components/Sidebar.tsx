@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, Tags, Layers, LogOut, X } from 'lucide-react';
+import { LayoutDashboard, Package, Tags, Layers, LogOut, X, Truck } from 'lucide-react';
 import { authService } from '../services/authService';
 
 interface SidebarProps {
@@ -14,6 +14,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/departments', icon: Layers, label: 'Departamentos' },
     { to: '/categories', icon: Tags, label: 'Categorías' },
+    { to: '/suppliers', icon: Truck, label: 'Proveedores' },
     { to: '/products', icon: Package, label: 'Todo el Inventario' },
   ];
 

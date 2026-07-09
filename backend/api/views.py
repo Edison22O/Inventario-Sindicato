@@ -1,9 +1,9 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
-from .models import Role, User, Category, Media, Product, Department
+from .models import Role, User, Category, Media, Product, Department, Supplier
 from .serializers import (
     RoleSerializer, UserSerializer, CategorySerializer, 
-    MediaSerializer, ProductSerializer, DepartmentSerializer
+    MediaSerializer, ProductSerializer, DepartmentSerializer, SupplierSerializer
 )
 
 class RoleViewSet(viewsets.ModelViewSet):
@@ -24,6 +24,11 @@ class CategoryViewSet(viewsets.ModelViewSet):
 class DepartmentViewSet(viewsets.ModelViewSet):
     queryset = Department.objects.all()
     serializer_class = DepartmentSerializer
+    permission_classes = [IsAuthenticated]
+
+class SupplierViewSet(viewsets.ModelViewSet):
+    queryset = Supplier.objects.all()
+    serializer_class = SupplierSerializer
     permission_classes = [IsAuthenticated]
 
 class MediaViewSet(viewsets.ModelViewSet):
