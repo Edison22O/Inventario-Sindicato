@@ -37,6 +37,6 @@ class MediaViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
 class ProductViewSet(viewsets.ModelViewSet):
-    queryset = Product.objects.all()
+    queryset = Product.objects.select_related('department', 'category', 'supplier', 'media').all()
     serializer_class = ProductSerializer
     permission_classes = [IsAuthenticated]
