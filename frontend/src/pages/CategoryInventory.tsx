@@ -6,6 +6,7 @@ import api from '../services/api';
 import type { Product, Department, Category } from '../types';
 import ProductModal from '../components/ProductModal';
 import ProductViewModal from '../components/ProductViewModal';
+import { useInventoryWebSocket } from '../hooks/useInventoryWebSocket';
 
 const CategoryInventory = () => {
   const { id } = useParams();
@@ -64,6 +65,8 @@ const CategoryInventory = () => {
       setLoading(false);
     }
   };
+
+  useInventoryWebSocket(fetchData);
 
   const handleOpenModal = (product?: Product) => {
     setSelectedProduct(product || null);

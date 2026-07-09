@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Package, Tags, Layers, TrendingUp, AlertTriangle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import api from '../services/api';
+import { useInventoryWebSocket } from '../hooks/useInventoryWebSocket';
 import type { Product } from '../types/index';
 import type { Department } from '../types/index';
 import type { Category } from '../types/index';
@@ -116,6 +117,8 @@ const Dashboard = () => {
       trend: 'Equipos en mal estado'
     }
   ];
+
+  useInventoryWebSocket(fetchData);
 
   if (loading) {
     return (

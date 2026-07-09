@@ -6,6 +6,7 @@ import api from '../services/api';
 import type { Product, Department, Category, Supplier } from '../types';
 import ProductModal from '../components/ProductModal';
 import ProductViewModal from '../components/ProductViewModal';
+import { useInventoryWebSocket } from '../hooks/useInventoryWebSocket';
 
 const Products = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -44,24 +45,29 @@ const Products = () => {
   };
 
   const fetchData = async () => {
-    setLoading(true);
     try {
-      const [prodRes, depRes, catRes, supRes] = await Promise.all([
+      const [productsRes, deptsRes, catsRes, suppsRes] = await Promise.all([
         api.get('/products/'),
         api.get('/departments/'),
         api.get('/categories/'),
         api.get('/suppliers/')
       ]);
-      setProducts(prodRes.data);
-      setDepartments(depRes.data);
-      setCategories(catRes.data);
-      setSuppliers(supRes.data);
+      setProducts(productsRes.data);
+      setDepartments(deptsRes.data);
+      setCategories(catsRes.data);
+      setSuppliers(suppsRes.data);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      toast.error('Error cargando datos');
     } finally {
       setLoading(false);
     }
   };
+
+  useInventoryWebSocket(fetchData);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const handleOpenModal = (product?: Product) => {
     setSelectedProduct(product || null);

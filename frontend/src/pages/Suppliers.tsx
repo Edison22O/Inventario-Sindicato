@@ -5,6 +5,7 @@ import api from '../services/api';
 import type { Supplier } from '../types';
 import SupplierModal from '../components/SupplierModal';
 import SupplierViewModal from '../components/SupplierViewModal';
+import { useInventoryWebSocket } from '../hooks/useInventoryWebSocket';
 
 const Suppliers = () => {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -43,6 +44,8 @@ const Suppliers = () => {
       setLoading(false);
     }
   };
+
+  useInventoryWebSocket(fetchSuppliers);
 
   const handleOpenModal = (e?: React.MouseEvent, supplier?: Supplier) => {
     if (e) {

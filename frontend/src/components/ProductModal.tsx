@@ -56,7 +56,11 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSave, pr
     };
 
     if (product) {
-      setFormData(product);
+      const validStates = ['Bueno', 'Regular', 'Malo', 'De Baja'];
+      const currentState = product.estado ? product.estado.toLowerCase() : '';
+      const matchedState = validStates.find(s => s.toLowerCase() === currentState) || 'Bueno';
+      
+      setFormData({ ...product, estado: matchedState });
       setPreviewUrl(product.image || null);
     } else {
       setFormData(initialState);

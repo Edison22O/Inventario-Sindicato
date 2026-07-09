@@ -18,7 +18,12 @@ const MaintenanceModal: React.FC<MaintenanceModalProps> = ({ isOpen, onClose, on
 
   useEffect(() => {
     if (product) {
-      setEstado(product.estado || 'Bueno');
+      const validStates = ['Bueno', 'Regular', 'Malo', 'De Baja'];
+      const currentState = product.estado ? product.estado.toLowerCase() : '';
+      const matchedState = validStates.find(s => s.toLowerCase() === currentState) || 'Bueno';
+      
+      setEstado(matchedState);
+      
       // Set today's date as default for maintenance if not set
       const today = new Date().toISOString().split('T')[0];
       setFechaMantenimiento(product.fecha_ultimo_mantenimiento || today);

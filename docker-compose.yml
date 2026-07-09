@@ -14,7 +14,7 @@ services:
 
   backend:
     build: ./backend
-    command: bash -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    command: bash -c "python manage.py migrate && daphne -b 0.0.0.0 -p 8000 inventory_api.asgi:application"
     volumes:
       - ./backend:/app
     ports:
@@ -38,8 +38,16 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - VITE_API_URL=http://localhost:8000
+      - VITE_API_URL=http://localhost:8009/api
     depends_on:
+      - backend
+
+  nginx:
+    build: ./nginx
+    ports:
+      - "8009:80"
+    depends_on:
+      - frontend
       - backend
 
 volumes:
