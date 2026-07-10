@@ -9,7 +9,7 @@ import ProductViewModal from '../components/ProductViewModal';
 import { useInventoryWebSocket } from '../hooks/useInventoryWebSocket';
 import { getImageUrl } from '../utils/getImageUrl';
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import 'jspdf-autotable';
 
 const DepartmentInventory = () => {
   const { id } = useParams();
@@ -190,7 +190,7 @@ const DepartmentInventory = () => {
       doc.setFontSize(11);
       doc.text(`Fecha de generacion: ${new Date().toLocaleDateString('es-EC')}`, 14, 30);
 
-      autoTable(doc, {
+      (doc as any).autoTable({
         startY: 35,
         head: [['Foto', 'Codigo', 'Producto', 'Marca/Modelo', 'Serie', 'Estado', 'Cant.', 'Precio Unit.', 'Total']],
         body: tableData,
@@ -203,7 +203,7 @@ const DepartmentInventory = () => {
           7: { halign: 'right' },
           8: { halign: 'right' }
         },
-        didDrawCell: (data) => {
+        didDrawCell: (data: any) => {
           if (data.section === 'body' && data.column.index === 0) {
             // Ensure we are not on the 'TOTAL GENERAL' row
             if (data.row.index < filteredProducts.length) {
