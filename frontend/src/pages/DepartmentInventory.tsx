@@ -7,6 +7,7 @@ import type { Product, Department, Category } from '../types';
 import ProductModal from '../components/ProductModal';
 import ProductViewModal from '../components/ProductViewModal';
 import { useInventoryWebSocket } from '../hooks/useInventoryWebSocket';
+import { getImageUrl } from '../utils/getImageUrl';
 
 const DepartmentInventory = () => {
   const { id } = useParams();
@@ -80,7 +81,7 @@ const DepartmentInventory = () => {
 
   const handleSaveProduct = async (formData: FormData) => {
     if (selectedProduct) {
-      await api.put(`/products/${selectedProduct.id}/`, formData);
+      await api.patch(`/products/${selectedProduct.id}/`, formData);
     } else {
       // Si estamos en la vista de un departamento, forzamos que el nuevo producto sea de este departamento
       formData.set('department', String(id));
@@ -209,7 +210,7 @@ const DepartmentInventory = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden">
                         {product.image ? (
-                          <img src={product.image.startsWith('http') ? product.image : `http://localhost:8000${product.image}`} alt={product.nombre} className="w-full h-full object-cover" />
+                          <img src={getImageUrl(product.image)} alt={product.nombre} className="w-full h-full object-cover" />
                         ) : (
                           <ImageIcon className="w-5 h-5 text-gray-400" />
                         )}

@@ -9,7 +9,7 @@ import ProductViewModal from '../components/ProductViewModal';
 import { useInventoryWebSocket } from '../hooks/useInventoryWebSocket';
 import { getImageUrl } from '../utils/getImageUrl';
 
-const Products = () => {
+const DiscardedProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -19,7 +19,6 @@ const Products = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [filterDepartment, setFilterDepartment] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
-  const [filterEstado, setFilterEstado] = useState('');
   
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -132,13 +131,14 @@ const Products = () => {
     
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `inventario_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `bajas_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // keeping upload logic in case they want to import discards
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -261,7 +261,7 @@ const Products = () => {
             modelo: row['MODELO'] ? row['MODELO'].toString() : '',
             serie: row['SERIE'] ? row['SERIE'].toString() : '',
             color: row['COLOR'] ? row['COLOR'].toString() : '',
-            estado: row['ESTADO'] ? row['ESTADO'].toString() : 'Bueno',
+            estado: 'De Baja', // Force De Baja for this view if imported here
             caracteristicas: caracteristicas,
             fecha_compra: parsedFecha,
             department: deptMap[row['UBICACIÓN']?.toString().trim().toUpperCase()],
@@ -270,29 +270,12 @@ const Products = () => {
           
           try {
             if (diffCents !== 0 && cantOriginal > 1) {
-              // Dividimos en dos registros para que el total sume exacto (sin perder centavos por divisiones)
-              await api.post('/products/', {
-                ...basePayload,
-                codigo: cod,
-                cantidad: cantOriginal - 1,
-                costo: costoUnitario
-              });
+              await api.post('/products/', { ...basePayload, codigo: cod, cantidad: cantOriginal - 1, costo: costoUnitario });
               count++;
-              const codAjuste = `${cod}-aj`;
-              await api.post('/products/', {
-                ...basePayload,
-                codigo: codAjuste,
-                cantidad: 1,
-                costo: Math.round((costoUnitario + diffCents) * 100) / 100
-              });
+              await api.post('/products/', { ...basePayload, codigo: `${cod}-aj`, cantidad: 1, costo: Math.round((costoUnitario + diffCents) * 100) / 100 });
               count++;
             } else {
-              await api.post('/products/', {
-                ...basePayload,
-                codigo: cod,
-                cantidad: cantOriginal,
-                costo: costoUnitario
-              });
+              await api.post('/products/', { ...basePayload, codigo: cod, cantidad: cantOriginal, costo: costoUnitario });
               count++;
             }
           } catch (postErr) {
@@ -315,8 +298,8 @@ const Products = () => {
   };
 
   const filteredProducts = products.filter((product) => {
-    // Exclude 'De Baja' items from main inventory
-    if (product.estado?.toLowerCase() === 'de baja') return false;
+    // SOLO MOSTRAR DE BAJA
+    if (product.estado?.toLowerCase() !== 'de baja') return false;
 
     const matchesSearch = 
       product.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -325,15 +308,14 @@ const Products = () => {
       
     const matchesDepartment = filterDepartment ? String(product.department) === filterDepartment : true;
     const matchesCategory = filterCategory ? String(product.category) === filterCategory : true;
-    const matchesEstado = filterEstado ? product.estado?.toLowerCase() === filterEstado.toLowerCase() : true;
 
-    return matchesSearch && matchesDepartment && matchesCategory && matchesEstado;
+    return matchesSearch && matchesDepartment && matchesCategory;
   });
 
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterDepartment, filterCategory, filterEstado]);
+  }, [searchTerm, filterDepartment, filterCategory]);
 
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
   const paginatedProducts = filteredProducts.slice(
@@ -346,23 +328,16 @@ const Products = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <Package className="w-8 h-8 text-emerald-600" />
-            Catálogo Completo
+            <Package className="w-8 h-8 text-red-600" />
+            Equipos Dados de Baja
           </h1>
           <p className="text-gray-500 mt-2 text-lg">
-            Todos los activos de la empresa
+            Activos retirados del inventario
           </p>
         </div>
-        <button 
-          onClick={() => handleOpenModal()}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-medium shadow-sm shadow-emerald-200"
-        >
-          <Plus className="w-5 h-5" />
-          Nuevo Producto
-        </button>
       </div>
 
-      <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="relative w-full sm:w-96">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -426,19 +401,6 @@ const Products = () => {
                 ))}
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
-              <select 
-                value={filterEstado} 
-                onChange={(e) => setFilterEstado(e.target.value)}
-                className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500 text-sm"
-              >
-                <option value="">Todos</option>
-                <option value="Bueno">Bueno</option>
-                <option value="Regular">Regular</option>
-                <option value="Malo">Malo</option>
-              </select>
-            </div>
           </div>
         )}
 
@@ -453,7 +415,6 @@ const Products = () => {
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Serie</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Ubicación</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Proveedor</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
                 <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Precio</th>
                 <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Cant.</th>
                 <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Acciones</th>
@@ -462,7 +423,7 @@ const Products = () => {
             <tbody className="divide-y divide-gray-100 bg-white">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="px-6 py-12 text-center">
+                  <td colSpan={10} className="px-6 py-12 text-center">
                     <div className="flex justify-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
                     </div>
@@ -470,7 +431,7 @@ const Products = () => {
                 </tr>
               ) : filteredProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={10} className="px-6 py-12 text-center text-gray-500">
                     No se encontraron productos
                   </td>
                 </tr>
@@ -509,15 +470,6 @@ const Products = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {product.supplier_name || <span className="text-gray-300 italic">No asignado</span>}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        product.estado?.toLowerCase() === 'bueno' ? 'bg-emerald-100 text-emerald-800' :
-                        product.estado?.toLowerCase() === 'malo' ? 'bg-red-100 text-red-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {product.estado || 'N/A'}
-                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-medium">
                       ${Number(product.costo || 0).toLocaleString('es-EC', { minimumFractionDigits: 2 })}
@@ -605,4 +557,4 @@ const Products = () => {
   );
 };
 
-export default Products;
+export default DiscardedProducts;

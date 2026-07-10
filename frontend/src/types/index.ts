@@ -53,5 +53,18 @@ export interface Product {
   image?: string | null;
 }
 
+export interface MaintenanceLog {
+  id: number;
+  product: number;
+  product_codigo?: string;
+  product_nombre?: string;
+  fecha: string;
+  realizado_por: string;
+  descripcion: string;
+  costo: string | number;
+  estado_resultante: string;
+  created_at?: string;
+}
+
 // Trick to force Vite to treat this as a module with at least one export
 export const __vite_types_fix = true;

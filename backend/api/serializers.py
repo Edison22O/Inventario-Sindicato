@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Role, User, Category, Media, Product, Department, Supplier
+from .models import Role, User, Category, Media, Product, Department, Supplier, MaintenanceLog
 
 class RoleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -49,3 +49,23 @@ class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = '__all__'
+
+class MaintenanceLogSerializer(serializers.ModelSerializer):
+    product_codigo = serializers.CharField(source='product.codigo', read_only=True)
+    product_nombre = serializers.CharField(source='product.nombre', read_only=True)
+    
+    class Meta:
+        model = MaintenanceLog
+        fields = '__all__'
+
+    def create(self, validated_data):
+        # Crear el registro de mantenimiento
+        maintenance_log = super().create(validated_data)
+        
+        # Actualizar el producto relacionado
+        product = maintenance_log.product
+        product.estado = maintenance_log.estado_resultante
+        product.fecha_ultimo_mantenimiento = maintenance_log.fecha
+        product.save()
+        
+        return maintenance_log

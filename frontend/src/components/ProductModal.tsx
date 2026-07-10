@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Upload, Image as ImageIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { Department, Product, Category, Supplier } from '../types';
+import { getImageUrl } from '../utils/getImageUrl';
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -146,7 +147,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSave, pr
               <div className="flex items-center gap-6">
                 <div className="w-32 h-32 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden relative">
                   {previewUrl ? (
-                    <img src={previewUrl.startsWith('blob:') || previewUrl.startsWith('http') ? previewUrl : `http://localhost:8000${previewUrl}`} alt="Preview" className="w-full h-full object-cover" />
+                    <img src={previewUrl.startsWith('blob:') ? previewUrl : getImageUrl(previewUrl)} alt="Preview" className="w-full h-full object-cover" />
                   ) : (
                     <ImageIcon className="w-8 h-8 text-gray-400" />
                   )}

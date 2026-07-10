@@ -1,6 +1,8 @@
-import React from 'react';
-import { X, Package, Building2, Tags, Truck, Calendar, Hash, Image as ImageIcon, CheckCircle2, AlertTriangle, XCircle, FileText } from 'lucide-react';
-import type { Product } from '../types';
+import React, { useState, useEffect } from 'react';
+import { X, Package, Building2, Tags, Truck, Calendar, Hash, Image as ImageIcon, CheckCircle2, AlertTriangle, XCircle, FileText, Wrench } from 'lucide-react';
+import type { Product, MaintenanceLog } from '../types';
+import api from '../services/api';
+import { getImageUrl } from '../utils/getImageUrl';
 
 interface ProductViewModalProps {
   isOpen: boolean;
@@ -9,6 +11,18 @@ interface ProductViewModalProps {
 }
 
 const ProductViewModal: React.FC<ProductViewModalProps> = ({ isOpen, onClose, product }) => {
+  const [maintenances, setMaintenances] = useState<MaintenanceLog[]>([]);
+
+  useEffect(() => {
+    if (isOpen && product) {
+      api.get(`/maintenances/?product=${product.id}`).then(res => {
+        setMaintenances(res.data);
+      }).catch(err => console.error("Error fetching maintenances", err));
+    } else {
+      setMaintenances([]);
+    }
+  }, [isOpen, product]);
+
   if (!isOpen || !product) return null;
 
   const getStatusColor = (status?: string) => {
@@ -61,9 +75,10 @@ const ProductViewModal: React.FC<ProductViewModalProps> = ({ isOpen, onClose, pr
                   <div className="aspect-square rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden mb-4 relative group">
                     {product.image ? (
                       <img 
-                        src={product.image.startsWith('http') ? product.image : `http://localhost:8000${product.image}`} 
+                        src={getImageUrl(product.image)} 
                         alt={product.nombre} 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                        className="w-full h-full object-cover cursor-pointer group-hover:scale-105 transition-transform duration-500"
+                        onClick={() => window.open(getImageUrl(product.image), '_blank')}
                       />
                     ) : (
                       <ImageIcon className="w-16 h-16 text-gray-300" />
@@ -176,11 +191,11 @@ const ProductViewModal: React.FC<ProductViewModalProps> = ({ isOpen, onClose, pr
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-500 mb-1">Fecha de Compra</p>
-                      <p className="text-base font-medium text-gray-900">{product.fecha_compra ? new Date(product.fecha_compra).toLocaleDateString('es-EC') : '-'}</p>
+                      <p className="text-base font-medium text-gray-900">{product.fecha_compra ? new Date(`${product.fecha_compra}T12:00:00`).toLocaleDateString('es-EC') : '-'}</p>
                     </div>
                     <div className="md:col-span-2">
                       <p className="text-sm font-medium text-gray-500 mb-1">Último Mantenimiento</p>
-                      <p className="text-base font-medium text-gray-900">{product.fecha_ultimo_mantenimiento ? new Date(product.fecha_ultimo_mantenimiento).toLocaleDateString('es-EC') : '-'}</p>
+                      <p className="text-base font-medium text-gray-900">{product.fecha_ultimo_mantenimiento ? new Date(`${product.fecha_ultimo_mantenimiento}T12:00:00`).toLocaleDateString('es-EC') : '-'}</p>
                     </div>
                   </div>
                 </div>
@@ -200,6 +215,43 @@ const ProductViewModal: React.FC<ProductViewModalProps> = ({ isOpen, onClose, pr
 
               </div>
             </div>
+
+            {/* Maintenance History */}
+            {maintenances.length > 0 && (
+              <div className="mt-8 bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                <div className="flex items-center gap-3 mb-6">
+                  <Wrench className="w-5 h-5 text-emerald-600" />
+                  <h4 className="text-lg font-bold text-gray-900">Historial de Mantenimientos</h4>
+                </div>
+                <div className="space-y-4">
+                  {maintenances.map((log) => (
+                    <div key={log.id} className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                      <div className="flex flex-col sm:flex-row justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="font-bold text-gray-900">{log.fecha ? new Date(`${log.fecha}T12:00:00`).toLocaleDateString('es-EC') : '-'}</span>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${
+                              log.estado_resultante.toLowerCase() === 'bueno' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                              log.estado_resultante.toLowerCase() === 'regular' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                              log.estado_resultante.toLowerCase() === 'malo' ? 'bg-red-50 text-red-700 border-red-200' :
+                              'bg-gray-50 text-gray-700 border-gray-200'
+                            }`}>
+                              {log.estado_resultante}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-600 mb-1"><span className="font-semibold">Técnico:</span> {log.realizado_por}</p>
+                          <p className="text-sm text-gray-700 mt-2">{log.descripcion}</p>
+                        </div>
+                        <div className="text-left sm:text-right shrink-0">
+                          <p className="text-xs text-gray-500 font-medium uppercase mb-0.5">Costo</p>
+                          <p className="text-lg font-bold text-emerald-600">${Number(log.costo).toLocaleString('es-EC', { minimumFractionDigits: 2 })}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="p-6 border-t border-gray-100 flex justify-end bg-white">

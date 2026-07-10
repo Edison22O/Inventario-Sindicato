@@ -5,10 +5,12 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Categories from './pages/Categories';
 import Products from './pages/Products';
+import DiscardedProducts from './pages/DiscardedProducts';
 import Departments from './pages/Departments';
 import DepartmentInventory from './pages/DepartmentInventory';
 import CategoryInventory from './pages/CategoryInventory';
 import Suppliers from './pages/Suppliers';
+import Maintenances from './pages/Maintenances';
 
 function App() {
   return (
@@ -25,6 +27,8 @@ function App() {
           <Route path="/departments" element={<Departments />} />
           <Route path="/departments/:id" element={<DepartmentInventory />} />
           <Route path="/products" element={<Products />} />
+          <Route path="/maintenances" element={<Maintenances />} />
+          <Route path="/discarded" element={<DiscardedProducts />} />
           <Route path="/suppliers" element={<Suppliers />} />
         </Route>
 

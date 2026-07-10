@@ -41,7 +41,7 @@ const Dashboard = () => {
 
   const totalAssets = products.reduce((acc, curr) => acc + curr.cantidad, 0);
   const totalValue = products.reduce((acc, curr) => acc + (Number(curr.costo) * curr.cantidad), 0);
-  const badStateProducts = products.filter(p => p.estado?.toLowerCase() === 'malo' || p.estado?.toLowerCase() === 'de baja');
+  const badStateProducts = products.filter(p => p.estado?.toLowerCase() === 'malo');
   const regularStateProducts = products.filter(p => p.estado?.toLowerCase() === 'regular');
 
   const departmentSummary = departments.map((dep) => {
@@ -75,8 +75,8 @@ const Dashboard = () => {
     setIsMaintenanceModalOpen(true);
   };
 
-  const handleSaveMaintenance = async (id: number, data: { estado: string; fecha_ultimo_mantenimiento: string }) => {
-    await api.patch(`/products/${id}/`, data);
+  const handleSaveMaintenance = async (id: number, data: any) => {
+    await api.post(`/maintenances/`, data);
     fetchData(); // Refrescar el dashboard para que la alerta desaparezca
   };
 

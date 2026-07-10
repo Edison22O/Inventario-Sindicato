@@ -2,17 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { X, Save, Image as ImageIcon, MapPin, Calendar, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { Product } from '../types';
+import { getImageUrl } from '../utils/getImageUrl';
 
 interface MaintenanceModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (id: number, data: { estado: string; fecha_ultimo_mantenimiento: string }) => Promise<void>;
+  onSave: (id: number, data: { estado_resultante: string; fecha: string; realizado_por: string; descripcion: string; costo: number | string; product: number }) => Promise<void>;
   product: Product | null;
 }
 
 const MaintenanceModal: React.FC<MaintenanceModalProps> = ({ isOpen, onClose, onSave, product }) => {
   const [estado, setEstado] = useState('Bueno');
   const [fechaMantenimiento, setFechaMantenimiento] = useState('');
+  const [realizadoPor, setRealizadoPor] = useState('');
+  const [descripcion, setDescripcion] = useState('');
+  const [costo, setCosto] = useState('0.00');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isImageExpanded, setIsImageExpanded] = useState(false);
 
@@ -27,6 +31,9 @@ const MaintenanceModal: React.FC<MaintenanceModalProps> = ({ isOpen, onClose, on
       // Set today's date as default for maintenance if not set
       const today = new Date().toISOString().split('T')[0];
       setFechaMantenimiento(product.fecha_ultimo_mantenimiento || today);
+      setRealizadoPor('');
+      setDescripcion('');
+      setCosto('0.00');
     }
   }, [product, isOpen]);
 
@@ -38,8 +45,12 @@ const MaintenanceModal: React.FC<MaintenanceModalProps> = ({ isOpen, onClose, on
     
     try {
       await onSave(product.id, {
-        estado,
-        fecha_ultimo_mantenimiento: fechaMantenimiento
+        product: product.id,
+        estado_resultante: estado,
+        fecha: fechaMantenimiento,
+        realizado_por: realizadoPor,
+        descripcion: descripcion,
+        costo: costo
       });
       toast.success('Mantenimiento registrado con éxito');
       onClose();
@@ -70,12 +81,12 @@ const MaintenanceModal: React.FC<MaintenanceModalProps> = ({ isOpen, onClose, on
           {/* Read Only Info */}
           <div className="bg-gray-50 rounded-xl p-6 mb-8 flex flex-col sm:flex-row gap-6 items-start">
             <div 
-              className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl bg-white border border-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-sm cursor-pointer hover:border-amber-400 hover:ring-2 hover:ring-amber-100 transition-all"
+              className="w-24 h-24 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden cursor-pointer"
               onClick={() => product.image && setIsImageExpanded(true)}
               title={product.image ? "Haz clic para ampliar la imagen" : ""}
             >
               {product.image ? (
-                <img src={product.image.startsWith('http') ? product.image : `http://localhost:8000${product.image}`} alt="Product" className="w-full h-full object-cover" />
+                <img src={getImageUrl(product.image)} alt="Product" className="w-full h-full object-cover" />
               ) : (
                 <ImageIcon className="w-8 h-8 text-gray-300" />
               )}
@@ -137,6 +148,42 @@ const MaintenanceModal: React.FC<MaintenanceModalProps> = ({ isOpen, onClose, on
                   className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-amber-500 focus:border-amber-500 text-gray-900 shadow-sm" 
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Realizado por *</label>
+                <input 
+                  type="text" 
+                  required
+                  value={realizadoPor} 
+                  onChange={(e) => setRealizadoPor(e.target.value)} 
+                  placeholder="Nombre del técnico o taller"
+                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-amber-500 focus:border-amber-500 text-gray-900 shadow-sm" 
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Costo del Mantenimiento ($)</label>
+                <input 
+                  type="number" 
+                  step="0.01"
+                  min="0"
+                  required
+                  value={costo} 
+                  onChange={(e) => setCosto(e.target.value)} 
+                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-amber-500 focus:border-amber-500 text-gray-900 shadow-sm" 
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Descripción del Trabajo *</label>
+              <textarea 
+                required
+                rows={3}
+                value={descripcion} 
+                onChange={(e) => setDescripcion(e.target.value)} 
+                placeholder="Detalla qué reparaciones o ajustes se le hicieron al equipo..."
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-amber-500 focus:border-amber-500 text-gray-900 shadow-sm" 
+              />
             </div>
           </form>
         </div>
@@ -158,25 +205,23 @@ const MaintenanceModal: React.FC<MaintenanceModalProps> = ({ isOpen, onClose, on
 
       {/* Expanded Image Overlay */}
       {isImageExpanded && product.image && (
-        <div 
-          className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm cursor-zoom-out"
-          onClick={() => setIsImageExpanded(false)}
-        >
-          <button 
-            className="absolute top-6 right-6 text-white hover:text-amber-400 bg-black/50 hover:bg-black/80 rounded-full p-2 transition-all"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsImageExpanded(false);
-            }}
-          >
-            <X className="w-8 h-8" />
-          </button>
-          <img 
-            src={product.image.startsWith('http') ? product.image : `http://localhost:8000${product.image}`} 
-            alt={product.nombre} 
-            className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl ring-1 ring-white/10" 
-            onClick={(e) => e.stopPropagation()}
-          />
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md" onClick={() => setIsImageExpanded(false)}>
+          <div className="relative max-w-4xl max-h-[90vh]">
+            <button 
+              className="absolute -top-12 right-0 text-white hover:text-amber-400 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsImageExpanded(false);
+              }}
+            >
+              <X className="w-8 h-8" />
+            </button>
+            <img 
+              src={getImageUrl(product.image)} 
+              alt="Ampliada" 
+              className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl" 
+            />
+          </div>
         </div>
       )}
     </div>
