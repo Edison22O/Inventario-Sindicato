@@ -11,47 +11,62 @@ export const useInventoryWebSocket = (onUpdate: () => void) => {
     }, [onUpdate]);
 
     useEffect(() => {
-        // Usa la ruta en la que está escuchando Nginx
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = window.location.host;
-        const wsUrl = `${protocol}//${host}/ws/inventory/`;
+        let reconnectTimeout: ReturnType<typeof setTimeout>;
+        let isComponentMounted = true;
 
-        ws.current = new WebSocket(wsUrl);
+        const connect = () => {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const host = window.location.host;
+            const wsUrl = `${protocol}//${host}/ws/inventory/`;
 
-        ws.current.onopen = () => {
-            console.log('WebSocket Connected');
-        };
+            ws.current = new WebSocket(wsUrl);
 
-        ws.current.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.type === 'inventory_update') {
-                const actionText = data.message.action === 'create' ? 'creado' : (data.message.action === 'update' ? 'actualizado' : 'eliminado');
-                const modelText = data.message.model;
-                
-                toast.success(`${modelText} ${actionText}. Refrescando datos...`, {
-                    id: 'ws-update', 
-                    duration: 2000,
-                });
-                
-                // Trigger the latest callback to refetch data
-                if (savedOnUpdate.current) {
-                    savedOnUpdate.current();
+            ws.current.onopen = () => {
+                console.log('WebSocket Connected');
+            };
+
+            ws.current.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'inventory_update') {
+                    const actionText = data.message.action === 'create' ? 'creado' : (data.message.action === 'update' ? 'actualizado' : 'eliminado');
+                    const modelText = data.message.model;
+                    
+                    toast.success(`${modelText} ${actionText}. Refrescando datos...`, {
+                        id: 'ws-update', 
+                        duration: 2000,
+                    });
+                    
+                    if (savedOnUpdate.current) {
+                        savedOnUpdate.current();
+                    }
                 }
-            }
+            };
+
+            ws.current.onerror = (error) => {
+                // Ignore errors if component is unmounted
+                if (isComponentMounted) {
+                    console.error('WebSocket Error:', error);
+                }
+            };
+
+            ws.current.onclose = () => {
+                if (isComponentMounted) {
+                    console.log('WebSocket Disconnected. Intentando reconectar en 3 segundos...');
+                    reconnectTimeout = setTimeout(connect, 3000);
+                }
+            };
         };
 
-        ws.current.onerror = (error) => {
-            console.error('WebSocket Error:', error);
-        };
-
-        ws.current.onclose = () => {
-            console.log('WebSocket Disconnected. Reconnecting...');
-        };
+        connect();
 
         return () => {
+            isComponentMounted = false;
+            clearTimeout(reconnectTimeout);
             if (ws.current) {
+                // If connecting, closing it throws a harmless browser warning in dev mode.
                 ws.current.close();
             }
         };
-    }, []); // Empty dependency array means the WebSocket connects only once per component mount
+    }, []);
 };
+
