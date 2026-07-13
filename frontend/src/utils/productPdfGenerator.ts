@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import 'jspdf-autotable';
 import api from '../services/api';
 import { getImageUrl } from './getImageUrl';
 import type { Product, MaintenanceLog } from '../types';
@@ -132,7 +132,7 @@ const addProductPageToDoc = async (
     ['Fecha de Compra:', product.fecha_compra ? new Date(`${product.fecha_compra}T12:00:00`).toLocaleDateString('es-EC') : '-', 'Ingreso Sistema:', product.fecha_ingreso ? new Date(product.fecha_ingreso).toLocaleDateString('es-EC') : '-'],
   ];
 
-  autoTable(doc, {
+  (doc as any).autoTable({
     startY: currentY,
     body: specsData,
     theme: 'plain',
@@ -185,7 +185,7 @@ const addProductPageToDoc = async (
       m.descripcion
     ]);
 
-    autoTable(doc, {
+    (doc as any).autoTable({
       startY: currentY,
       head: [['Fecha', 'Técnico', 'Estado', 'Costo', 'Descripción']],
       body: mantData,
