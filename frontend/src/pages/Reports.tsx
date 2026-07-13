@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { FileBarChart, CheckSquare, Square, Download, Package, AlertTriangle, TrendingUp, Hash } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 import toast from 'react-hot-toast';
 import api from '../services/api';
@@ -154,7 +154,7 @@ const Reports = () => {
         ]);
         tableData.push(['TOTAL GENERAL', departmentSummary.reduce((acc, curr) => acc + curr.equipos, 0).toString()]);
         
-        autoTable(doc, {
+        (doc as any).autoTable({
           startY: currentY,
           head: [['Ubicación', 'Cantidad Equipos']],
           body: tableData,
@@ -178,7 +178,7 @@ const Reports = () => {
         ]);
         tableData.push(['TOTAL GENERAL', `$${departmentSummary.reduce((acc, curr) => acc + curr.costo, 0).toLocaleString('es-EC', { minimumFractionDigits: 2 })}`]);
         
-        autoTable(doc, {
+        (doc as any).autoTable({
           startY: currentY,
           head: [['Ubicación', 'Costo Total']],
           body: tableData,
@@ -202,7 +202,7 @@ const Reports = () => {
         ]);
         tableData.push(['TOTAL GENERAL', categorySummary.reduce((acc, curr) => acc + curr.equipos, 0).toString()]);
 
-        autoTable(doc, {
+        (doc as any).autoTable({
           startY: currentY,
           head: [['Categoría', 'Cantidad Equipos']],
           body: tableData,
@@ -226,7 +226,7 @@ const Reports = () => {
         ]);
         tableData.push(['TOTAL GENERAL', `$${categorySummary.reduce((acc, curr) => acc + curr.costo, 0).toLocaleString('es-EC', { minimumFractionDigits: 2 })}`]);
 
-        autoTable(doc, {
+        (doc as any).autoTable({
           startY: currentY,
           head: [['Categoría', 'Costo Total']],
           body: tableData,
@@ -250,7 +250,7 @@ const Reports = () => {
           `${((e.value / products.length) * 100).toFixed(1)}%`
         ]);
         
-        autoTable(doc, {
+        (doc as any).autoTable({
           startY: currentY,
           head: [['Estado', 'Cantidad', 'Porcentaje']],
           body: tableData,
@@ -275,7 +275,7 @@ const Reports = () => {
           p.fecha_ultimo_mantenimiento || 'N/A'
         ]);
 
-        autoTable(doc, {
+        (doc as any).autoTable({
           startY: currentY,
           head: [['Código', 'Equipo', 'Ubicación', 'Estado', 'Última Revisión']],
           body: tableData,

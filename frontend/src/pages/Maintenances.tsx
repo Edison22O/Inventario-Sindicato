@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import api from '../services/api';
 import type { MaintenanceLog, Product } from '../types';
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import 'jspdf-autotable';
 import { useInventoryWebSocket } from '../hooks/useInventoryWebSocket';
 import ProductViewModal from '../components/ProductViewModal';
 import { generateProductPDF } from '../utils/productPdfGenerator';
@@ -112,7 +112,7 @@ const Maintenances = () => {
       doc.setFontSize(11);
       doc.text(`Fecha de generacion: ${new Date().toLocaleDateString('es-EC')}`, 14, 30);
 
-      autoTable(doc, {
+      (doc as any).autoTable({
         startY: 35,
         head: [['Fecha', 'Codigo Equipo', 'Equipo', 'Tecnico', 'Costo', 'Estado', 'Descripcion']],
         body: tableData,
