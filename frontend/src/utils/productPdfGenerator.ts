@@ -8,6 +8,11 @@ import toast from 'react-hot-toast';
 const loadImageBase64 = async (url: string): Promise<string | null> => {
   try {
     const response = await fetch(url);
+    if (!response.ok) return null;
+    
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.startsWith('image/')) return null;
+
     const blob = await response.blob();
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -210,9 +215,9 @@ export const generateProductPDF = async (product: Product) => {
     doc.save(`Ficha_Tecnica_${product.codigo}.pdf`);
     toast.success('PDF generado exitosamente', { id: toastId });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error generating product PDF:', error);
-    toast.error('Error al generar la ficha técnica', { id: toastId });
+    toast.error('Error al generar la ficha técnica: ' + (error?.message || String(error)), { id: toastId, duration: 8000 });
   }
 };
 
@@ -233,8 +238,8 @@ export const generateBulkProductsPDF = async (products: Product[], allMaintenanc
 
     doc.save(filename);
     toast.success('PDF consolidado generado exitosamente', { id: toastId });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error generating bulk PDF:', error);
-    toast.error('Error al generar el reporte', { id: toastId });
+    toast.error('Error al generar el reporte: ' + (error?.message || String(error)), { id: toastId, duration: 8000 });
   }
 };
