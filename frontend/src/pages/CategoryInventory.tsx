@@ -8,9 +8,7 @@ import ProductModal from '../components/ProductModal';
 import ProductViewModal from '../components/ProductViewModal';
 import { useInventoryWebSocket } from '../hooks/useInventoryWebSocket';
 import { getImageUrl } from '../utils/getImageUrl';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import { generateProductPDF } from '../utils/productPdfGenerator';
+import { generateProductPDF, generateBulkProductsPDF } from '../utils/productPdfGenerator';
 
 const CategoryInventory = () => {
   const { id } = useParams();
@@ -128,120 +126,18 @@ const CategoryInventory = () => {
 
   const [isExporting, setIsExporting] = useState(false);
 
-  const getBase64ImageFromUrl = async (imageUrl: string): Promise<string> => {
-    const res = await fetch(imageUrl);
-    const blob = await res.blob();
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  };
-
   const handleExport = async () => {
     if (isExporting) return;
     setIsExporting(true);
-    const toastId = toast.loading('Generando PDF...');
-    
     try {
-      // 1. Preload images as Base64
-      const loadedImages: Record<number, string> = {};
-      
-      const imagePromises = filteredProducts.map(async (p) => {
-        if (!p.image) return;
-        try {
-          const url = getImageUrl(p.image);
-          const base64 = await getBase64ImageFromUrl(url);
-          loadedImages[p.id] = base64;
-        } catch (err) {
-          console.warn('Could not load image for PDF', p.image);
-        }
-      });
-
-      await Promise.all(imagePromises);
-
-      let totalGeneral = 0;
-      const tableData = filteredProducts.map(p => {
-        const precioUnitario = Number(p.costo || 0);
-        const precioTotal = precioUnitario * p.cantidad;
-        totalGeneral += precioTotal;
-        
-        return [
-          '', // Placeholder for 'Foto'
-          p.codigo,
-          p.nombre,
-          `${p.marca || ''} ${p.modelo || ''}`.trim(),
-          p.serie || '',
-          p.estado || '',
-          p.cantidad,
-          `$${precioUnitario.toLocaleString('es-EC', { minimumFractionDigits: 2 })}`,
-          `$${precioTotal.toLocaleString('es-EC', { minimumFractionDigits: 2 })}`
-        ];
-      });
-
-      tableData.push([
-        '', '', '', '', '', '', 'TOTAL GENERAL:', '',
-        `$${totalGeneral.toLocaleString('es-EC', { minimumFractionDigits: 2 })}`
-      ]);
-
-      const doc = new jsPDF('landscape');
-      
-      doc.setFontSize(18);
-      doc.text(`Reporte de Categoria: ${category?.name || 'Reporte'}`, 14, 22);
-      
-      doc.setFontSize(11);
-      doc.text(`Fecha de generacion: ${new Date().toLocaleDateString('es-EC')}`, 14, 30);
-
-      autoTable(doc, {
-        startY: 35,
-        head: [['Foto', 'Codigo', 'Producto', 'Marca/Modelo', 'Serie', 'Estado', 'Cant.', 'Precio Unit.', 'Total']],
-        body: tableData,
-        theme: 'grid',
-        headStyles: { fillColor: [5, 150, 105] }, // emerald-600
-        styles: { fontSize: 9, minCellHeight: 14, valign: 'middle' },
-        columnStyles: {
-          0: { cellWidth: 16 }, // Foto column width
-          6: { halign: 'right' },
-          7: { halign: 'right' },
-          8: { halign: 'right' }
-        },
-        didDrawCell: (data: any) => {
-          if (data.section === 'body' && data.column.index === 0) {
-            // Ensure we are not on the 'TOTAL GENERAL' row
-            if (data.row.index < filteredProducts.length) {
-              const product = filteredProducts[data.row.index];
-              if (!product) return;
-              
-              const base64Img = loadedImages[product.id];
-              if (base64Img) {
-                try {
-                   // Center image in the cell (12x12 dimensions)
-                   const imgDim = 12;
-                   const x = data.cell.x + (data.cell.width - imgDim) / 2;
-                   const y = data.cell.y + (data.cell.height - imgDim) / 2;
-                   
-                   // Extract extension for jsPDF (jpeg, png, webp)
-                   let format = 'JPEG';
-                   if (base64Img.startsWith('data:image/png')) format = 'PNG';
-                   else if (base64Img.startsWith('data:image/webp')) format = 'WEBP';
-
-                   doc.addImage(base64Img, format, x, y, imgDim, imgDim);
-                } catch (e) {
-                   console.error('Error drawing image in PDF', e);
-                }
-              }
-            }
-          }
-        }
-      });
-
-      const fileName = `Inventario_Categoria_${category?.name || 'Reporte'}_${new Date().toISOString().split('T')[0]}.pdf`;
-      doc.save(fileName);
-      toast.success('PDF generado exitosamente', { id: toastId });
+      const mantRes = await api.get('/maintenances/');
+      await generateBulkProductsPDF(
+        filteredProducts, 
+        mantRes.data, 
+        `Inventario_Categoria_${category?.name || 'Reporte'}_${new Date().toISOString().split('T')[0]}.pdf`
+      );
     } catch (error) {
-      console.error('Error generating PDF:', error);
-      toast.error('Error al generar el PDF', { id: toastId });
+      toast.error('Error al descargar mantenimientos para el reporte');
     } finally {
       setIsExporting(false);
     }
