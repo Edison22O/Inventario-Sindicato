@@ -75,7 +75,7 @@ const Dashboard = () => {
     setIsMaintenanceModalOpen(true);
   };
 
-  const handleSaveMaintenance = async (id: number, data: any) => {
+  const handleSaveMaintenance = async (_id: number, data: any) => {
     await api.post(`/maintenances/`, data);
     fetchData(); // Refrescar el dashboard para que la alerta desaparezca
   };
@@ -167,7 +167,7 @@ const Dashboard = () => {
                 <XAxis dataKey="ubicacion" tick={{ fontSize: 11 }} tickMargin={10} axisLine={false} tickLine={false} />
                 <YAxis tickFormatter={(val) => `$${val}`} axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
                 <Tooltip 
-                  formatter={(value: number) => [`$${value.toLocaleString('es-EC', { minimumFractionDigits: 2 })}`, 'Inversión']}
+                  formatter={(value: any) => [`$${Number(value).toLocaleString('es-EC', { minimumFractionDigits: 2 })}`, 'Inversión']}
                   labelStyle={{ fontWeight: 'bold', color: '#374151' }}
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                   cursor={{ fill: '#f9fafb' }}
@@ -192,7 +192,7 @@ const Dashboard = () => {
                 <XAxis dataKey="categoria" tick={{ fontSize: 11 }} tickMargin={10} axisLine={false} tickLine={false} />
                 <YAxis tickFormatter={(val) => `$${val}`} axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
                 <Tooltip 
-                  formatter={(value: number) => [`$${value.toLocaleString('es-EC', { minimumFractionDigits: 2 })}`, 'Inversión']}
+                  formatter={(value: any) => [`$${Number(value).toLocaleString('es-EC', { minimumFractionDigits: 2 })}`, 'Inversión']}
                   labelStyle={{ fontWeight: 'bold', color: '#374151' }}
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                   cursor={{ fill: '#f9fafb' }}
@@ -224,7 +224,7 @@ const Dashboard = () => {
                   outerRadius={90}
                   paddingAngle={5}
                   dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
                   labelLine={false}
                 >
                   {estadoData.map((entry, index) => (

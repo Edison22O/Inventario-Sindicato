@@ -41,7 +41,6 @@ export interface Product {
   estado?: string;
   caracteristicas?: string;
   costo: string;
-  fecha_ingreso: string;
   category?: number;
   category_name?: string;
   fecha_ingreso?: string;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Image as ImageIcon, MapPin, Calendar, CheckCircle2 } from 'lucide-react';
+import { X, Image as ImageIcon, MapPin, Calendar, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { Product } from '../types';
 import { getImageUrl } from '../utils/getImageUrl';

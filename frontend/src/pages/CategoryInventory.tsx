@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Package, Search, ArrowLeft, Download, Filter, Plus, Edit2, Trash2, Image as ImageIcon, Eye } from 'lucide-react';
+import { Package, Search, ArrowLeft, Download, Filter, Plus, Edit2, Trash2, Image as ImageIcon, Eye, Printer } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 import type { Product, Department, Category } from '../types';
@@ -9,7 +9,8 @@ import ProductViewModal from '../components/ProductViewModal';
 import { useInventoryWebSocket } from '../hooks/useInventoryWebSocket';
 import { getImageUrl } from '../utils/getImageUrl';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
+import { generateProductPDF } from '../utils/productPdfGenerator';
 
 const CategoryInventory = () => {
   const { id } = useParams();
@@ -192,7 +193,7 @@ const CategoryInventory = () => {
       doc.setFontSize(11);
       doc.text(`Fecha de generacion: ${new Date().toLocaleDateString('es-EC')}`, 14, 30);
 
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: 35,
         head: [['Foto', 'Codigo', 'Producto', 'Marca/Modelo', 'Serie', 'Estado', 'Cant.', 'Precio Unit.', 'Total']],
         body: tableData,
@@ -210,6 +211,8 @@ const CategoryInventory = () => {
             // Ensure we are not on the 'TOTAL GENERAL' row
             if (data.row.index < filteredProducts.length) {
               const product = filteredProducts[data.row.index];
+              if (!product) return;
+              
               const base64Img = loadedImages[product.id];
               if (base64Img) {
                 try {
@@ -384,6 +387,13 @@ const CategoryInventory = () => {
                           title="Ver Detalles"
                         >
                           <Eye className="w-5 h-5" />
+                        </button>
+                        <button 
+                          onClick={() => generateProductPDF(product)}
+                          className="p-1 text-gray-400 hover:text-indigo-600 transition-colors"
+                          title="Imprimir Ficha Técnica"
+                        >
+                          <Printer className="w-5 h-5" />
                         </button>
                         <button 
                           onClick={() => handleOpenModal(product)}

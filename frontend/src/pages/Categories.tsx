@@ -83,7 +83,7 @@ const Categories = () => {
           </p>
         </div>
         <button 
-          onClick={() => handleOpenModal()}
+          onClick={(e) => handleOpenModal(e)}
           className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-medium shadow-sm shadow-emerald-200"
         >
           <Plus className="w-5 h-5" />

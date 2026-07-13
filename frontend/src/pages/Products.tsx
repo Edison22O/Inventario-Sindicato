@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import * as xlsx from 'xlsx';
-import { Package, Plus, Search, Filter, Download, Upload, Edit2, Trash2, Image as ImageIcon, Eye } from 'lucide-react';
+import { Package, Plus, Search, Filter, Download, Upload, Edit2, Trash2, Image as ImageIcon, Eye, Printer } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 import type { Product, Department, Category, Supplier } from '../types';
@@ -8,6 +8,9 @@ import ProductModal from '../components/ProductModal';
 import ProductViewModal from '../components/ProductViewModal';
 import { useInventoryWebSocket } from '../hooks/useInventoryWebSocket';
 import { getImageUrl } from '../utils/getImageUrl';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { generateProductPDF } from '../utils/productPdfGenerator';
 
 const Products = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -20,6 +23,7 @@ const Products = () => {
   const [filterDepartment, setFilterDepartment] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [filterEstado, setFilterEstado] = useState('');
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
   
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -136,6 +140,101 @@ const Products = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const getBase64ImageFromUrl = async (imageUrl: string): Promise<string> => {
+    const res = await fetch(imageUrl);
+    const blob = await res.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  const handleExportPDF = async () => {
+    if (isExportingPDF) return;
+    setIsExportingPDF(true);
+    const toastId = toast.loading('Generando PDF...');
+    
+    try {
+      const loadedImages: Record<number, string> = {};
+      const imagePromises = filteredProducts.map(async (p) => {
+        if (!p.image) return;
+        try {
+          const url = getImageUrl(p.image);
+          const base64 = await getBase64ImageFromUrl(url);
+          loadedImages[p.id] = base64;
+        } catch (err) {
+          console.warn('Could not load image', p.image);
+        }
+      });
+      await Promise.all(imagePromises);
+
+      let totalGeneral = 0;
+      const tableData = filteredProducts.map(p => {
+        const precioUnitario = Number(p.costo || 0);
+        const precioTotal = precioUnitario * p.cantidad;
+        totalGeneral += precioTotal;
+        return [
+          '', 
+          p.codigo, 
+          p.nombre, 
+          `${p.marca || ''} ${p.modelo || ''}`.trim(), 
+          p.serie || '', 
+          p.department_name || p.department || '',
+          p.estado || '', 
+          p.cantidad, 
+          `$${precioUnitario.toLocaleString('es-EC', { minimumFractionDigits: 2 })}`, 
+          `$${precioTotal.toLocaleString('es-EC', { minimumFractionDigits: 2 })}`
+        ];
+      });
+
+      tableData.push(['', '', '', '', '', '', '', 'TOTAL:', '', `$${totalGeneral.toLocaleString('es-EC', { minimumFractionDigits: 2 })}`]);
+
+      const doc = new jsPDF('landscape');
+      doc.setFontSize(18);
+      doc.text(`Reporte General de Inventario`, 14, 22);
+      doc.setFontSize(11);
+      doc.text(`Fecha de generacion: ${new Date().toLocaleDateString('es-EC')}`, 14, 30);
+
+      autoTable(doc, {
+        startY: 35,
+        head: [['Foto', 'Codigo', 'Producto', 'Marca/Modelo', 'Serie', 'Ubicacion', 'Estado', 'Cant.', 'Precio Unit.', 'Total']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: { fillColor: [5, 150, 105] },
+        styles: { fontSize: 8, minCellHeight: 14, valign: 'middle' },
+        columnStyles: { 0: { cellWidth: 16 }, 7: { halign: 'right' }, 8: { halign: 'right' }, 9: { halign: 'right' } },
+        didDrawCell: (data: any) => {
+          if (data.section === 'body' && data.column.index === 0) {
+            if (data.row.index < filteredProducts.length) {
+              const product = filteredProducts[data.row.index];
+              if (!product) return;
+              const base64Img = loadedImages[product.id];
+              if (base64Img) {
+                try {
+                   const imgDim = 12;
+                   const x = data.cell.x + (data.cell.width - imgDim) / 2;
+                   const y = data.cell.y + (data.cell.height - imgDim) / 2;
+                   let format = 'JPEG';
+                   if (base64Img.startsWith('data:image/png')) format = 'PNG';
+                   else if (base64Img.startsWith('data:image/webp')) format = 'WEBP';
+                   doc.addImage(base64Img, format, x, y, imgDim, imgDim);
+                } catch (e) { console.error('Error drawing image', e); }
+              }
+            }
+          }
+        }
+      });
+      doc.save(`Inventario_General_${new Date().toISOString().split('T')[0]}.pdf`);
+      toast.success('PDF generado exitosamente', { id: toastId });
+    } catch (error) {
+      toast.error('Error al generar el PDF', { id: toastId });
+    } finally {
+      setIsExportingPDF(false);
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -391,9 +490,17 @@ const Products = () => {
             <button 
               onClick={handleExport}
               className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-gray-50 text-gray-700 rounded-xl hover:bg-gray-100 transition-colors font-medium border border-gray-200"
-              title="Exportar"
+              title="Exportar CSV"
             >
-              <Download className="w-5 h-5" />
+              <Download className="w-5 h-5" /> CSV
+            </button>
+            <button 
+              onClick={handleExportPDF}
+              disabled={isExportingPDF}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-red-50 text-red-700 rounded-xl hover:bg-red-100 transition-colors font-medium border border-red-200 disabled:opacity-50"
+              title="Exportar PDF"
+            >
+              <Download className="w-5 h-5" /> PDF
             </button>
           </div>
         </div>
@@ -533,6 +640,13 @@ const Products = () => {
                           title="Ver Detalles"
                         >
                           <Eye className="w-5 h-5" />
+                        </button>
+                        <button 
+                          onClick={() => generateProductPDF(product)}
+                          className="p-1 text-gray-400 hover:text-indigo-600 transition-colors"
+                          title="Imprimir Ficha Técnica"
+                        >
+                          <Printer className="w-5 h-5" />
                         </button>
                         <button 
                           onClick={() => handleOpenModal(product)}

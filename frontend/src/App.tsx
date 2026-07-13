@@ -11,6 +11,7 @@ import DepartmentInventory from './pages/DepartmentInventory';
 import CategoryInventory from './pages/CategoryInventory';
 import Suppliers from './pages/Suppliers';
 import Maintenances from './pages/Maintenances';
+import Reports from './pages/Reports';
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
           <Route path="/maintenances" element={<Maintenances />} />
           <Route path="/discarded" element={<DiscardedProducts />} />
           <Route path="/suppliers" element={<Suppliers />} />
+          <Route path="/reports" element={<Reports />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

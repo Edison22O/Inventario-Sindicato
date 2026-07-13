@@ -1,16 +1,20 @@
 import { useState, useEffect } from 'react';
-import { Wrench, Search, FileDown, Eye } from 'lucide-react';
+import { Wrench, Search, FileDown, Eye, Printer } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 import type { MaintenanceLog, Product } from '../types';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { useInventoryWebSocket } from '../hooks/useInventoryWebSocket';
 import ProductViewModal from '../components/ProductViewModal';
+import { generateProductPDF } from '../utils/productPdfGenerator';
 
 const Maintenances = () => {
   const [logs, setLogs] = useState<MaintenanceLog[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   useEffect(() => {
@@ -37,6 +41,15 @@ const Maintenances = () => {
       setIsViewModalOpen(true);
     } catch (error) {
       toast.error('Error al cargar detalles del equipo');
+    }
+  };
+
+  const handlePrintProduct = async (productId: number) => {
+    try {
+      const res = await api.get(`/products/${productId}/`);
+      await generateProductPDF(res.data);
+    } catch (error) {
+      toast.error('Error al cargar datos del equipo para imprimir');
     }
   };
 
@@ -72,6 +85,50 @@ const Maintenances = () => {
     link.href = url;
     link.download = `mantenimientos_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportPDF = () => {
+    if (isExportingPDF) return;
+    setIsExportingPDF(true);
+    const toastId = toast.loading('Generando PDF...');
+    
+    try {
+      const tableData = filteredLogs.map(l => {
+        return [
+          l.fecha ? new Date(`${l.fecha}T12:00:00`).toLocaleDateString('es-EC') : '-',
+          l.product_codigo || '',
+          l.product_nombre || '',
+          l.realizado_por || '',
+          `$${Number(l.costo || 0).toLocaleString('es-EC', { minimumFractionDigits: 2 })}`,
+          l.estado_resultante || '',
+          l.descripcion || ''
+        ];
+      });
+
+      const doc = new jsPDF('landscape');
+      doc.setFontSize(18);
+      doc.text(`Reporte de Mantenimientos`, 14, 22);
+      doc.setFontSize(11);
+      doc.text(`Fecha de generacion: ${new Date().toLocaleDateString('es-EC')}`, 14, 30);
+
+      autoTable(doc, {
+        startY: 35,
+        head: [['Fecha', 'Codigo Equipo', 'Equipo', 'Tecnico', 'Costo', 'Estado', 'Descripcion']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: { fillColor: [5, 150, 105] },
+        styles: { fontSize: 9, minCellHeight: 14, valign: 'middle' },
+        columnStyles: { 4: { halign: 'right' } }
+      });
+      
+      doc.save(`Mantenimientos_${new Date().toISOString().split('T')[0]}.pdf`);
+      toast.success('PDF generado exitosamente', { id: toastId });
+    } catch (error) {
+      toast.error('Error al generar el PDF', { id: toastId });
+    } finally {
+      setIsExportingPDF(false);
+    }
   };
 
   if (loading) {
@@ -95,13 +152,23 @@ const Maintenances = () => {
           </p>
         </div>
         
-        <button 
-          onClick={handleExport}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors shadow-sm font-medium"
-        >
-          <FileDown className="w-5 h-5" />
-          Exportar CSV
-        </button>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <button 
+            onClick={handleExport}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors shadow-sm font-medium"
+            title="Exportar CSV"
+          >
+            <FileDown className="w-5 h-5" /> CSV
+          </button>
+          <button 
+            onClick={handleExportPDF}
+            disabled={isExportingPDF}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-red-50 border border-red-200 text-red-700 rounded-xl hover:bg-red-100 transition-colors shadow-sm font-medium disabled:opacity-50"
+            title="Exportar PDF"
+          >
+            <FileDown className="w-5 h-5" /> PDF
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-8">
@@ -161,13 +228,22 @@ const Maintenances = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <button
-                      onClick={() => handleViewProduct(log.product)}
-                      className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-colors"
-                      title="Ver Detalles del Equipo"
-                    >
-                      <Eye className="w-5 h-5" />
-                    </button>
+                    <div className="flex justify-center gap-2">
+                      <button
+                        onClick={() => handleViewProduct(log.product)}
+                        className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                        title="Ver Detalles del Equipo"
+                      >
+                        <Eye className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => handlePrintProduct(log.product)}
+                        className="p-1 text-gray-400 hover:text-indigo-600 transition-colors"
+                        title="Imprimir Ficha Técnica"
+                      >
+                        <Printer className="w-5 h-5" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
