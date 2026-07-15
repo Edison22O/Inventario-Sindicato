@@ -8,7 +8,7 @@ import ProductModal from '../components/ProductModal';
 import ProductViewModal from '../components/ProductViewModal';
 import { useInventoryWebSocket } from '../hooks/useInventoryWebSocket';
 import { getImageUrl } from '../utils/getImageUrl';
-import { generateProductPDF, generateBulkProductsPDF } from '../utils/productPdfGenerator';
+import { generateProductPDF, generateBulkProductsPDF, generateTablePDF } from '../utils/productPdfGenerator';
 
 const CategoryInventory = () => {
   const { id } = useParams();
@@ -126,7 +126,7 @@ const CategoryInventory = () => {
 
   const [isExporting, setIsExporting] = useState(false);
 
-  const handleExport = async () => {
+  const handleExportFichas = async () => {
     if (isExporting) return;
     setIsExporting(true);
     try {
@@ -134,10 +134,24 @@ const CategoryInventory = () => {
       await generateBulkProductsPDF(
         filteredProducts, 
         mantRes.data, 
-        `Inventario_Categoria_${category?.name || 'Reporte'}_${new Date().toISOString().split('T')[0]}.pdf`
+        `Fichas_Categoria_${category?.name || 'Reporte'}_${new Date().toISOString().split('T')[0]}.pdf`
       );
     } catch (error) {
       toast.error('Error al descargar mantenimientos para el reporte');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportTabla = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      await generateTablePDF(
+        filteredProducts,
+        `Tabla_Categoria_${category?.name || 'Reporte'}_${new Date().toISOString().split('T')[0]}.pdf`,
+        `Inventario de Categoría: ${category?.name || ''}`
+      );
     } finally {
       setIsExporting(false);
     }
@@ -190,12 +204,20 @@ const CategoryInventory = () => {
               Filtrar
             </button>
             <button 
-              onClick={handleExport}
+              onClick={handleExportTabla}
               disabled={isExporting}
               className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-gray-50 text-gray-700 rounded-xl hover:bg-gray-100 transition-colors font-medium border border-gray-200 disabled:opacity-50"
             >
               <Download className="w-5 h-5" />
-              {isExporting ? 'Generando...' : 'Exportar'}
+              Tabla (Resumen)
+            </button>
+            <button 
+              onClick={handleExportFichas}
+              disabled={isExporting}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-emerald-50 text-emerald-700 rounded-xl hover:bg-emerald-100 transition-colors font-medium border border-emerald-200 disabled:opacity-50"
+            >
+              <Printer className="w-5 h-5" />
+              Fichas Técnicas
             </button>
           </div>
         </div>

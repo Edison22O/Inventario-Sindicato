@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import { applyAutoTable } from './pdfHelper';
 import api from '../services/api';
 import { getImageUrl } from './getImageUrl';
 import type { Product, MaintenanceLog } from '../types';
@@ -132,7 +132,7 @@ const addProductPageToDoc = async (
     ['Fecha de Compra:', product.fecha_compra ? new Date(`${product.fecha_compra}T12:00:00`).toLocaleDateString('es-EC') : '-', 'Ingreso Sistema:', product.fecha_ingreso ? new Date(product.fecha_ingreso).toLocaleDateString('es-EC') : '-'],
   ];
 
-  (doc as any).autoTable({
+  applyAutoTable(doc, {
     startY: currentY,
     body: specsData,
     theme: 'plain',
@@ -185,7 +185,7 @@ const addProductPageToDoc = async (
       m.descripcion
     ]);
 
-    (doc as any).autoTable({
+    applyAutoTable(doc, {
       startY: currentY,
       head: [['Fecha', 'Técnico', 'Estado', 'Costo', 'Descripción']],
       body: mantData,
@@ -241,5 +241,91 @@ export const generateBulkProductsPDF = async (products: Product[], allMaintenanc
   } catch (error: any) {
     console.error('Error generating bulk PDF:', error);
     toast.error('Error al generar el reporte: ' + (error?.message || String(error)), { id: toastId, duration: 8000 });
+  }
+};
+
+export const generateTablePDF = async (products: Product[], filename: string, title: string) => {
+  if (!products || products.length === 0) {
+    toast.error('No hay productos para exportar');
+    return;
+  }
+  const toastId = toast.loading('Generando PDF en formato tabla...');
+  try {
+    const doc = new jsPDF('landscape', 'mm', 'a4');
+
+    // Title
+    doc.setFontSize(22);
+    doc.setTextColor(5, 150, 105);
+    doc.text(title, doc.internal.pageSize.getWidth() / 2, 20, { align: 'center' });
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139);
+    doc.text('Sindicato de Choferes Profesionales del Cantón Espejo', doc.internal.pageSize.getWidth() / 2, 28, { align: 'center' });
+    
+    doc.setDrawColor(226, 232, 240);
+    doc.line(14, 35, doc.internal.pageSize.getWidth() - 14, 35);
+
+    // Prepare data
+    const tableData = [];
+    const images: Record<number, string> = {};
+
+    for (let i = 0; i < products.length; i++) {
+      const p = products[i];
+      if (p.image) {
+        const b64 = await loadImageBase64(getImageUrl(p.image));
+        if (b64) images[i] = b64;
+      }
+      
+      tableData.push([
+        '', // Image placeholder
+        p.codigo,
+        `${p.nombre}\n${p.color || ''}`,
+        `${p.marca || '-'}\n${p.modelo || '-'}`,
+        p.department_name || String(p.department),
+        p.category_name || String(p.category) || '-',
+        p.estado || '-',
+        p.cantidad
+      ]);
+    }
+
+    applyAutoTable(doc, {
+      startY: 45,
+      head: [['Imagen', 'Código', 'Producto', 'Marca/Mod', 'Ubicación', 'Categoría', 'Estado', 'Cant.']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [5, 150, 105], textColor: 255, fontStyle: 'bold' },
+      styles: { cellPadding: 3, fontSize: 9, minCellHeight: 20, valign: 'middle' },
+      columnStyles: {
+        0: { cellWidth: 25, halign: 'center' },
+        1: { cellWidth: 30 },
+        2: { cellWidth: 'auto' },
+        3: { cellWidth: 40 },
+        4: { cellWidth: 35 },
+        5: { cellWidth: 35 },
+        6: { cellWidth: 25 },
+        7: { cellWidth: 15, halign: 'right' }
+      },
+      didDrawCell: (data: any) => {
+        if (data.column.index === 0 && data.cell.section === 'body') {
+          const rowIndex = data.row.index;
+          if (images[rowIndex]) {
+            let format = 'JPEG';
+            if (images[rowIndex].startsWith('data:image/png')) format = 'PNG';
+            else if (images[rowIndex].startsWith('data:image/webp')) format = 'WEBP';
+            
+            const dim = 16;
+            const x = data.cell.x + (data.cell.width - dim) / 2;
+            const y = data.cell.y + (data.cell.height - dim) / 2;
+            doc.addImage(images[rowIndex], format, x, y, dim, dim);
+          }
+        }
+      }
+    });
+
+    doc.save(filename);
+    toast.success('PDF generado exitosamente', { id: toastId });
+  } catch (error: any) {
+    console.error('Error generating table PDF:', error);
+    toast.error('Error al generar PDF: ' + (error?.message || String(error)), { id: toastId, duration: 8000 });
   }
 };
