@@ -8,7 +8,7 @@ import ProductModal from '../components/ProductModal';
 import ProductViewModal from '../components/ProductViewModal';
 import { useInventoryWebSocket } from '../hooks/useInventoryWebSocket';
 import { getImageUrl } from '../utils/getImageUrl';
-import { generateProductPDF, generateBulkProductsPDF } from '../utils/productPdfGenerator';
+import { generateProductPDF, generateBulkProductsPDF, generateTablePDF } from '../utils/productPdfGenerator';
 
 const DiscardedProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -20,8 +20,8 @@ const DiscardedProducts = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [filterDepartment, setFilterDepartment] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
-  const [isExportingPDF, setIsExportingPDF] = useState(false);
-  
+  const [isExportingTabla, setIsExportingTabla] = useState(false);
+  const [isExportingFichas, setIsExportingFichas] = useState(false);
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -139,20 +139,35 @@ const DiscardedProducts = () => {
     document.body.removeChild(link);
   };
 
-  const handleExportPDF = async () => {
-    if (isExportingPDF) return;
-    setIsExportingPDF(true);
+  const handleExportTabla = async () => {
+    if (isExportingTabla) return;
+    setIsExportingTabla(true);
+    try {
+      await generateTablePDF(
+        filteredProducts, 
+        `Bajas_Tabla_${new Date().toISOString().split('T')[0]}.pdf`
+      );
+    } catch (error) {
+      toast.error('Error al generar la tabla PDF');
+    } finally {
+      setIsExportingTabla(false);
+    }
+  };
+
+  const handleExportFichas = async () => {
+    if (isExportingFichas) return;
+    setIsExportingFichas(true);
     try {
       const mantRes = await api.get('/maintenances/');
       await generateBulkProductsPDF(
         filteredProducts, 
         mantRes.data, 
-        `Bajas_${new Date().toISOString().split('T')[0]}.pdf`
+        `Bajas_Fichas_${new Date().toISOString().split('T')[0]}.pdf`
       );
     } catch (error) {
       toast.error('Error al descargar mantenimientos para el reporte');
     } finally {
-      setIsExportingPDF(false);
+      setIsExportingFichas(false);
     }
   };
 
@@ -390,12 +405,20 @@ const DiscardedProducts = () => {
               <Download className="w-5 h-5" /> CSV
             </button>
             <button 
-              onClick={handleExportPDF}
-              disabled={isExportingPDF}
+              onClick={handleExportTabla}
+              disabled={isExportingTabla}
               className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-red-50 text-red-700 rounded-xl hover:bg-red-100 transition-colors font-medium border border-red-200 disabled:opacity-50"
-              title="Exportar PDF"
+              title="Exportar Tabla (Resumen)"
             >
-              <Download className="w-5 h-5" /> PDF
+              <Download className="w-5 h-5" /> Tabla (Resumen)
+            </button>
+            <button 
+              onClick={handleExportFichas}
+              disabled={isExportingFichas}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-red-50 text-red-700 rounded-xl hover:bg-red-100 transition-colors font-medium border border-red-200 disabled:opacity-50"
+              title="Exportar Fichas Técnicas"
+            >
+              <Download className="w-5 h-5" /> Fichas Técnicas
             </button>
           </div>
         </div>

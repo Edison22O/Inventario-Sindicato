@@ -7,14 +7,15 @@ import jsPDF from 'jspdf';
 import { applyAutoTable } from '../utils/pdfHelper';
 import { useInventoryWebSocket } from '../hooks/useInventoryWebSocket';
 import ProductViewModal from '../components/ProductViewModal';
-import { generateProductPDF } from '../utils/productPdfGenerator';
+import { generateProductPDF, generateBulkProductsPDF } from '../utils/productPdfGenerator';
 
 const Maintenances = () => {
   const [logs, setLogs] = useState<MaintenanceLog[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [isExportingPDF, setIsExportingPDF] = useState(false);
+  const [isExportingTabla, setIsExportingTabla] = useState(false);
+  const [isExportingFichas, setIsExportingFichas] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   useEffect(() => {
@@ -88,9 +89,9 @@ const Maintenances = () => {
     URL.revokeObjectURL(url);
   };
 
-  const handleExportPDF = () => {
-    if (isExportingPDF) return;
-    setIsExportingPDF(true);
+  const handleExportTabla = () => {
+    if (isExportingTabla) return;
+    setIsExportingTabla(true);
     const toastId = toast.loading('Generando PDF...');
     
     try {
@@ -122,12 +123,37 @@ const Maintenances = () => {
         columnStyles: { 4: { halign: 'right' } }
       });
       
-      doc.save(`Mantenimientos_${new Date().toISOString().split('T')[0]}.pdf`);
+      doc.save(`Mantenimientos_Tabla_${new Date().toISOString().split('T')[0]}.pdf`);
       toast.success('PDF generado exitosamente', { id: toastId });
     } catch (error) {
       toast.error('Error al generar el PDF', { id: toastId });
     } finally {
-      setIsExportingPDF(false);
+      setIsExportingTabla(false);
+    }
+  };
+
+  const handleExportFichas = async () => {
+    if (isExportingFichas) return;
+    setIsExportingFichas(true);
+    const toastId = toast.loading('Generando fichas técnicas...');
+    try {
+      const [mantRes, prodRes] = await Promise.all([
+        api.get('/maintenances/'),
+        api.get('/products/')
+      ]);
+      const logProductIds = new Set(filteredLogs.map(l => l.product));
+      const targetProducts = (prodRes.data as Product[]).filter((p: Product) => logProductIds.has(p.id));
+      
+      await generateBulkProductsPDF(
+        targetProducts, 
+        mantRes.data, 
+        `Mantenimientos_Fichas_${new Date().toISOString().split('T')[0]}.pdf`
+      );
+      toast.success('Fichas generadas', { id: toastId });
+    } catch (error) {
+      toast.error('Error al generar fichas técnicas', { id: toastId });
+    } finally {
+      setIsExportingFichas(false);
     }
   };
 
@@ -161,12 +187,20 @@ const Maintenances = () => {
             <FileDown className="w-5 h-5" /> CSV
           </button>
           <button 
-            onClick={handleExportPDF}
-            disabled={isExportingPDF}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-red-50 border border-red-200 text-red-700 rounded-xl hover:bg-red-100 transition-colors shadow-sm font-medium disabled:opacity-50"
-            title="Exportar PDF"
+            onClick={handleExportTabla}
+            disabled={isExportingTabla}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-red-50 border border-red-200 text-red-700 rounded-xl hover:bg-red-100 transition-colors shadow-sm font-medium disabled:opacity-50"
+            title="Exportar Tabla (Resumen)"
           >
-            <FileDown className="w-5 h-5" /> PDF
+            <FileDown className="w-5 h-5" /> Tabla (Resumen)
+          </button>
+          <button 
+            onClick={handleExportFichas}
+            disabled={isExportingFichas}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-red-50 border border-red-200 text-red-700 rounded-xl hover:bg-red-100 transition-colors shadow-sm font-medium disabled:opacity-50"
+            title="Exportar Fichas Técnicas"
+          >
+            <FileDown className="w-5 h-5" /> Fichas Técnicas
           </button>
         </div>
       </div>

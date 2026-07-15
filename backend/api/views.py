@@ -84,7 +84,13 @@ class BackupViewSet(viewsets.ViewSet):
             response['Content-Disposition'] = 'attachment; filename="backup_inventario.sql"'
             return response
         except subprocess.CalledProcessError as e:
+            import sys
+            print(f"PG_DUMP ERROR: {e.stderr.decode()}", file=sys.stderr, flush=True)
             return Response({'error': str(e), 'stderr': e.stderr.decode()}, status=500)
+        except Exception as e:
+            import sys
+            print(f"GENERAL ERROR: {str(e)}", file=sys.stderr, flush=True)
+            return Response({'error': str(e)}, status=500)
 
     @action(detail=False, methods=['post'], url_path='import')
     def import_db(self, request):
