@@ -146,7 +146,8 @@ const Products = () => {
     try {
       await generateTablePDF(
         filteredProducts, 
-        `Inventario_Tabla_${new Date().toISOString().split('T')[0]}.pdf`
+        `Inventario_Tabla_${new Date().toISOString().split('T')[0]}.pdf`,
+        'Resumen de Catálogo Completo'
       );
     } catch (error) {
       toast.error('Error al generar la tabla PDF');

@@ -145,7 +145,8 @@ const DiscardedProducts = () => {
     try {
       await generateTablePDF(
         filteredProducts, 
-        `Bajas_Tabla_${new Date().toISOString().split('T')[0]}.pdf`
+        `Bajas_Tabla_${new Date().toISOString().split('T')[0]}.pdf`,
+        'Equipos Dados de Baja'
       );
     } catch (error) {
       toast.error('Error al generar la tabla PDF');
