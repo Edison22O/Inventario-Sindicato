@@ -433,7 +433,7 @@ const Products = () => {
             <button 
               onClick={handleExportTabla}
               disabled={isExportingTabla}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-red-50 text-red-700 rounded-xl hover:bg-red-100 transition-colors font-medium border border-red-200 disabled:opacity-50"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-gray-50 text-gray-700 rounded-xl hover:bg-gray-100 transition-colors font-medium border border-gray-200 disabled:opacity-50"
               title="Exportar Tabla (Resumen)"
             >
               <Download className="w-5 h-5" /> Tabla (Resumen)
@@ -441,10 +441,10 @@ const Products = () => {
             <button 
               onClick={handleExportFichas}
               disabled={isExportingFichas}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-red-50 text-red-700 rounded-xl hover:bg-red-100 transition-colors font-medium border border-red-200 disabled:opacity-50"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-emerald-50 text-emerald-700 rounded-xl hover:bg-emerald-100 transition-colors font-medium border border-emerald-200 disabled:opacity-50"
               title="Exportar Fichas Técnicas"
             >
-              <Download className="w-5 h-5" /> Fichas Técnicas
+              <Printer className="w-5 h-5" /> Fichas Técnicas
             </button>
           </div>
         </div>
