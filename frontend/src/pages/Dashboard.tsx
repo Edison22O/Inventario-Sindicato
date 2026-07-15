@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Package, Tags, Layers, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Package, Tags, Layers, TrendingUp, AlertTriangle, Download } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import api from '../services/api';
 import { useInventoryWebSocket } from '../hooks/useInventoryWebSocket';
@@ -13,6 +14,8 @@ const Dashboard = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   
   // Maintenance Modal State
   const [isMaintenanceModalOpen, setIsMaintenanceModalOpen] = useState(false);
@@ -80,6 +83,48 @@ const Dashboard = () => {
     fetchData(); // Refrescar el dashboard para que la alerta desaparezca
   };
 
+  const handleExportBackup = async () => {
+    try {
+      setIsExporting(true);
+      const response = await api.get('/backup/export/', { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'backup_inventario.sql');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success('Respaldo exportado exitosamente');
+    } catch (error) {
+      console.error('Error exporting backup:', error);
+      toast.error('Error al exportar el respaldo');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleImportBackup = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsImporting(true);
+      const formData = new FormData();
+      formData.append('file', file);
+      await api.post('/backup/import/', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      toast.success('Base de datos restaurada con éxito');
+      fetchData(); // Reload dashboard data
+    } catch (error) {
+      console.error('Error importing backup:', error);
+      toast.error('Error al restaurar la base de datos');
+    } finally {
+      setIsImporting(false);
+      if (event.target) event.target.value = ''; // Reset input
+    }
+  };
+
   const estadoData = [
     { name: 'Bueno', value: products.filter(p => p.estado?.toLowerCase() === 'bueno' || p.estado?.toLowerCase() === 'bueno (resuelto)').length },
     { name: 'Regular', value: regularStateProducts.length },
@@ -130,9 +175,36 @@ const Dashboard = () => {
 
   return (
     <div className="p-8">
-      <div className="mb-10">
-        <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">Panel de Control</h1>
-        <p className="text-gray-500 mt-2 text-lg font-medium">Resumen general del inventario institucional</p>
+      <div className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">Panel de Control</h1>
+          <p className="text-gray-500 mt-2 text-lg font-medium">Resumen general del inventario institucional</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <input 
+            type="file" 
+            id="backup-upload" 
+            className="hidden" 
+            accept=".sql"
+            onChange={handleImportBackup} 
+          />
+          <button 
+            onClick={() => document.getElementById('backup-upload')?.click()}
+            disabled={isImporting}
+            className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 font-medium text-sm flex items-center gap-2 shadow-sm transition-all disabled:opacity-50"
+          >
+            <Download className="w-4 h-4 rotate-180" />
+            {isImporting ? 'Importando...' : 'Importar Respaldo'}
+          </button>
+          <button 
+            onClick={handleExportBackup}
+            disabled={isExporting}
+            className="px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-medium text-sm flex items-center gap-2 shadow-sm shadow-emerald-600/20 transition-all disabled:opacity-50"
+          >
+            <Download className="w-4 h-4" />
+            {isExporting ? 'Exportando...' : 'Exportar BD'}
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">

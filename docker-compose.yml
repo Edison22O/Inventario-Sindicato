@@ -46,6 +46,8 @@ services:
     build: ./nginx
     ports:
       - "8009:80"
+    volumes:
+      - ./backend/media:/app/media
     depends_on:
       - frontend
       - backend
