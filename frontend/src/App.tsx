@@ -1,17 +1,35 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import ProtectedRoute from './components/ProtectedRoute';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Categories from './pages/Categories';
-import Products from './pages/Products';
-import DiscardedProducts from './pages/DiscardedProducts';
-import Departments from './pages/Departments';
-import DepartmentInventory from './pages/DepartmentInventory';
-import CategoryInventory from './pages/CategoryInventory';
-import Suppliers from './pages/Suppliers';
-import Maintenances from './pages/Maintenances';
-import Reports from './pages/Reports';
+import ProtectedRoute from '@/modules/auth/components/ProtectedRoute';
+import Login from '@/modules/auth/pages/Login';
+import Home from '@/modules/home/pages/Home';
+import Dashboard from '@/modules/dashboard/pages/Dashboard';
+import Categories from '@/modules/inventory/pages/Categories';
+import Products from '@/modules/inventory/pages/Products';
+import DiscardedProducts from '@/modules/inventory/pages/DiscardedProducts';
+import Departments from '@/modules/inventory/pages/Departments';
+import DepartmentInventory from '@/modules/inventory/pages/DepartmentInventory';
+import CategoryInventory from '@/modules/inventory/pages/CategoryInventory';
+import Suppliers from '@/modules/suppliers/pages/Suppliers';
+import Maintenances from '@/modules/maintenance/pages/Maintenances';
+import Reports from '@/modules/reports/pages/Reports';
+
+// Furniture Modules
+import FurnitureDashboard from '@/modules/furniture/dashboard/pages/Dashboard';
+import FurnitureCategories from '@/modules/furniture/inventory/pages/Categories';
+import FurnitureProducts from '@/modules/furniture/inventory/pages/Products';
+import FurnitureDiscardedProducts from '@/modules/furniture/inventory/pages/DiscardedProducts';
+import FurnitureDepartments from '@/modules/furniture/inventory/pages/Departments';
+import FurnitureDepartmentInventory from '@/modules/furniture/inventory/pages/DepartmentInventory';
+import FurnitureCategoryInventory from '@/modules/furniture/inventory/pages/CategoryInventory';
+import FurnitureSuppliers from '@/modules/furniture/suppliers/pages/Suppliers';
+import FurnitureMaintenances from '@/modules/furniture/maintenance/pages/Maintenances';
+import FurnitureReports from '@/modules/furniture/reports/pages/Reports';
+
+// Vehicles Modules
+import VehiclesCatalog from '@/modules/vehicles/pages/VehiclesCatalog';
+import VehicleTrips from '@/modules/vehicles/pages/VehicleTrips';
+import TripHistory from '@/modules/vehicles/pages/TripHistory';
 
 function App() {
   return (
@@ -22,7 +40,8 @@ function App() {
         
         {/* Protected Routes */}
         <Route element={<ProtectedRoute />}>
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/" element={<Home />} />
+          <Route path="/inventory-dashboard" element={<Dashboard />} />
           <Route path="/categories" element={<Categories />} />
           <Route path="/categories/:id" element={<CategoryInventory />} />
           <Route path="/departments" element={<Departments />} />
@@ -32,6 +51,23 @@ function App() {
           <Route path="/discarded" element={<DiscardedProducts />} />
           <Route path="/suppliers" element={<Suppliers />} />
           <Route path="/reports" element={<Reports />} />
+
+          {/* Furniture Routes */}
+          <Route path="/furniture/inventory-dashboard" element={<FurnitureDashboard />} />
+          <Route path="/furniture/categories" element={<FurnitureCategories />} />
+          <Route path="/furniture/categories/:id" element={<FurnitureCategoryInventory />} />
+          <Route path="/furniture/departments" element={<FurnitureDepartments />} />
+          <Route path="/furniture/departments/:id" element={<FurnitureDepartmentInventory />} />
+          <Route path="/furniture/products" element={<FurnitureProducts />} />
+          <Route path="/furniture/maintenances" element={<FurnitureMaintenances />} />
+          <Route path="/furniture/discarded" element={<FurnitureDiscardedProducts />} />
+          <Route path="/furniture/suppliers" element={<FurnitureSuppliers />} />
+          <Route path="/furniture/reports" element={<FurnitureReports />} />
+
+          {/* Vehicles Routes */}
+          <Route path="/vehicles/catalog" element={<VehiclesCatalog />} />
+          <Route path="/vehicles/trips" element={<VehicleTrips />} />
+          <Route path="/vehicles/history" element={<TripHistory />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

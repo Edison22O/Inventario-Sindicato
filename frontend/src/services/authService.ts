@@ -1,5 +1,5 @@
-import api from './api';
-import type { LoginCredentials, AuthResponse } from '../types';
+import api from '@/shared/services/api';
+import type { LoginCredentials, AuthResponse } from '@/shared/types';
 // Force Vite HMR reload
 
 export const authService = {
