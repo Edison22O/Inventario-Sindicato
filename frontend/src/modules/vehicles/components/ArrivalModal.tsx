@@ -3,6 +3,8 @@ import { X, Upload, Camera } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { VehicleTrip } from '@/shared/types';
 
+import { compressImage } from '@/shared/utils/imageCompressor';
+
 interface ArrivalModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -20,6 +22,7 @@ const ArrivalModal: React.FC<ArrivalModalProps> = ({ isOpen, onClose, onSave, tr
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCompressing, setIsCompressing] = useState(false);
 
   if (!isOpen || !trip) return null;
 
@@ -28,11 +31,20 @@ const ArrivalModal: React.FC<ArrivalModalProps> = ({ isOpen, onClose, onSave, tr
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setImageFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
+      setIsCompressing(true);
+      try {
+        const compressed = await compressImage(file);
+        setImageFile(compressed);
+        setPreviewUrl(URL.createObjectURL(compressed));
+      } catch (error) {
+        setImageFile(file);
+        setPreviewUrl(URL.createObjectURL(file));
+      } finally {
+        setIsCompressing(false);
+      }
     }
   };
 
@@ -126,7 +138,7 @@ const ArrivalModal: React.FC<ArrivalModalProps> = ({ isOpen, onClose, onSave, tr
                       <span className="font-medium group-hover:text-emerald-500 transition-colors">Tocar para abrir cámara</span>
                     </div>
                   )}
-                  {/* El atributo capture="environment" abre la cámara trasera en móviles */}
+                  {/* El atributo capture="environment" obliga a abrir la cámara trasera para evitar subir fotos viejas de la galería */}
                   <input 
                     type="file" 
                     accept="image/*"
@@ -146,8 +158,8 @@ const ArrivalModal: React.FC<ArrivalModalProps> = ({ isOpen, onClose, onSave, tr
           <button type="button" onClick={onClose} className="px-6 py-2.5 rounded-xl font-medium text-gray-700 hover:bg-gray-100 transition-colors">
             Cancelar
           </button>
-          <button type="submit" form="arrivalForm" disabled={isSubmitting} className="px-6 py-2.5 rounded-xl font-medium text-white bg-emerald-600 hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2">
-            {isSubmitting ? (
+          <button type="submit" form="arrivalForm" disabled={isSubmitting || isCompressing} className="px-6 py-2.5 rounded-xl font-medium text-white bg-emerald-600 hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2">
+            {isSubmitting || isCompressing ? (
               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             ) : (
               <Upload className="w-5 h-5" />

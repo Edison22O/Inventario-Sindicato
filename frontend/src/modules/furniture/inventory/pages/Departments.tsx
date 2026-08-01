@@ -5,6 +5,7 @@ import api from '@/shared/services/api';
 import type { Department } from '@/shared/types';
 import { Link } from 'react-router-dom';
 import DepartmentModal from '@/modules/furniture/inventory/components/DepartmentModal';
+import { confirmDialog } from '@/shared/utils/confirmDialog';
 
 const Departments = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -55,7 +56,7 @@ const Departments = () => {
   const handleDeleteDepartment = async (e: React.MouseEvent, id: number) => {
     e.preventDefault();
     e.stopPropagation();
-    if (window.confirm('¿Estás seguro de que deseas eliminar este departamento? Se eliminarán también todos sus productos.')) {
+    if (await confirmDialog('¿Estás seguro de que deseas eliminar este departamento? Se eliminarán también todos sus productos.')) {
       try {
         await api.delete(`/furniture/departments/${id}/`);
         toast.success('Departamento eliminado');

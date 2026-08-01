@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Propuesta Comercial - Sindicato</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #2563eb;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        h1 {
+            color: #1e3a8a;
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+        h2 {
+            color: #2563eb;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 8px;
+            margin-top: 40px;
+        }
+        h3 {
+            color: #1e40af;
+            margin-top: 25px;
+        }
+        .client-info {
+            font-size: 18px;
+            color: #4b5563;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 10px;
+        }
+        .price-box {
+            background-color: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-left: 5px solid #2563eb;
+            padding: 20px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .price {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0f172a;
+        }
+        .footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 14px;
+            color: #64748b;
+            font-style: italic;
+        }
+        @media print {
+            body { padding: 0; }
+            .price-box { break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>PROPUESTA DE DESARROLLO E IMPLEMENTACIÓN TECNOLÓGICA</h1>
+        <div class="client-info">
+            <strong>Cliente:</strong> Sindicato de Choferes Profesionales<br>
+            <strong>Proyecto:</strong> Sistema Centralizado de Inventario y Control de Flota Vehicular
+        </div>
+    </div>
+
+    <h2>1. Resumen del Proyecto</h2>
+    <p>El presente documento detalla la propuesta para la implementación de un sistema de información de nivel empresarial. La plataforma está diseñada para automatizar y tener trazabilidad total sobre los activos del sindicato, control estricto de los viajes de la flota vehicular y gestión de mantenimientos, todo operando en tiempo real y con soporte nativo para dispositivos móviles.</p>
+
+    <h2>2. Características y Módulos del Sistema</h2>
+    <ul>
+        <li><strong>Control de Flota Vehicular (Entradas y Salidas):</strong> Monitoreo en tiempo real del estado de los vehículos, registro de kilometraje, niveles de combustible y novedades.</li>
+        <li><strong>Captura de Evidencia Fotográfica Inteligente:</strong> Integración directa con la cámara de teléfonos móviles para subir evidencia in situ, con optimización algorítmica de imágenes para ahorrar hasta un 90% de ancho de banda y almacenamiento.</li>
+        <li><strong>Sincronización en Tiempo Real (WebSockets):</strong> Los cambios realizados por los guardias en la puerta se reflejan instantáneamente en las pantallas de administración sin necesidad de recargar la página.</li>
+        <li><strong>Gestión de Inventario (Bienes, Muebles y Equipos):</strong> Control detallado de altas, bajas, reparaciones y asignaciones a custodios.</li>
+        <li><strong>Reportes PDF Automatizados:</strong> Generación instantánea de actas de entrega-recepción, reportes de bajas y resúmenes de flota.</li>
+        <li><strong>Bitácora de Auditoría de Alta Seguridad:</strong> Registro inmutable de cada acción realizada en el sistema (quién, cuándo y desde dónde).</li>
+    </ul>
+
+    <h2>3. Arquitectura y Stack Tecnológico</h2>
+    <p>El sistema ha sido construido utilizando los estándares más modernos de la industria del desarrollo de software:</p>
+    <ul>
+        <li><strong>Frontend (Interfaz de Usuario):</strong> React.js (v19) y TypeScript. Interfaces dinámicas, rápidas y adaptables a cualquier tamaño de pantalla (Responsive Design) utilizando Tailwind CSS.</li>
+        <li><strong>Backend (Lógica del Servidor):</strong> Python 3.11 con Django Rest Framework. Una API robusta que maneja la lógica de negocio y la seguridad de las peticiones.</li>
+        <li><strong>Base de Datos:</strong> PostgreSQL 15. Un motor de base de datos de grado empresarial que garantiza la integridad, seguridad y rapidez en el manejo de altos volúmenes de información.</li>
+        <li><strong>Infraestructura y Despliegue:</strong> Contenerización con Docker y orquestación de red mediante Nginx. Preparado para despliegue seguro tanto en red local como en la nube con encriptación.</li>
+    </ul>
+
+    <h2>4. Opciones de Inversión</h2>
+    <p>A continuación, se presentan dos modelos de adquisición estructurados para las necesidades del Sindicato:</p>
+
+    <div class="price-box">
+        <h3>OPCIÓN A: Adquisición de Licencia de Uso (Recomendada)</h3>
+        <p>El modelo más utilizado por instituciones para garantizar el correcto funcionamiento del software a largo plazo sin riesgos técnicos. El sindicato adquiere el derecho de uso exclusivo del sistema y delega la responsabilidad técnica completa al desarrollador.</p>
+        
+        <ul>
+            <li><strong>Costo de Implementación e Instalación:</strong> <span class="price">$1,500.00 USD</span> (Pago Único)</li>
+            <li><strong>Póliza de Soporte, Hosting y Mantenimiento:</strong> <span class="price">$100.00 USD</span> (Mensual)</li>
+        </ul>
+        <p><em>* Incluye: Alojamiento del sistema, mantenimiento preventivo de la base de datos, copias de seguridad (backups) semanales, solución inmediata de cualquier fallo técnico y soporte a usuarios.</em></p>
+    </div>
+
+    <div class="price-box">
+        <h3>OPCIÓN B: Transferencia de Propiedad Intelectual (Código Fuente)</h3>
+        <p>El sindicato adquiere el 100% de los derechos del software, incluyendo todos los archivos de programación originales (código fuente). El Sindicato asume la responsabilidad técnica total del futuro del sistema.</p>
+        
+        <ul>
+            <li><strong>Costo Total de Transferencia:</strong> <span class="price">$4,500.00 USD</span> (Pago Único)</li>
+        </ul>
+        <p><em>* Incluye: Instalación inicial y entrega de repositorios con el código fuente. El Sindicato tendrá la libertad de contratar a otros programadores para modificarlo o revenderlo. <strong>No incluye</strong> póliza de mantenimiento, ni servidor, ni soporte técnico a futuro.</em></p>
+    </div>
+
+    <div class="footer">
+        Este documento es de carácter confidencial. Propuesta válida por 30 días calendario desde su emisión.
+    </div>
+
+</body>
+</html>

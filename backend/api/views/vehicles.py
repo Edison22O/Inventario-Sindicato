@@ -5,17 +5,20 @@ from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 from api.models.vehicles import Vehicle, VehicleTrip
 from api.serializers.vehicles import VehicleSerializer, VehicleTripSerializer
+from api.mixins import AuditLogMixin
 from api.signals import broadcast_inventory_update
 
-class VehicleViewSet(viewsets.ModelViewSet):
+class VehicleViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = Vehicle.objects.all().order_by('-id')
     serializer_class = VehicleSerializer
     permission_classes = [IsAuthenticated]
+    audit_module_name = 'Catálogo de Vehículos'
 
-class VehicleTripViewSet(viewsets.ModelViewSet):
+class VehicleTripViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = VehicleTrip.objects.select_related('vehicle', 'conductor').all().order_by('-fecha_hora_salida')
     serializer_class = VehicleTripSerializer
     permission_classes = [IsAuthenticated]
+    audit_module_name = 'Viajes'
 
     def perform_create(self, serializer):
         # Al crear la salida

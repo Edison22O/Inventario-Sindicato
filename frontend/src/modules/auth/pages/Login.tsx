@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, User, ShieldCheck, ChevronRight } from 'lucide-react';
 import { authService } from '@/services/authService';
+import api from '@/shared/services/api';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -9,6 +10,24 @@ const Login = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  
+  const [orgName, setOrgName] = useState('Sindicato de Choferes Profesionales del Cantón Espejo');
+  const [logoUrl, setLogoUrl] = useState('/logo.png');
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await api.get('/system-settings/');
+        if (response.data) {
+          if (response.data.organization_name) setOrgName(response.data.organization_name);
+          if (response.data.logo) setLogoUrl(response.data.logo);
+        }
+      } catch (error) {
+        console.error("Error fetching settings in Login", error);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,18 +56,14 @@ const Login = () => {
       {/* Floating White "Mirror" Card */}
       <div className="relative z-10 w-full max-w-[500px] bg-white rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] border border-gray-100 p-8 sm:p-12">
         
-        {/* Header / Branding */}
         <div className="text-center mb-8 flex flex-col items-center">
           <div className="w-56 h-40 flex items-center justify-center mb-4">
-            <img src="/logo.png" alt="Logo Sindicato" className="w-full h-full object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+            <img src={logoUrl} alt="Logo Sindicato" className="w-full h-full object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
           </div>
           <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight leading-tight">
-            Sindicato de Choferes Profesionales
+            {orgName}
           </h1>
-          <h2 className="text-sm font-semibold text-emerald-600 mb-2 uppercase tracking-widest">
-            del Cantón Espejo
-          </h2>
-          <div className="h-0.5 w-16 bg-gradient-to-r from-emerald-400 to-gold-500 rounded-full mt-2 mx-auto"></div>
+          <div className="h-0.5 w-16 bg-gradient-to-r from-emerald-400 to-gold-500 rounded-full mt-4 mx-auto"></div>
         </div>
 
         <div className="mb-8 text-center">

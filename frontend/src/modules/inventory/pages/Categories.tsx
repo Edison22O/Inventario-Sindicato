@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { Tags, Plus, Search, MapPin, Edit2, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import CategoryModal from '@/modules/inventory/components/CategoryModal';
+import { confirmDialog } from '@/shared/utils/confirmDialog';
 
 const Categories = () => {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -54,7 +55,7 @@ const Categories = () => {
   const handleDeleteCategory = async (e: React.MouseEvent, id: number) => {
     e.preventDefault();
     e.stopPropagation();
-    if (window.confirm('¿Estás seguro de que deseas eliminar esta categoría?')) {
+    if (await confirmDialog('¿Estás seguro de que deseas eliminar esta categoría?')) {
       try {
         await api.delete(`/categories/${id}/`);
         toast.success('Categoría eliminada');

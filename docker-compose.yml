@@ -38,7 +38,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - VITE_API_URL=http://localhost:8009/api
+      - VITE_API_URL=/api/
     depends_on:
       - backend
 
@@ -51,6 +51,18 @@ services:
     depends_on:
       - frontend
       - backend
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    environment:
+      - NGROK_AUTHTOKEN=3HJm48ng2s8ADVhdyD6ZblW1ZgW_293yo5zZH4JvyRiEqECBF
+    command:
+      - "http"
+      - "nginx:80"
+    depends_on:
+      - nginx
+    ports:
+      - "4040:4040"
 
 volumes:
   postgres_data:

@@ -34,3 +34,38 @@ class Media(models.Model):
     file = models.FileField(upload_to='media/')
     file_type = models.CharField(max_length=100)
     uploaded_at = models.DateTimeField(auto_now_add=True)
+
+class SystemSettings(models.Model):
+    organization_name = models.CharField(max_length=255, default='Sindicato de Choferes Profesionales del Cantón Espejo')
+    logo = models.ImageField(upload_to='settings/', null=True, blank=True)
+    primary_color = models.CharField(max_length=20, default='#148143')
+    
+    def save(self, *args, **kwargs):
+        # Enforce singleton
+        self.pk = 1
+        super(SystemSettings, self).save(*args, **kwargs)
+
+    @classmethod
+    def load(cls):
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj
+
+class ActivityLog(models.Model):
+    ACTION_CHOICES = (
+        ('CREATE', 'Creación'),
+        ('UPDATE', 'Actualización'),
+        ('DELETE', 'Eliminación'),
+        ('LOGIN', 'Inicio de Sesión'),
+        ('OTHER', 'Otro'),
+    )
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='activity_logs')
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    module = models.CharField(max_length=100)
+    description = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f"{self.user} - {self.action} - {self.timestamp}"

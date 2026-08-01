@@ -9,6 +9,7 @@ import ProductViewModal from '@/modules/inventory/components/ProductViewModal';
 import { useInventoryWebSocket } from '@/modules/inventory/hooks/useInventoryWebSocket';
 import { getImageUrl } from '@/shared/utils/getImageUrl';
 import { generateProductPDF, generateBulkProductsPDF, generateTablePDF } from '@/modules/inventory/utils/productPdfGenerator';
+import { confirmDialog } from '@/shared/utils/confirmDialog';
 
 const CategoryInventory = () => {
   const { id } = useParams();
@@ -94,7 +95,7 @@ const CategoryInventory = () => {
   };
 
   const handleDeleteProduct = async (productId: number) => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar este producto permanentemente?')) {
+    if (await confirmDialog('¿Estás seguro de que deseas eliminar este producto permanentemente?')) {
       try {
         await api.delete(`/products/${productId}/`);
         toast.success('Producto eliminado');

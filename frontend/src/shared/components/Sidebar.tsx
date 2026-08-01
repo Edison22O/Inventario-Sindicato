@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, Tags, Layers, LogOut, X, Truck, Wrench, FileBarChart, ChevronDown, Monitor, Home as HomeIcon } from 'lucide-react';
+import { LayoutDashboard, Package, Tags, Layers, LogOut, X, Truck, Wrench, FileBarChart, ChevronDown, Monitor, Armchair, Home as HomeIcon, Settings } from 'lucide-react';
 import { authService } from '@/services/authService';
+import api from '@/shared/services/api';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -13,6 +14,30 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const [isInventoryExpanded, setIsInventoryExpanded] = useState(false);
   const [isFurnitureExpanded, setIsFurnitureExpanded] = useState(false);
   const [isVehiclesExpanded, setIsVehiclesExpanded] = useState(false);
+  
+  const [orgName, setOrgName] = useState('Sindicato de Choferes Profesionales del Cantón Espejo');
+  const [logoUrl, setLogoUrl] = useState('/logo.png');
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await api.get('/system-settings/');
+        if (response.data) {
+          if (response.data.organization_name) setOrgName(response.data.organization_name);
+          if (response.data.logo) setLogoUrl(response.data.logo);
+        }
+      } catch (error) {
+        console.error("Error fetching settings in Sidebar", error);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const userRole = authService.getUserRole();
+  const isAdmin = userRole === 'Administrador';
+  const showTech = isAdmin || userRole === 'Tecnologico';
+  const showFurniture = isAdmin || userRole === 'Muebles';
+  const showVehicles = isAdmin || userRole === 'Conductores';
 
   const inventoryLinks = [
     { to: '/inventory-dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -66,10 +91,10 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         <div className="absolute inset-0 z-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20 pointer-events-none"></div>
         <div className="py-8 flex flex-col items-center gap-4 px-6 border-b border-emerald-800/50 relative z-10">
           <div className="w-24 h-24 bg-white rounded-2xl p-1 shadow-lg overflow-hidden flex items-center justify-center">
-            <img src="/logo.png" alt="Logo Sindicato" className="w-full h-full object-contain mix-blend-multiply" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+            <img src={logoUrl} alt="Logo Sindicato" className="w-full h-full object-contain mix-blend-multiply" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
           </div>
           <h1 className="text-sm font-bold text-white tracking-wide leading-tight text-center drop-shadow-sm">
-            Sindicato de Choferes<br/><span className="text-emerald-300 font-semibold">Profesionales del Cantón Espejo</span>
+            {orgName}
           </h1>
           <button 
             onClick={onClose}
@@ -94,113 +119,133 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
             Inicio
           </Link>
 
-          {/* Group Header */}
-          <button
-            onClick={() => setIsInventoryExpanded(!isInventoryExpanded)}
-            className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl transition-all duration-300 font-semibold group relative overflow-hidden bg-white/10 text-white border border-white/10 shadow-sm`}
-          >
-            <div className="flex items-center gap-3">
-              <Monitor className="w-5 h-5 text-gold-400" />
-              <span className="text-left leading-tight text-sm">Inventario Equipos<br/>Tecnológicos</span>
+          <div className="space-y-6">
+          {showTech && (
+            <div>
+              <button
+                onClick={() => setIsInventoryExpanded(!isInventoryExpanded)}
+                className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl transition-all duration-300 font-semibold group relative overflow-hidden bg-white/10 text-white border border-white/10 shadow-sm`}
+              >
+                <div className="flex items-center gap-3">
+                  <Monitor className="w-5 h-5 text-emerald-400" />
+                  <span className="text-left leading-tight text-sm">Equipos<br/>Tecnológicos</span>
+                </div>
+                <ChevronDown className={`w-5 h-5 text-emerald-200 transition-transform duration-300 ${isInventoryExpanded ? 'rotate-180' : ''}`} />
+              </button>
+
+              <div className={`space-y-1 mt-2 overflow-hidden transition-all duration-300 ${isInventoryExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                {inventoryLinks.map((link) => {
+                  const Icon = link.icon;
+                  const isActive = location.pathname === link.to;
+
+                  return (
+                    <Link
+                      key={link.to}
+                      to={link.to}
+                      onClick={onClose}
+                      className={`flex items-center gap-3 px-4 py-3 ml-2 rounded-xl transition-all duration-300 font-medium group relative overflow-hidden ${
+                        isActive
+                          ? 'bg-white/10 text-white shadow-sm border border-white/10'
+                          : 'text-emerald-100/70 hover:bg-white/5 hover:text-white border border-transparent'
+                      }`}
+                    >
+                      <Icon className={`w-4 h-4 ${isActive ? 'text-emerald-400' : 'text-emerald-200/50 group-hover:text-emerald-200'}`} />
+                      <span className="text-sm">{link.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
-            <ChevronDown className={`w-5 h-5 text-emerald-200 transition-transform duration-300 ${isInventoryExpanded ? 'rotate-180' : ''}`} />
-          </button>
+          )}
 
-          {/* Group Items */}
-          <div className={`space-y-1 mt-2 overflow-hidden transition-all duration-300 ${isInventoryExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
-            {inventoryLinks.map((link) => {
-              const Icon = link.icon;
-              const isActive = location.pathname === link.to || location.pathname.startsWith(`${link.to}/`);
-              const finalIsActive = isActive;
+          {showFurniture && (
+            <div>
+              <button
+                onClick={() => setIsFurnitureExpanded(!isFurnitureExpanded)}
+                className={`w-full flex items-center justify-between px-4 py-3.5 mt-4 rounded-2xl transition-all duration-300 font-semibold group relative overflow-hidden bg-white/10 text-white border border-white/10 shadow-sm`}
+              >
+                <div className="flex items-center gap-3">
+                  <Armchair className="w-5 h-5 text-amber-400" />
+                  <span className="text-left leading-tight text-sm">Inventario de<br/>Mobiliario</span>
+                </div>
+                <ChevronDown className={`w-5 h-5 text-emerald-200 transition-transform duration-300 ${isFurnitureExpanded ? 'rotate-180' : ''}`} />
+              </button>
 
-              return (
-                <Link
-                  key={link.to}
-                  to={link.to}
-                  onClick={onClose} // Auto-close on mobile when clicking a link
-                  className={`flex items-center gap-3 px-4 py-3 ml-2 rounded-xl transition-all duration-300 font-medium group relative overflow-hidden ${
-                    finalIsActive
-                      ? 'bg-white/10 text-white shadow-sm border border-white/10'
-                      : 'text-emerald-100/70 hover:bg-white/5 hover:text-white border border-transparent'
-                  }`}
-                >
-                  <Icon className={`w-4 h-4 ${finalIsActive ? 'text-gold-400' : 'text-emerald-200/50 group-hover:text-emerald-200'}`} />
-                  <span className="text-sm">{link.label}</span>
-                </Link>
-              );
-            })}
-          </div>
+              <div className={`space-y-1 mt-2 overflow-hidden transition-all duration-300 ${isFurnitureExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                {furnitureLinks.map((link) => {
+                  const Icon = link.icon;
+                  const isActive = location.pathname === link.to || location.pathname.startsWith(`${link.to}/`);
 
-          {/* Furniture Group Header */}
-          <button
-            onClick={() => setIsFurnitureExpanded(!isFurnitureExpanded)}
-            className={`w-full flex items-center justify-between px-4 py-3.5 mt-4 rounded-2xl transition-all duration-300 font-semibold group relative overflow-hidden bg-white/10 text-white border border-white/10 shadow-sm`}
-          >
-            <div className="flex items-center gap-3">
-              <Package className="w-5 h-5 text-purple-400" />
-              <span className="text-left leading-tight text-sm">Inventario de<br/>Muebles</span>
+                  return (
+                    <Link
+                      key={link.to}
+                      to={link.to}
+                      onClick={onClose}
+                      className={`flex items-center gap-3 px-4 py-3 ml-2 rounded-xl transition-all duration-300 font-medium group relative overflow-hidden ${
+                        isActive
+                          ? 'bg-white/10 text-white shadow-sm border border-white/10'
+                          : 'text-emerald-100/70 hover:bg-white/5 hover:text-white border border-transparent'
+                      }`}
+                    >
+                      <Icon className={`w-4 h-4 ${isActive ? 'text-amber-400' : 'text-emerald-200/50 group-hover:text-emerald-200'}`} />
+                      <span className="text-sm">{link.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
-            <ChevronDown className={`w-5 h-5 text-emerald-200 transition-transform duration-300 ${isFurnitureExpanded ? 'rotate-180' : ''}`} />
-          </button>
+          )}
 
-          {/* Furniture Group Items */}
-          <div className={`space-y-1 mt-2 overflow-hidden transition-all duration-300 ${isFurnitureExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
-            {furnitureLinks.map((link) => {
-              const Icon = link.icon;
-              const isActive = location.pathname === link.to || location.pathname.startsWith(`${link.to}/`);
+          {showVehicles && (
+            <div>
+              <button
+                onClick={() => setIsVehiclesExpanded(!isVehiclesExpanded)}
+                className={`w-full flex items-center justify-between px-4 py-3.5 mt-4 rounded-2xl transition-all duration-300 font-semibold group relative overflow-hidden bg-white/10 text-white border border-white/10 shadow-sm`}
+              >
+                <div className="flex items-center gap-3">
+                  <Truck className="w-5 h-5 text-blue-400" />
+                  <span className="text-left leading-tight text-sm">Gestión de<br/>Vehículos</span>
+                </div>
+                <ChevronDown className={`w-5 h-5 text-emerald-200 transition-transform duration-300 ${isVehiclesExpanded ? 'rotate-180' : ''}`} />
+              </button>
 
-              return (
-                <Link
-                  key={link.to}
-                  to={link.to}
-                  onClick={onClose}
-                  className={`flex items-center gap-3 px-4 py-3 ml-2 rounded-xl transition-all duration-300 font-medium group relative overflow-hidden ${
-                    isActive
-                      ? 'bg-white/10 text-white shadow-sm border border-white/10'
-                      : 'text-emerald-100/70 hover:bg-white/5 hover:text-white border border-transparent'
-                  }`}
-                >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-purple-400' : 'text-emerald-200/50 group-hover:text-emerald-200'}`} />
-                  <span className="text-sm">{link.label}</span>
-                </Link>
-              );
-            })}
-          </div>
+              <div className={`space-y-1 mt-2 overflow-hidden transition-all duration-300 ${isVehiclesExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                {vehiclesLinks.map((link) => {
+                  const Icon = link.icon;
+                  const isActive = location.pathname === link.to || location.pathname.startsWith(`${link.to}/`);
 
-          {/* Vehicles Group Header */}
-          <button
-            onClick={() => setIsVehiclesExpanded(!isVehiclesExpanded)}
-            className={`w-full flex items-center justify-between px-4 py-3.5 mt-4 rounded-2xl transition-all duration-300 font-semibold group relative overflow-hidden bg-white/10 text-white border border-white/10 shadow-sm`}
-          >
-            <div className="flex items-center gap-3">
-              <Truck className="w-5 h-5 text-blue-400" />
-              <span className="text-left leading-tight text-sm">Gestión de<br/>Vehículos</span>
+                  return (
+                    <Link
+                      key={link.to}
+                      to={link.to}
+                      onClick={onClose}
+                      className={`flex items-center gap-3 px-4 py-3 ml-2 rounded-xl transition-all duration-300 font-medium group relative overflow-hidden ${
+                        isActive
+                          ? 'bg-white/10 text-white shadow-sm border border-white/10'
+                          : 'text-emerald-100/70 hover:bg-white/5 hover:text-white border border-transparent'
+                      }`}
+                    >
+                      <Icon className={`w-4 h-4 ${isActive ? 'text-blue-400' : 'text-emerald-200/50 group-hover:text-emerald-200'}`} />
+                      <span className="text-sm">{link.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
-            <ChevronDown className={`w-5 h-5 text-emerald-200 transition-transform duration-300 ${isVehiclesExpanded ? 'rotate-180' : ''}`} />
-          </button>
+          )}
 
-          {/* Vehicles Group Items */}
-          <div className={`space-y-1 mt-2 overflow-hidden transition-all duration-300 ${isVehiclesExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
-            {vehiclesLinks.map((link) => {
-              const Icon = link.icon;
-              const isActive = location.pathname === link.to || location.pathname.startsWith(`${link.to}/`);
-
-              return (
-                <Link
-                  key={link.to}
-                  to={link.to}
-                  onClick={onClose}
-                  className={`flex items-center gap-3 px-4 py-3 ml-2 rounded-xl transition-all duration-300 font-medium group relative overflow-hidden ${
-                    isActive
-                      ? 'bg-white/10 text-white shadow-sm border border-white/10'
-                      : 'text-emerald-100/70 hover:bg-white/5 hover:text-white border border-transparent'
-                  }`}
-                >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-blue-400' : 'text-emerald-200/50 group-hover:text-emerald-200'}`} />
-                  <span className="text-sm">{link.label}</span>
-                </Link>
-              );
-            })}
+          {isAdmin && (
+            <div>
+              <Link
+                to="/control-panel"
+                onClick={onClose}
+                className={`w-full flex items-center gap-3 px-4 py-3.5 mt-8 rounded-2xl transition-all duration-300 font-semibold group relative overflow-hidden bg-white/5 text-gray-300 hover:text-white hover:bg-white/10 border border-white/5 shadow-sm`}
+              >
+                <Settings className={`w-5 h-5 text-gray-400 group-hover:text-white transition-colors ${location.pathname === '/control-panel' ? 'text-white' : ''}`} />
+                <span className="text-left leading-tight text-sm">Panel de<br/>Control</span>
+              </Link>
+            </div>
+          )}
           </div>
         </nav>
 

@@ -6,6 +6,7 @@ import type { Vehicle, VehicleTrip } from '@/shared/types';
 import DepartureModal from '@/modules/vehicles/components/DepartureModal';
 import ArrivalModal from '@/modules/vehicles/components/ArrivalModal';
 import { getImageUrl } from '@/shared/utils/getImageUrl';
+import { useInventoryWebSocket } from '@/modules/inventory/hooks/useInventoryWebSocket';
 
 const VehicleTrips = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -39,6 +40,9 @@ const VehicleTrips = () => {
       setLoading(false);
     }
   };
+
+  // Escuchar por WebSockets para refrescar automáticamente (para múltiples dispositivos)
+  useInventoryWebSocket(fetchData);
 
   const handleOpenDeparture = (vehicle: Vehicle) => {
     setSelectedVehicleForDeparture(vehicle);

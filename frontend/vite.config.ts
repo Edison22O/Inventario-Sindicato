@@ -14,6 +14,7 @@ export default defineConfig({
       usePolling: true,
     },
     host: true, // Needed for docker
+    allowedHosts: true, // Allow ngrok and localtunnel hosts
     strictPort: true,
     port: 3000,
   }

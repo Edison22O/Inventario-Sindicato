@@ -5,6 +5,8 @@ import api from '@/shared/services/api';
 import type { Vehicle } from '@/shared/types';
 import VehicleModal from '@/modules/vehicles/components/VehicleModal';
 import { getImageUrl } from '@/shared/utils/getImageUrl';
+import { confirmDialog } from '@/shared/utils/confirmDialog';
+import { useInventoryWebSocket } from '@/modules/inventory/hooks/useInventoryWebSocket';
 
 const VehiclesCatalog = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -28,6 +30,9 @@ const VehiclesCatalog = () => {
     }
   };
 
+  // Escuchar por WebSockets
+  useInventoryWebSocket(fetchVehicles);
+
   const handleOpenModal = (vehicle?: Vehicle) => {
     setSelectedVehicle(vehicle || null);
     setIsModalOpen(true);
@@ -48,7 +53,7 @@ const VehiclesCatalog = () => {
   };
 
   const handleDeleteVehicle = async (id: number) => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar este vehículo permanentemente?')) {
+    if (await confirmDialog('¿Estás seguro de que deseas eliminar este vehículo permanentemente?')) {
       try {
         await api.delete(`/vehicles/${id}/`);
         toast.success('Vehículo eliminado');

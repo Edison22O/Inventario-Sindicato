@@ -5,18 +5,22 @@ from django.http import HttpResponse
 from django.conf import settings
 import subprocess
 import os
-from rest_framework.permissions import IsAuthenticated
-from api.models.core import Role, User, Media
-from api.serializers.core import RoleSerializer, UserSerializer, MediaSerializer
+from django.core.management import call_command
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
+from rest_framework_simplejwt.views import TokenObtainPairView
+from api.models.core import Role, User, Media, SystemSettings, ActivityLog
+from api.serializers.core import RoleSerializer, UserSerializer, MediaSerializer, CustomTokenObtainPairSerializer, SystemSettingsSerializer, ActivityLogSerializer
+from api.mixins import AuditLogMixin
 
 class RoleViewSet(viewsets.ModelViewSet):
     queryset = Role.objects.all()
     serializer_class = RoleSerializer
     permission_classes = [IsAuthenticated]
 
-class UserViewSet(viewsets.ModelViewSet):
+class UserViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    audit_module_name = 'Gestión de Usuarios'
     permission_classes = [IsAuthenticated]
 
 class MediaViewSet(viewsets.ModelViewSet):
@@ -88,3 +92,43 @@ class BackupViewSet(viewsets.ViewSet):
             if os.path.exists(file_path):
                 os.remove(file_path)
             return Response({'error': str(e), 'stderr': e.stderr.decode()}, status=500)
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
+
+class SystemSettingsViewSet(viewsets.ModelViewSet):
+    queryset = SystemSettings.objects.all()
+    serializer_class = SystemSettingsSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def list(self, request, *args, **kwargs):
+        settings = SystemSettings.load()
+        serializer = self.get_serializer(settings)
+        return Response(serializer.data)
+
+class AdminDashboardStatsViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        from api.models.core import User
+        from api.models.inventory import Product
+        from api.models.furniture import FurnitureProduct
+        from api.models.vehicles import Vehicle
+        
+        users_count = User.objects.count()
+        tech_count = Product.objects.count()
+        furniture_count = FurnitureProduct.objects.count()
+        vehicles_count = Vehicle.objects.count()
+        
+        return Response({
+            'users': users_count,
+            'tech_assets': tech_count,
+            'furniture_assets': furniture_count,
+            'vehicles': vehicles_count
+        })
+
+class ActivityLogViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = ActivityLog.objects.all()
+    serializer_class = ActivityLogSerializer
+    permission_classes = [IsAuthenticated]

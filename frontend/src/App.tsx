@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import ProtectedRoute from '@/modules/auth/components/ProtectedRoute';
+import RoleGuard from '@/modules/auth/components/RoleGuard';
 import Login from '@/modules/auth/pages/Login';
 import Home from '@/modules/home/pages/Home';
 import Dashboard from '@/modules/dashboard/pages/Dashboard';
@@ -13,6 +14,7 @@ import CategoryInventory from '@/modules/inventory/pages/CategoryInventory';
 import Suppliers from '@/modules/suppliers/pages/Suppliers';
 import Maintenances from '@/modules/maintenance/pages/Maintenances';
 import Reports from '@/modules/reports/pages/Reports';
+import SettingsDashboard from '@/modules/admin/pages/SettingsDashboard';
 
 // Furniture Modules
 import FurnitureDashboard from '@/modules/furniture/dashboard/pages/Dashboard';
@@ -41,33 +43,46 @@ function App() {
         {/* Protected Routes */}
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<Home />} />
-          <Route path="/inventory-dashboard" element={<Dashboard />} />
-          <Route path="/categories" element={<Categories />} />
-          <Route path="/categories/:id" element={<CategoryInventory />} />
-          <Route path="/departments" element={<Departments />} />
-          <Route path="/departments/:id" element={<DepartmentInventory />} />
-          <Route path="/products" element={<Products />} />
-          <Route path="/maintenances" element={<Maintenances />} />
-          <Route path="/discarded" element={<DiscardedProducts />} />
-          <Route path="/suppliers" element={<Suppliers />} />
-          <Route path="/reports" element={<Reports />} />
+          
+          {/* Inventory Modules (Tecnologico) */}
+          <Route element={<RoleGuard allowedRoles={['Tecnologico']} />}>
+            <Route path="/inventory-dashboard" element={<Dashboard />} />
+            <Route path="/categories" element={<Categories />} />
+            <Route path="/categories/:id" element={<CategoryInventory />} />
+            <Route path="/departments" element={<Departments />} />
+            <Route path="/departments/:id" element={<DepartmentInventory />} />
+            <Route path="/products" element={<Products />} />
+            <Route path="/maintenances" element={<Maintenances />} />
+            <Route path="/discarded" element={<DiscardedProducts />} />
+            <Route path="/suppliers" element={<Suppliers />} />
+            <Route path="/reports" element={<Reports />} />
+          </Route>
 
-          {/* Furniture Routes */}
-          <Route path="/furniture/inventory-dashboard" element={<FurnitureDashboard />} />
-          <Route path="/furniture/categories" element={<FurnitureCategories />} />
-          <Route path="/furniture/categories/:id" element={<FurnitureCategoryInventory />} />
-          <Route path="/furniture/departments" element={<FurnitureDepartments />} />
-          <Route path="/furniture/departments/:id" element={<FurnitureDepartmentInventory />} />
-          <Route path="/furniture/products" element={<FurnitureProducts />} />
-          <Route path="/furniture/maintenances" element={<FurnitureMaintenances />} />
-          <Route path="/furniture/discarded" element={<FurnitureDiscardedProducts />} />
-          <Route path="/furniture/suppliers" element={<FurnitureSuppliers />} />
-          <Route path="/furniture/reports" element={<FurnitureReports />} />
+          {/* Furniture Modules (Muebles) */}
+          <Route element={<RoleGuard allowedRoles={['Muebles']} />}>
+            <Route path="/furniture/inventory-dashboard" element={<FurnitureDashboard />} />
+            <Route path="/furniture/categories" element={<FurnitureCategories />} />
+            <Route path="/furniture/categories/:id" element={<FurnitureCategoryInventory />} />
+            <Route path="/furniture/departments" element={<FurnitureDepartments />} />
+            <Route path="/furniture/departments/:id" element={<FurnitureDepartmentInventory />} />
+            <Route path="/furniture/products" element={<FurnitureProducts />} />
+            <Route path="/furniture/maintenances" element={<FurnitureMaintenances />} />
+            <Route path="/furniture/discarded" element={<FurnitureDiscardedProducts />} />
+            <Route path="/furniture/suppliers" element={<FurnitureSuppliers />} />
+            <Route path="/furniture/reports" element={<FurnitureReports />} />
+          </Route>
 
-          {/* Vehicles Routes */}
-          <Route path="/vehicles/catalog" element={<VehiclesCatalog />} />
-          <Route path="/vehicles/trips" element={<VehicleTrips />} />
-          <Route path="/vehicles/history" element={<TripHistory />} />
+          {/* Vehicles Routes (Conductores) */}
+          <Route element={<RoleGuard allowedRoles={['Conductores']} />}>
+            <Route path="/vehicles/catalog" element={<VehiclesCatalog />} />
+            <Route path="/vehicles/trips" element={<VehicleTrips />} />
+            <Route path="/vehicles/history" element={<TripHistory />} />
+          </Route>
+
+          {/* Admin / Settings (Administrador) */}
+          <Route element={<RoleGuard allowedRoles={['Administrador']} />}>
+            <Route path="/control-panel" element={<SettingsDashboard />} />
+          </Route>
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

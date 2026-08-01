@@ -5,31 +5,37 @@ from api.serializers.furniture import (
     FurnitureCategorySerializer, FurnitureDepartmentSerializer, FurnitureSupplierSerializer,
     FurnitureProductSerializer, FurnitureMaintenanceLogSerializer
 )
+from api.mixins import AuditLogMixin
 
-class FurnitureCategoryViewSet(viewsets.ModelViewSet):
+class FurnitureCategoryViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = FurnitureCategory.objects.all()
     serializer_class = FurnitureCategorySerializer
     permission_classes = [IsAuthenticated]
+    audit_module_name = 'Muebles (Categorías)'
 
-class FurnitureDepartmentViewSet(viewsets.ModelViewSet):
+class FurnitureDepartmentViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = FurnitureDepartment.objects.all()
     serializer_class = FurnitureDepartmentSerializer
     permission_classes = [IsAuthenticated]
+    audit_module_name = 'Muebles (Departamentos)'
 
-class FurnitureSupplierViewSet(viewsets.ModelViewSet):
+class FurnitureSupplierViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = FurnitureSupplier.objects.all()
     serializer_class = FurnitureSupplierSerializer
     permission_classes = [IsAuthenticated]
+    audit_module_name = 'Muebles (Proveedores)'
 
-class FurnitureProductViewSet(viewsets.ModelViewSet):
+class FurnitureProductViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = FurnitureProduct.objects.select_related('department', 'category', 'supplier', 'media').all()
     serializer_class = FurnitureProductSerializer
     permission_classes = [IsAuthenticated]
+    audit_module_name = 'Inventario de Mobiliario'
 
-class FurnitureMaintenanceLogViewSet(viewsets.ModelViewSet):
+class FurnitureMaintenanceLogViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = FurnitureMaintenanceLog.objects.all()
     serializer_class = FurnitureMaintenanceLogSerializer
     permission_classes = [IsAuthenticated]
+    audit_module_name = 'Muebles (Mantenimiento)'
 
     def get_queryset(self):
         queryset = FurnitureMaintenanceLog.objects.select_related('product').all().order_by('-fecha', '-created_at')

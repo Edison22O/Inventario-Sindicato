@@ -6,7 +6,8 @@ from .views import (
     MaintenanceLogViewSet, BackupViewSet,
     FurnitureCategoryViewSet, FurnitureDepartmentViewSet, FurnitureSupplierViewSet,
     FurnitureProductViewSet, FurnitureMaintenanceLogViewSet,
-    VehicleViewSet, VehicleTripViewSet
+    VehicleViewSet, VehicleTripViewSet,
+    SystemSettingsViewSet, AdminDashboardStatsViewSet, ActivityLogViewSet
 )
 
 router = DefaultRouter()
@@ -19,6 +20,9 @@ router.register(r'media', MediaViewSet)
 router.register(r'products', ProductViewSet)
 router.register(r'maintenances', MaintenanceLogViewSet)
 router.register(r'backup', BackupViewSet, basename='backup')
+router.register(r'system-settings', SystemSettingsViewSet, basename='system-settings')
+router.register(r'admin-stats', AdminDashboardStatsViewSet, basename='admin-stats')
+router.register(r'audit-logs', ActivityLogViewSet, basename='audit-logs')
 
 # Furniture Routes
 router.register(r'furniture/categories', FurnitureCategoryViewSet, basename='furniture-category')

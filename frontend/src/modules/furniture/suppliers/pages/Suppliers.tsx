@@ -6,6 +6,7 @@ import type { Supplier } from '@/shared/types';
 import SupplierModal from '@/modules/furniture/suppliers/components/SupplierModal';
 import SupplierViewModal from '@/modules/furniture/suppliers/components/SupplierViewModal';
 import { useInventoryWebSocket } from '@/modules/furniture/inventory/hooks/useInventoryWebSocket';
+import { confirmDialog } from '@/shared/utils/confirmDialog';
 
 const Suppliers = () => {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -75,7 +76,7 @@ const Suppliers = () => {
   const handleDeleteSupplier = async (e: React.MouseEvent, id: number) => {
     e.preventDefault();
     e.stopPropagation();
-    if (window.confirm('¿Estás seguro de que deseas eliminar este proveedor? Sus productos quedarán sin proveedor asignado.')) {
+    if (await confirmDialog('¿Estás seguro de que deseas eliminar este proveedor? Sus productos quedarán sin proveedor asignado.')) {
       try {
         await api.delete(`/furniture/suppliers/${id}/`);
         toast.success('Proveedor eliminado');
