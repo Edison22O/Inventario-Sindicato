@@ -40,6 +40,10 @@ class SystemSettings(models.Model):
     logo = models.ImageField(upload_to='settings/', null=True, blank=True)
     primary_color = models.CharField(max_length=20, default='#148143')
     
+    # Precios de Combustible (Globales)
+    precio_gasolina = models.DecimalField(max_digits=5, decimal_places=2, default=2.40)
+    precio_diesel = models.DecimalField(max_digits=5, decimal_places=2, default=1.75)
+    
     def save(self, *args, **kwargs):
         # Enforce singleton
         self.pk = 1
@@ -69,3 +73,22 @@ class ActivityLog(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.action} - {self.timestamp}"
+
+class DriverProfile(models.Model):
+    ESTADO_CONDUCTOR = [
+        ('Activo', 'Activo'),
+        ('En Viaje', 'En Viaje'),
+        ('Inactivo', 'Inactivo'),
+    ]
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='driver_profile')
+    licencia = models.CharField(max_length=50)
+    tipo_licencia = models.CharField(max_length=20)
+    estado = models.CharField(max_length=20, choices=ESTADO_CONDUCTOR, default='Activo')
+    foto = models.ImageField(upload_to='conductores/', null=True, blank=True)
+    telefono = models.CharField(max_length=20, blank=True, null=True)
+    direccion = models.TextField(blank=True, null=True)
+    tipo_sangre = models.CharField(max_length=10, blank=True, null=True)
+    contacto_emergencia = models.CharField(max_length=100, blank=True, null=True)
+    
+    def __str__(self):
+        return f"Conductor: {self.user.get_full_name() or self.user.username}"

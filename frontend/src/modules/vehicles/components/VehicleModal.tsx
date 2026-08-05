@@ -18,7 +18,14 @@ const VehicleModal: React.FC<VehicleModalProps> = ({ isOpen, onClose, onSave, ve
     modelo: '',
     año: new Date().getFullYear(),
     color: '',
-    estado_actual: 'En Sindicato'
+    estado_actual: 'En Sindicato',
+    tipo_combustible: 'Gasolina',
+    capacidad_tanque_galones: 10,
+    rendimiento_km_por_galon: 40,
+    odometro_actual: 0,
+    combustible_actual_galones: 0,
+    mes_matricula: '',
+    fecha_vencimiento_matricula: ''
   });
   
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -36,7 +43,14 @@ const VehicleModal: React.FC<VehicleModalProps> = ({ isOpen, onClose, onSave, ve
         modelo: '',
         año: new Date().getFullYear(),
         color: '',
-        estado_actual: 'En Sindicato'
+        estado_actual: 'En Sindicato',
+        tipo_combustible: 'Gasolina',
+        capacidad_tanque_galones: 10,
+        rendimiento_km_por_galon: 40,
+        odometro_actual: 0,
+        combustible_actual_galones: 0,
+        mes_matricula: '',
+        fecha_vencimiento_matricula: ''
       });
       setPreviewUrl(null);
     }
@@ -150,6 +164,49 @@ const VehicleModal: React.FC<VehicleModalProps> = ({ isOpen, onClose, onSave, ve
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Color *</label>
                 <input required type="text" name="color" value={formData.color} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4 border-t border-gray-100 pt-6">
+              <h3 className="col-span-full text-lg font-bold text-gray-900">Configuración de Combustible</h3>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Combustible *</label>
+                <select required name="tipo_combustible" value={formData.tipo_combustible || 'Gasolina'} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500">
+                  <option value="Gasolina">Gasolina</option>
+                  <option value="Diesel">Diesel</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Capacidad del Tanque (Galones) *</label>
+                <input required type="number" step="0.01" name="capacidad_tanque_galones" value={formData.capacidad_tanque_galones || ''} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Rendimiento (KM por Galón) *</label>
+                <input required type="number" step="0.01" name="rendimiento_km_por_galon" value={formData.rendimiento_km_por_galon || ''} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4 border-t border-gray-100 pt-6">
+              <h3 className="col-span-full text-lg font-bold text-gray-900">Estado Inicial</h3>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Odómetro Actual (KM) *</label>
+                <input required type="number" name="odometro_actual" value={formData.odometro_actual || 0} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Combustible Actual (Galones) *</label>
+                <input required type="number" step="0.01" name="combustible_actual_galones" value={formData.combustible_actual_galones || 0} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4 border-t border-gray-100 pt-6">
+              <h3 className="col-span-full text-lg font-bold text-gray-900">Matrícula</h3>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mes de Matrícula</label>
+                <input type="text" name="mes_matricula" value={formData.mes_matricula || ''} onChange={handleChange} placeholder="Ej: Octubre" className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Vencimiento Matrícula</label>
+                <input type="date" name="fecha_vencimiento_matricula" value={formData.fecha_vencimiento_matricula || ''} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500" />
               </div>
             </div>
 

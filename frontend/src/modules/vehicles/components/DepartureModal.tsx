@@ -15,8 +15,6 @@ interface DepartureModalProps {
 const DepartureModal: React.FC<DepartureModalProps> = ({ isOpen, onClose, onSave, vehicle }) => {
   const [formData, setFormData] = useState({
     descripcion_salida: '',
-    kilometraje_salida: '',
-    gasolina_salida: '100',
   });
   
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -61,8 +59,6 @@ const DepartureModal: React.FC<DepartureModalProps> = ({ isOpen, onClose, onSave
     const data = new FormData();
     data.append('vehicle', String(vehicle.id));
     data.append('descripcion_salida', formData.descripcion_salida);
-    data.append('kilometraje_salida', formData.kilometraje_salida);
-    data.append('gasolina_salida', formData.gasolina_salida);
     data.append('foto_evidencia_salida', imageFile);
 
     try {
@@ -70,7 +66,7 @@ const DepartureModal: React.FC<DepartureModalProps> = ({ isOpen, onClose, onSave
       toast.success('Salida registrada con éxito');
       
       // Limpiar
-      setFormData({ descripcion_salida: '', kilometraje_salida: '', gasolina_salida: '100' });
+      setFormData({ descripcion_salida: '' });
       setImageFile(null);
       setPreviewUrl(null);
       
@@ -103,21 +99,8 @@ const DepartureModal: React.FC<DepartureModalProps> = ({ isOpen, onClose, onSave
               <textarea required name="descripcion_salida" rows={2} value={formData.descripcion_salida} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500" placeholder="Ej: Viaje a Quito por reunión directiva..." />
             </div>
 
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Kilometraje Actual *</label>
-                <input required type="number" name="kilometraje_salida" value={formData.kilometraje_salida} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500" placeholder="Ej: 154000" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nivel de Gasolina (%) *</label>
-                <select required name="gasolina_salida" value={formData.gasolina_salida} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500">
-                  <option value="100">Lleno (100%)</option>
-                  <option value="75">Tres Cuartos (75%)</option>
-                  <option value="50">Medio Tanque (50%)</option>
-                  <option value="25">Un Cuarto (25%)</option>
-                  <option value="10">Reserva (10%)</option>
-                </select>
-              </div>
+            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 text-sm text-blue-800">
+              <span className="font-semibold">Información Actual:</span> El vehículo tiene {vehicle.odometro_actual} KM y {vehicle.combustible_actual_galones} galones de combustible.
             </div>
 
             <div>

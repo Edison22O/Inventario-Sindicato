@@ -20,6 +20,13 @@ class VehicleTripViewSet(AuditLogMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     audit_module_name = 'Viajes'
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        vehicle_id = self.request.query_params.get('vehicle', None)
+        if vehicle_id is not None:
+            queryset = queryset.filter(vehicle_id=vehicle_id)
+        return queryset
+
     def perform_create(self, serializer):
         # Al crear la salida
         trip = serializer.save(conductor=self.request.user, estado_viaje='En Curso')
@@ -41,26 +48,22 @@ class VehicleTripViewSet(AuditLogMixin, viewsets.ModelViewSet):
         
         # Extraer datos de llegada
         kilometraje_llegada = request.data.get('kilometraje_llegada')
-        gasolina_llegada = request.data.get('gasolina_llegada')
-        descripcion_llegada = request.data.get('descripcion_llegada', '')
+        galones_recargados = request.data.get('galones_recargados', 0)
+        novedades_observaciones = request.data.get('novedades_observaciones', '')
         foto_evidencia_llegada = request.FILES.get('foto_evidencia_llegada')
 
-        if not kilometraje_llegada or not gasolina_llegada or not foto_evidencia_llegada:
-            return Response({'detail': 'Kilometraje, gasolina y foto de evidencia son obligatorios para la llegada.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not kilometraje_llegada or not foto_evidencia_llegada:
+            return Response({'detail': 'Kilometraje y foto de evidencia son obligatorios para la llegada.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Actualizar viaje
-        trip.kilometraje_llegada = kilometraje_llegada
-        trip.gasolina_llegada = gasolina_llegada
-        trip.descripcion_llegada = descripcion_llegada
+        trip.kilometraje_llegada = int(kilometraje_llegada)
+        trip.galones_recargados = galones_recargados
+        trip.novedades_observaciones = novedades_observaciones
         trip.foto_evidencia_llegada = foto_evidencia_llegada
         trip.fecha_hora_llegada = timezone.now()
         trip.estado_viaje = 'Finalizado'
+        # El save() se encargará de toda la matemática y actualización del vehículo
         trip.save()
-
-        # Actualizar vehículo
-        vehicle = trip.vehicle
-        vehicle.estado_actual = 'En Sindicato'
-        vehicle.save()
 
         broadcast_inventory_update('Vehicle', 'update')
         broadcast_inventory_update('VehicleTrip', 'update')

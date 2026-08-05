@@ -6,10 +6,11 @@ import GlobalDashboard from '../components/GlobalDashboard';
 import SystemSettingsPanel from '../components/SystemSettingsPanel';
 import GlobalCatalogs from '../components/GlobalCatalogs';
 import AuditLogs from '../components/AuditLogs';
-import { Activity } from 'lucide-react';
+import VehicleMaintenanceAdmin from '../components/VehicleMaintenanceAdmin';
+import { Activity, Wrench } from 'lucide-react';
 
 const SettingsDashboard = () => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'catalogs' | 'settings' | 'backups' | 'audit'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'catalogs' | 'settings' | 'backups' | 'audit' | 'pm'>('dashboard');
 
   return (
     <div className="flex-1 p-8">
@@ -92,6 +93,17 @@ const SettingsDashboard = () => {
             <Database className="w-5 h-5" />
             Base de Datos y Respaldos
           </button>
+          <button
+            onClick={() => setActiveTab('pm')}
+            className={`flex items-center gap-2 py-4 px-4 whitespace-nowrap border-b-2 font-medium text-sm transition-colors ${
+              activeTab === 'pm'
+                ? 'border-emerald-600 text-emerald-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <Wrench className="w-5 h-5" />
+            PM Vehículos
+          </button>
         </div>
 
         {/* Tab Content */}
@@ -102,6 +114,7 @@ const SettingsDashboard = () => {
           {activeTab === 'audit' && <AuditLogs />}
           {activeTab === 'settings' && <SystemSettingsPanel />}
           {activeTab === 'backups' && <SystemBackups />}
+          {activeTab === 'pm' && <VehicleMaintenanceAdmin />}
         </div>
       </div>
     </div>

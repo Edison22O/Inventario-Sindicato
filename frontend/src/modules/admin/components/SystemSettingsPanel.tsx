@@ -7,7 +7,9 @@ const SystemSettingsPanel = () => {
   const [settingsId, setSettingsId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     organization_name: '',
-    primary_color: '#148143'
+    primary_color: '#148143',
+    precio_gasolina: '2.40',
+    precio_diesel: '1.75'
   });
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [currentLogo, setCurrentLogo] = useState<string | null>(null);
@@ -25,7 +27,9 @@ const SystemSettingsPanel = () => {
         setSettingsId(response.data.id);
         setFormData({
           organization_name: response.data.organization_name,
-          primary_color: response.data.primary_color
+          primary_color: response.data.primary_color,
+          precio_gasolina: response.data.precio_gasolina || '2.40',
+          precio_diesel: response.data.precio_diesel || '1.75'
         });
         setCurrentLogo(response.data.logo);
       }
@@ -41,6 +45,8 @@ const SystemSettingsPanel = () => {
       const data = new FormData();
       data.append('organization_name', formData.organization_name);
       data.append('primary_color', formData.primary_color);
+      data.append('precio_gasolina', formData.precio_gasolina);
+      data.append('precio_diesel', formData.precio_diesel);
       if (logoFile) {
         data.append('logo', logoFile);
       }
@@ -80,6 +86,39 @@ const SystemSettingsPanel = () => {
             className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all font-medium text-gray-900"
             placeholder="Ej. Sindicato de Choferes..."
           />
+        </div>
+
+        {/* Precios de Combustible */}
+        <div className="pt-6 border-t border-gray-100">
+          <h3 className="text-lg font-bold text-gray-900 mb-4">Precios Globales de Combustible</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Precio Gasolina (Por Galón)</label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formData.precio_gasolina}
+                  onChange={(e) => setFormData({...formData, precio_gasolina: e.target.value})}
+                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all font-medium text-gray-900"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Precio Diésel (Por Galón)</label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formData.precio_diesel}
+                  onChange={(e) => setFormData({...formData, precio_diesel: e.target.value})}
+                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all font-medium text-gray-900"
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Logo */}

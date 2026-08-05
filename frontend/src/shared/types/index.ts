@@ -76,6 +76,19 @@ export interface Vehicle {
   color: string;
   estado_actual: string;
   foto_vehiculo?: string;
+  
+  // Nuevos campos
+  mes_matricula?: string;
+  fecha_vencimiento_matricula?: string;
+  tipo_combustible?: string;
+  capacidad_tanque_galones?: string | number;
+  rendimiento_km_por_galon?: string | number;
+  odometro_actual?: number;
+  combustible_actual_galones?: string | number;
+  dias_para_vencimiento_matricula?: number | null;
+  alerta_matricula?: string;
+  proximo_mantenimiento?: string;
+  
   created_at?: string;
 }
 
@@ -88,16 +101,47 @@ export interface VehicleTrip {
   conductor: number;
   conductor_name?: string;
   estado_viaje: string;
+  
   descripcion_salida: string;
   fecha_hora_salida?: string;
   kilometraje_salida: number;
-  gasolina_salida: number;
   foto_evidencia_salida?: string;
+  
   fecha_hora_llegada?: string;
   kilometraje_llegada?: number;
-  gasolina_llegada?: number;
   foto_evidencia_llegada?: string;
-  descripcion_llegada?: string;
+  novedades_observaciones?: string;
+  
+  galones_recargados?: string | number;
+  km_recorridos?: number;
+  costo_combustible_viaje?: string | number;
+}
+
+export interface VehicleMaintenance {
+  id: number;
+  vehicle: number;
+  vehicle_placa?: string;
+  actividad: string;
+  fecha_ultimo_cambio: string;
+  km_ultimo_cambio: number;
+  frecuencia_km: number;
+  notas?: string;
+  km_proximo_cambio?: number;
+  km_recorridos_desde_cambio?: number;
+  estado_alerta?: string;
+}
+
+export interface DriverProfile {
+  id: number;
+  user: number;
+  licencia: string;
+  tipo_licencia: string;
+  estado: string;
+  foto?: string | null;
+  telefono?: string;
+  direccion?: string;
+  tipo_sangre?: string;
+  contacto_emergencia?: string;
 }
 
 // Trick to force Vite to treat this as a module with at least one export

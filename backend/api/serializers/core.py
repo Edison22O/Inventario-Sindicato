@@ -1,7 +1,12 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
-from api.models.core import Role, User, Media
+from api.models.core import Role, User, Media, DriverProfile
+
+class DriverProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DriverProfile
+        fields = '__all__'
 
 class RoleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -9,9 +14,11 @@ class RoleSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class UserSerializer(serializers.ModelSerializer):
+    role_name = serializers.CharField(source='role.name', read_only=True)
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'password', 'role', 'image', 'is_active', 'last_login']
+        fields = ['id', 'username', 'email', 'password', 'role', 'role_name', 'image', 'is_active', 'last_login']
         extra_kwargs = {'password': {'write_only': True, 'required': False}}
 
     def create(self, validated_data):

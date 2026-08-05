@@ -14,9 +14,9 @@ interface ArrivalModalProps {
 
 const ArrivalModal: React.FC<ArrivalModalProps> = ({ isOpen, onClose, onSave, trip }) => {
   const [formData, setFormData] = useState({
-    descripcion_llegada: '',
+    novedades_observaciones: '',
     kilometraje_llegada: '',
-    gasolina_llegada: '100',
+    galones_recargados: '0',
   });
   
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -63,16 +63,16 @@ const ArrivalModal: React.FC<ArrivalModalProps> = ({ isOpen, onClose, onSave, tr
     setIsSubmitting(true);
     
     const data = new FormData();
-    data.append('descripcion_llegada', formData.descripcion_llegada);
+    data.append('novedades_observaciones', formData.novedades_observaciones);
     data.append('kilometraje_llegada', formData.kilometraje_llegada);
-    data.append('gasolina_llegada', formData.gasolina_llegada);
+    data.append('galones_recargados', formData.galones_recargados);
     data.append('foto_evidencia_llegada', imageFile);
 
     try {
       await onSave(trip.id, data);
       toast.success('Llegada registrada con éxito');
       
-      setFormData({ descripcion_llegada: '', kilometraje_llegada: '', gasolina_llegada: '100' });
+      setFormData({ novedades_observaciones: '', kilometraje_llegada: '', galones_recargados: '0' });
       setImageFile(null);
       setPreviewUrl(null);
       
@@ -101,12 +101,12 @@ const ArrivalModal: React.FC<ArrivalModalProps> = ({ isOpen, onClose, onSave, tr
           <form id="arrivalForm" onSubmit={handleSubmit} className="space-y-6">
             
             <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 text-sm text-blue-800">
-              <span className="font-semibold">Recordatorio de Salida:</span> Salió con {trip.kilometraje_salida} KM y {trip.gasolina_salida}% de gasolina.
+              <span className="font-semibold">Recordatorio de Salida:</span> Salió con {trip.kilometraje_salida} KM.
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Novedades al llegar (Opcional)</label>
-              <textarea name="descripcion_llegada" rows={2} value={formData.descripcion_llegada} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500" placeholder="Ej: Todo normal / Rayón en puerta derecha..." />
+              <textarea name="novedades_observaciones" rows={2} value={formData.novedades_observaciones} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500" placeholder="Ej: Todo normal / Rayón en puerta derecha..." />
             </div>
 
             <div className="grid grid-cols-2 gap-6">
@@ -115,14 +115,8 @@ const ArrivalModal: React.FC<ArrivalModalProps> = ({ isOpen, onClose, onSave, tr
                 <input required type="number" min={trip.kilometraje_salida} name="kilometraje_llegada" value={formData.kilometraje_llegada} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500" placeholder="Ej: 154150" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nivel de Gasolina (%) *</label>
-                <select required name="gasolina_llegada" value={formData.gasolina_llegada} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500">
-                  <option value="100">Lleno (100%)</option>
-                  <option value="75">Tres Cuartos (75%)</option>
-                  <option value="50">Medio Tanque (50%)</option>
-                  <option value="25">Un Cuarto (25%)</option>
-                  <option value="10">Reserva (10%)</option>
-                </select>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Galones Recargados (Opcional)</label>
+                <input type="number" step="0.01" min="0" name="galones_recargados" value={formData.galones_recargados} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500" placeholder="Ej: 5.50" />
               </div>
             </div>
 

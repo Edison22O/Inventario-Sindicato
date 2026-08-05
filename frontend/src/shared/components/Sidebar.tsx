@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, Tags, Layers, LogOut, X, Truck, Wrench, FileBarChart, ChevronDown, Monitor, Armchair, Home as HomeIcon, Settings } from 'lucide-react';
+import { LayoutDashboard, Package, Tags, Layers, LogOut, X, Truck, Wrench, FileBarChart, ChevronDown, Monitor, Armchair, Home as HomeIcon, Settings, Users } from 'lucide-react';
 import { authService } from '@/services/authService';
 import api from '@/shared/services/api';
 
@@ -63,8 +63,12 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
   const vehiclesLinks = [
     { to: '/vehicles/catalog', icon: Truck, label: 'Flota Vehicular' },
+    { to: '/vehicles/drivers', icon: Users, label: 'Conductores' },
+    { to: '/vehicles/matriculas', icon: FileBarChart, label: 'Matrícula Vehicular' },
     { to: '/vehicles/trips', icon: Layers, label: 'Control de Salidas' },
+    { to: '/vehicles/maintenances', icon: Wrench, label: 'Mantenimiento Vehicular' },
     { to: '/vehicles/history', icon: FileBarChart, label: 'Historial de Viajes' },
+    { to: '/vehicles/reports', icon: FileBarChart, label: 'Reportes' },
   ];
 
   return (

@@ -8,9 +8,14 @@ import os
 from django.core.management import call_command
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
 from rest_framework_simplejwt.views import TokenObtainPairView
-from api.models.core import Role, User, Media, SystemSettings, ActivityLog
-from api.serializers.core import RoleSerializer, UserSerializer, MediaSerializer, CustomTokenObtainPairSerializer, SystemSettingsSerializer, ActivityLogSerializer
+from api.models.core import Role, User, Media, SystemSettings, ActivityLog, DriverProfile
+from api.serializers.core import RoleSerializer, UserSerializer, MediaSerializer, CustomTokenObtainPairSerializer, SystemSettingsSerializer, ActivityLogSerializer, DriverProfileSerializer
 from api.mixins import AuditLogMixin
+
+class DriverProfileViewSet(viewsets.ModelViewSet):
+    queryset = DriverProfile.objects.select_related('user').all()
+    serializer_class = DriverProfileSerializer
+    permission_classes = [IsAuthenticated]
 
 class RoleViewSet(viewsets.ModelViewSet):
     queryset = Role.objects.all()
