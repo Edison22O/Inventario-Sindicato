@@ -12,7 +12,16 @@ const VehicleMatriculas = () => {
   // Estados para renovar matrícula
   const [isRenewModalOpen, setIsRenewModalOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
-  const [newExpirationDate, setNewExpirationDate] = useState('');
+  
+  const [formData, setFormData] = useState({
+    fecha_pago: new Date().toISOString().split('T')[0],
+    año_matriculado: new Date().getFullYear().toString(),
+    costo: '',
+    lugar_tramite: '',
+    nueva_fecha_vencimiento: '',
+    notas: ''
+  });
+  
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -32,13 +41,22 @@ const VehicleMatriculas = () => {
 
   const handleOpenRenewModal = (vehicle: Vehicle) => {
     setSelectedVehicle(vehicle);
-    // Sugerir exactamente un año después de su vencimiento actual, o la fecha de hoy si no tiene
+    
+    let suggestedExpiration = new Date().toISOString().split('T')[0];
     if (vehicle.fecha_vencimiento_matricula) {
       const [y, m, d] = vehicle.fecha_vencimiento_matricula.split('-');
-      setNewExpirationDate(`${parseInt(y) + 1}-${m}-${d}`);
-    } else {
-      setNewExpirationDate(new Date().toISOString().split('T')[0]);
+      suggestedExpiration = `${parseInt(y) + 1}-${m}-${d}`;
     }
+
+    setFormData({
+      fecha_pago: new Date().toISOString().split('T')[0],
+      año_matriculado: new Date().getFullYear().toString(),
+      costo: '',
+      lugar_tramite: '',
+      nueva_fecha_vencimiento: suggestedExpiration,
+      notas: ''
+    });
+
     setIsRenewModalOpen(true);
   };
 
@@ -48,14 +66,17 @@ const VehicleMatriculas = () => {
 
     setSubmitting(true);
     try {
-      await api.patch(`/vehicles/${selectedVehicle.id}/`, {
-        fecha_vencimiento_matricula: newExpirationDate
+      await api.post('/vehicle-registrations/', {
+        ...formData,
+        vehicle: selectedVehicle.id,
+        costo: parseFloat(formData.costo || '0'),
+        año_matriculado: parseInt(formData.año_matriculado)
       });
-      toast.success('Matrícula renovada exitosamente');
+      toast.success('Renovación registrada exitosamente en el historial');
       setIsRenewModalOpen(false);
       fetchVehicles(); // Refrescar tabla
     } catch (error) {
-      toast.error('Error al renovar la matrícula');
+      toast.error('Error al registrar la renovación');
     } finally {
       setSubmitting(false);
     }
@@ -251,16 +272,36 @@ const VehicleMatriculas = () => {
                 </p>
               </div>
 
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Año Matriculado *</label>
+                  <input type="number" required value={formData.año_matriculado} onChange={e => setFormData({...formData, año_matriculado: e.target.value})} className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Costo Total ($) *</label>
+                  <input type="number" step="0.01" min="0" required value={formData.costo} onChange={e => setFormData({...formData, costo: e.target.value})} className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Fecha de Pago *</label>
+                  <input type="date" required value={formData.fecha_pago} onChange={e => setFormData({...formData, fecha_pago: e.target.value})} className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Nueva Fecha Vencimiento *</label>
+                  <input type="date" required value={formData.nueva_fecha_vencimiento} onChange={e => setFormData({...formData, nueva_fecha_vencimiento: e.target.value})} className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" />
+                </div>
+              </div>
+
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Nueva Fecha de Vencimiento</label>
-                <input
-                  type="date"
-                  required
-                  value={newExpirationDate}
-                  onChange={e => setNewExpirationDate(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-                />
-                <p className="text-xs text-gray-500 mt-2">La "Fecha de inicio" se calculará automáticamente como 1 año antes de esta nueva fecha.</p>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Lugar de Trámite</label>
+                <input type="text" placeholder="Ej. Agencia ANT..." value={formData.lugar_tramite} onChange={e => setFormData({...formData, lugar_tramite: e.target.value})} className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Notas u Observaciones</label>
+                <textarea rows={2} value={formData.notas} onChange={e => setFormData({...formData, notas: e.target.value})} className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Pago de multas, retenciones..." />
               </div>
 
               <div className="pt-2 flex justify-end gap-3">

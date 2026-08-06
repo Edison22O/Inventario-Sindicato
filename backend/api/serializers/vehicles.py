@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from api.models.vehicles import Vehicle, VehicleTrip
+from api.models.vehicles import Vehicle, VehicleTrip, VehicleRegistrationRecord
 
 class VehicleSerializer(serializers.ModelSerializer):
     dias_para_vencimiento_matricula = serializers.ReadOnlyField()
@@ -36,3 +36,10 @@ class VehicleTripSerializer(serializers.ModelSerializer):
         model = VehicleTrip
         fields = '__all__'
         read_only_fields = ('fecha_hora_salida', 'fecha_hora_llegada', 'estado_viaje', 'conductor', 'kilometraje_salida', 'km_recorridos', 'costo_combustible_viaje')
+
+class VehicleRegistrationRecordSerializer(serializers.ModelSerializer):
+    vehicle_placa = serializers.CharField(source='vehicle.placa', read_only=True)
+
+    class Meta:
+        model = VehicleRegistrationRecord
+        fields = '__all__'

@@ -31,6 +31,7 @@ import FurnitureReports from '@/modules/furniture/reports/pages/Reports';
 // Vehicles Modules
 import VehiclesCatalog from '@/modules/vehicles/pages/VehiclesCatalog';
 import VehicleTrips from '@/modules/vehicles/pages/VehicleTrips';
+import VehiclesDashboard from '@/modules/vehicles/pages/VehiclesDashboard';
 import TripHistory from '@/modules/vehicles/pages/TripHistory';
 import DriversCatalog from '@/modules/vehicles/pages/DriversCatalog';
 import DriverProfilePage from '@/modules/vehicles/pages/DriverProfile';
@@ -80,6 +81,8 @@ function App() {
 
           {/* Vehicles Routes (Conductores) */}
           <Route element={<RoleGuard allowedRoles={['Conductores', 'Administrador']} />}>
+            {/* Vehicles Routes */}
+            <Route path="/vehicles/dashboard" element={<VehiclesDashboard />} />
             <Route path="/vehicles/catalog" element={<VehiclesCatalog />} />
             <Route path="/vehicles/drivers" element={<DriversCatalog />} />
             <Route path="/vehicles/drivers/:id" element={<DriverProfilePage />} />

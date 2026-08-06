@@ -62,6 +62,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   ];
 
   const vehiclesLinks = [
+    { to: '/vehicles/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/vehicles/catalog', icon: Truck, label: 'Flota Vehicular' },
     { to: '/vehicles/drivers', icon: Users, label: 'Conductores' },
     { to: '/vehicles/matriculas', icon: FileBarChart, label: 'Matrícula Vehicular' },

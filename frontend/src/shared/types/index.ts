@@ -128,12 +128,29 @@ export interface VehicleMaintenance {
   vehicle_placa?: string;
   actividad: string;
   fecha_ultimo_cambio: string;
+  fecha_proximo_cambio?: string | null;
   km_ultimo_cambio: number;
   frecuencia_km: number;
+  km_proximo_cambio: number;
+  km_recorridos_desde_cambio: number;
+  dias_transcurridos: number;
+  dias_restantes: number | null;
+  km_restantes_para_proximo_cambio: number;
+  estado_alerta: string;
   notas?: string;
-  km_proximo_cambio?: number;
-  km_recorridos_desde_cambio?: number;
-  estado_alerta?: string;
+}
+
+export interface VehicleRegistrationRecord {
+  id: number;
+  vehicle: number;
+  vehicle_placa?: string;
+  fecha_pago: string;
+  año_matriculado: number;
+  costo: string;
+  lugar_tramite?: string;
+  nueva_fecha_vencimiento: string;
+  notas?: string;
+  created_at?: string;
 }
 
 export interface DriverProfile {

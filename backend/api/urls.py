@@ -9,7 +9,7 @@ from .views import (
     FurnitureProductViewSet, FurnitureMaintenanceLogViewSet,
     VehicleViewSet, VehicleTripViewSet,
     SystemSettingsViewSet, AdminDashboardStatsViewSet, ActivityLogViewSet,
-    DriverProfileViewSet
+    DriverProfileViewSet, VehicleRegistrationRecordViewSet, VehicleDashboardStatsView
 )
 from api.views.maintenance import MaintenanceLogViewSet, VehicleMaintenanceViewSet, VehicleMaintenanceRecordViewSet
 
@@ -41,7 +41,9 @@ router.register(r'vehicles', VehicleViewSet, basename='vehicles')
 router.register(r'vehicle-trips', VehicleTripViewSet, basename='vehicle-trips')
 router.register(r'vehicle-maintenances', VehicleMaintenanceViewSet, basename='vehicle-maintenances')
 router.register(r'driver-profiles', DriverProfileViewSet, basename='driver-profiles')
+router.register(r'vehicle-registrations', VehicleRegistrationRecordViewSet, basename='vehicle-registrations')
 
 urlpatterns = [
+    path('vehicle-dashboard-stats/', VehicleDashboardStatsView.as_view(), name='vehicle-dashboard-stats'),
     path('', include(router.urls)),
 ]

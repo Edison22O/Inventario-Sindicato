@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Truck, Calendar, Gauge, Droplet, Wrench, FileText, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Truck, Calendar, Gauge, Droplet, Wrench, FileText, AlertTriangle, Plus, X, DollarSign } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/shared/services/api';
-import type { Vehicle, VehicleTrip, VehicleMaintenance } from '@/shared/types';
+import type { Vehicle, VehicleTrip, VehicleMaintenance, VehicleRegistrationRecord } from '@/shared/types';
 import { getImageUrl } from '@/shared/utils/getImageUrl';
 
 const VehicleProfile = () => {
@@ -17,6 +17,21 @@ const VehicleProfile = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
+  // Matricula History Modal
+  const [isMatriculaModalOpen, setIsMatriculaModalOpen] = useState(false);
+  const [registrations, setRegistrations] = useState<VehicleRegistrationRecord[]>([]);
+  const [loadingRegistrations, setLoadingRegistrations] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [formData, setFormData] = useState({
+    fecha_pago: new Date().toISOString().split('T')[0],
+    año_matriculado: new Date().getFullYear().toString(),
+    costo: '',
+    lugar_tramite: '',
+    nueva_fecha_vencimiento: '',
+    notas: ''
+  });
+  const [submittingRegistration, setSubmittingRegistration] = useState(false);
+
   useEffect(() => {
     fetchVehicleData();
   }, [id]);
@@ -29,13 +44,52 @@ const VehicleProfile = () => {
         api.get(`/vehicle-maintenances/?vehicle=${id}`)
       ]);
       setVehicle(vehicleRes.data);
-      // Solo mostramos los viajes que ya terminaron o están en curso, ordenados por fecha (más recientes primero)
       setTrips(tripsRes.data);
       setMaintenances(maintRes.data);
     } catch (error) {
       toast.error('Error al cargar el perfil del vehículo');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadRegistrations = async () => {
+    setLoadingRegistrations(true);
+    try {
+      const res = await api.get(`/vehicle-registrations/?vehicle=${id}`);
+      setRegistrations(res.data);
+    } catch (error) {
+      toast.error('Error al cargar historial de matrículas');
+    } finally {
+      setLoadingRegistrations(false);
+    }
+  };
+
+  const openMatriculaModal = () => {
+    setIsMatriculaModalOpen(true);
+    setShowAddForm(false);
+    loadRegistrations();
+  };
+
+  const handleAddRegistration = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmittingRegistration(true);
+    try {
+      await api.post('/vehicle-registrations/', {
+        ...formData,
+        vehicle: id,
+        costo: parseFloat(formData.costo || '0'),
+        año_matriculado: parseInt(formData.año_matriculado)
+      });
+      toast.success('Renovación registrada exitosamente');
+      setShowAddForm(false);
+      loadRegistrations();
+      // Recargar vehículo para ver la nueva fecha de vencimiento
+      fetchVehicleData();
+    } catch (error) {
+      toast.error('Error al registrar la renovación');
+    } finally {
+      setSubmittingRegistration(false);
     }
   };
 
@@ -54,7 +108,7 @@ const VehicleProfile = () => {
   }
 
   return (
-    <div className="p-4 sm:p-8 max-w-7xl mx-auto space-y-8">
+    <div className="p-4 sm:p-8 max-w-7xl mx-auto space-y-8 pb-32">
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link to="/vehicles/catalog" className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors">
@@ -118,7 +172,6 @@ const VehicleProfile = () => {
                     <span className="text-gray-500">Color</span>
                     <span className="font-medium text-gray-900">{vehicle.color}</span>
                   </div>
-                  
                   {vehicle.chasis && (
                     <div className="flex justify-between border-b border-gray-50 pb-2">
                       <span className="text-gray-500">Chasis</span>
@@ -164,19 +217,32 @@ const VehicleProfile = () => {
                 </div>
               </div>
 
+              {/* Matrícula Vehicular */}
               <div className={`p-4 rounded-2xl border ${
                 vehicle.alerta_matricula === 'VIGENTE' ? 'bg-blue-50 border-blue-100' :
                 vehicle.alerta_matricula === 'PRÓXIMA A VENCER' ? 'bg-orange-50 border-orange-100' :
                 'bg-red-50 border-red-100'
               }`}>
-                <h3 className="font-bold text-gray-900 mb-1 flex items-center gap-2">
-                  <Calendar className="w-5 h-5" />
-                  Matrícula
-                </h3>
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                    <Calendar className="w-5 h-5" />
+                    Matrícula
+                  </h3>
+                  <button 
+                    onClick={openMatriculaModal}
+                    className="text-xs font-bold bg-white px-2 py-1 rounded shadow-sm text-gray-700 hover:bg-gray-50 border border-gray-200 transition-colors"
+                  >
+                    Renovar / Historial
+                  </button>
+                </div>
                 <p className="text-sm font-medium mb-1">Mes: {vehicle.mes_matricula || 'No registrado'}</p>
                 <p className="text-sm font-medium">Vencimiento: {vehicle.fecha_vencimiento_matricula || 'No registrado'}</p>
                 {vehicle.dias_para_vencimiento_matricula !== null && (
-                  <p className="text-xs font-bold mt-2 uppercase tracking-wide">
+                  <p className={`text-xs font-bold mt-2 uppercase tracking-wide px-2 py-1 rounded inline-block ${
+                    vehicle.alerta_matricula === 'VIGENTE' ? 'bg-blue-100 text-blue-800' :
+                    vehicle.alerta_matricula === 'PRÓXIMA A VENCER' ? 'bg-orange-100 text-orange-800' :
+                    'bg-red-100 text-red-800'
+                  }`}>
                     {vehicle.alerta_matricula} ({vehicle.dias_para_vencimiento_matricula} días)
                   </p>
                 )}
@@ -207,7 +273,7 @@ const VehicleProfile = () => {
                     <div className="flex justify-between items-start mb-2">
                       <h3 className="font-bold text-gray-900">{pm.actividad}</h3>
                       <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
-                        pm.estado_alerta === 'REQUERIDO' ? 'bg-red-100 text-red-700' :
+                        pm.estado_alerta === 'CAMBIO URGENTE' ? 'bg-red-100 text-red-700' :
                         pm.estado_alerta === 'PRÓXIMO' ? 'bg-orange-100 text-orange-700' :
                         'bg-emerald-100 text-emerald-700'
                       }`}>
@@ -220,7 +286,7 @@ const VehicleProfile = () => {
                       <p className="font-medium text-gray-900 mt-2">Próximo a los: {pm.km_proximo_cambio} KM</p>
                     </div>
                     
-                    {pm.estado_alerta === 'REQUERIDO' && (
+                    {pm.estado_alerta === 'CAMBIO URGENTE' && (
                       <div className="mt-3 p-2 bg-red-100 text-red-700 rounded-lg text-xs font-bold flex items-center gap-1">
                         <AlertTriangle className="w-4 h-4" />
                         Mantenimiento Vencido
@@ -333,6 +399,118 @@ const VehicleProfile = () => {
 
         </div>
       </div>
+
+      {/* Modal Historial de Matrículas */}
+      {isMatriculaModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl w-full max-w-3xl max-h-[85vh] shadow-2xl flex flex-col overflow-hidden">
+            <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50 shrink-0">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <FileText className="w-6 h-6 text-blue-600" />
+                  Historial de Matrículas
+                </h2>
+                <p className="text-sm text-gray-500 font-medium mt-1">
+                  Vehículo: {vehicle.placa}
+                </p>
+              </div>
+              <button onClick={() => setIsMatriculaModalOpen(false)} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-full transition-colors">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-6 bg-gray-50/50">
+              {showAddForm ? (
+                <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                  <h3 className="font-bold text-lg mb-4">Registrar Renovación de Matrícula</h3>
+                  <form onSubmit={handleAddRegistration} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Año Matriculado *</label>
+                        <input type="number" required value={formData.año_matriculado} onChange={e => setFormData({...formData, año_matriculado: e.target.value})} className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Costo Total ($) *</label>
+                        <input type="number" step="0.01" min="0" required value={formData.costo} onChange={e => setFormData({...formData, costo: e.target.value})} className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Fecha de Pago *</label>
+                        <input type="date" required value={formData.fecha_pago} onChange={e => setFormData({...formData, fecha_pago: e.target.value})} className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Nueva Fecha de Vencimiento *</label>
+                        <input type="date" required value={formData.nueva_fecha_vencimiento} onChange={e => setFormData({...formData, nueva_fecha_vencimiento: e.target.value})} className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Lugar de Trámite</label>
+                      <input type="text" placeholder="Ej. Agencia ANT..." value={formData.lugar_tramite} onChange={e => setFormData({...formData, lugar_tramite: e.target.value})} className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Notas u Observaciones</label>
+                      <textarea rows={2} value={formData.notas} onChange={e => setFormData({...formData, notas: e.target.value})} className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Pago de multas, retenciones..." />
+                    </div>
+
+                    <div className="pt-4 flex justify-end gap-3">
+                      <button type="button" onClick={() => setShowAddForm(false)} className="px-5 py-2.5 rounded-xl font-bold text-gray-500 hover:bg-gray-100 transition-colors">Cancelar</button>
+                      <button type="submit" disabled={submittingRegistration} className="px-5 py-2.5 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-sm">
+                        {submittingRegistration ? 'Guardando...' : 'Guardar Matrícula'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              ) : (
+                <>
+                  <div className="flex justify-end mb-4">
+                    <button onClick={() => setShowAddForm(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-sm">
+                      <Plus className="w-4 h-4" /> Añadir Renovación
+                    </button>
+                  </div>
+                  
+                  {loadingRegistrations ? (
+                    <div className="text-center py-8 text-gray-500">Cargando historial...</div>
+                  ) : registrations.length === 0 ? (
+                    <div className="text-center py-8 bg-white rounded-2xl border border-gray-200">
+                      <FileText className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                      <p className="text-gray-500">No hay historial de matrículas guardado.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {registrations.map(reg => (
+                        <div key={reg.id} className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col md:flex-row justify-between gap-4">
+                          <div>
+                            <h4 className="font-bold text-lg text-gray-900">Año Fiscal: {reg.año_matriculado}</h4>
+                            <div className="text-sm text-gray-600 mt-2 space-y-1">
+                              <p className="flex items-center gap-2"><Calendar className="w-4 h-4 text-gray-400" /> <b>Pago:</b> {reg.fecha_pago}</p>
+                              <p className="flex items-center gap-2"><FileText className="w-4 h-4 text-gray-400" /> <b>Vencimiento:</b> {reg.nueva_fecha_vencimiento}</p>
+                            </div>
+                            {reg.lugar_tramite && (
+                              <p className="text-sm text-gray-600 mt-1"><b>Trámite en:</b> {reg.lugar_tramite}</p>
+                            )}
+                            {reg.notas && (
+                              <p className="text-sm text-gray-500 mt-2 italic bg-gray-50 p-2 rounded-lg border border-gray-100">"{reg.notas}"</p>
+                            )}
+                          </div>
+                          <div className="flex flex-col items-end shrink-0">
+                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Costo</span>
+                            <span className="text-2xl font-black text-blue-600">${parseFloat(reg.costo).toLocaleString('es-EC', { minimumFractionDigits: 2 })}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

@@ -96,6 +96,11 @@ class VehicleTrip(models.Model):
             self.vehicle.estado_actual = 'Fuera del Sindicato'
             self.vehicle.save(update_fields=['estado_actual'])
             
+            if hasattr(self.conductor, 'driver_profile'):
+                profile = self.conductor.driver_profile
+                profile.estado = 'En Viaje'
+                profile.save(update_fields=['estado'])
+            
         # 2. Al actualizar (Llegada), calcular los deltas
         if self.pk and self.estado_viaje == 'Finalizado' and self.kilometraje_llegada is not None:
             # Calcular KM
@@ -129,7 +134,31 @@ class VehicleTrip(models.Model):
             self.vehicle.estado_actual = 'En Sindicato'
             self.vehicle.save()
 
+            if hasattr(self.conductor, 'driver_profile'):
+                profile = self.conductor.driver_profile
+                profile.estado = 'Activo'
+                profile.save(update_fields=['estado'])
+
         super(VehicleTrip, self).save(*args, **kwargs)
 
     def __str__(self):
         return f"Viaje {self.id} - {self.vehicle.placa} por {self.conductor.username}"
+
+class VehicleRegistrationRecord(models.Model):
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='registrations')
+    fecha_pago = models.DateField()
+    año_matriculado = models.IntegerField()
+    costo = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    lugar_tramite = models.CharField(max_length=200, blank=True, null=True)
+    nueva_fecha_vencimiento = models.DateField()
+    notas = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        # Actualizar automáticamente la fecha de vencimiento del vehículo
+        self.vehicle.fecha_vencimiento_matricula = self.nueva_fecha_vencimiento
+        self.vehicle.save(update_fields=['fecha_vencimiento_matricula'])
+        super(VehicleRegistrationRecord, self).save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Matrícula {self.año_matriculado} - {self.vehicle.placa}"

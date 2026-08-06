@@ -18,6 +18,7 @@ class VehicleMaintenance(models.Model):
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='maintenances')
     actividad = models.CharField(max_length=200) # ej: Aceite de motor, Filtro, etc.
     fecha_ultimo_cambio = models.DateField()
+    fecha_proximo_cambio = models.DateField(null=True, blank=True)
     km_ultimo_cambio = models.IntegerField()
     frecuencia_km = models.IntegerField() # Cada cuántos km se debe hacer
     
@@ -34,10 +35,32 @@ class VehicleMaintenance(models.Model):
         return self.vehicle.odometro_actual - self.km_ultimo_cambio
         
     @property
+    def dias_transcurridos(self):
+        from datetime import date
+        if self.fecha_ultimo_cambio:
+            return (date.today() - self.fecha_ultimo_cambio).days
+        return 0
+
+    @property
+    def dias_restantes(self):
+        from datetime import date
+        if self.fecha_proximo_cambio:
+            return (self.fecha_proximo_cambio - date.today()).days
+        return None
+        
+    @property
+    def km_restantes_para_proximo_cambio(self):
+        return self.km_proximo_cambio - self.vehicle.odometro_actual
+
+    @property
     def estado_alerta(self):
-        if self.km_recorridos_desde_cambio >= self.frecuencia_km:
+        # Mismo cálculo del Excel: Si km_restantes < 0 o dias_restantes < 0 -> CAMBIO URGENTE
+        dias = self.dias_restantes
+        km_restantes = self.km_restantes_para_proximo_cambio
+        
+        if km_restantes < 0 or (dias is not None and dias < 0):
             return "CAMBIO URGENTE"
-        elif self.frecuencia_km - self.km_recorridos_desde_cambio <= 500: # Alerta si faltan 500km o menos
+        elif km_restantes <= 500 or (dias is not None and dias <= 15):
             return "PRÓXIMO"
         else:
             return "VIGENTE"

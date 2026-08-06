@@ -21,6 +21,9 @@ class VehicleMaintenanceSerializer(serializers.ModelSerializer):
     vehicle_placa = serializers.CharField(source='vehicle.placa', read_only=True)
     km_proximo_cambio = serializers.ReadOnlyField()
     km_recorridos_desde_cambio = serializers.ReadOnlyField()
+    dias_transcurridos = serializers.ReadOnlyField()
+    dias_restantes = serializers.ReadOnlyField()
+    km_restantes_para_proximo_cambio = serializers.ReadOnlyField()
     estado_alerta = serializers.ReadOnlyField()
 
     class Meta:
