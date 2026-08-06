@@ -12,7 +12,10 @@ const TripHistory = () => {
   
   // Para filtrar por usuario
   const [selectedUser, setSelectedUser] = useState<string>('');
-  const [users, setUsers] = useState<{id: number, username: string}[]>([]);
+
+  // Paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     fetchTrips();
@@ -54,6 +57,11 @@ const TripHistory = () => {
     
     return matchesSearch && matchesUser;
   });
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedUser]);
 
   return (
     <div className="p-4 sm:p-8">
@@ -101,7 +109,7 @@ const TripHistory = () => {
             <div className="text-center py-12 text-gray-500">No se encontraron registros que coincidan con la búsqueda.</div>
           ) : (
             <div className="space-y-6">
-              {filteredTrips.map(trip => (
+              {filteredTrips.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map(trip => (
                 <div key={trip.id} className="border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
                   {/* Cabecera del Viaje */}
                   <div className={`p-4 flex items-center justify-between border-b border-gray-200 ${trip.estado_viaje === 'En Curso' ? 'bg-red-50' : 'bg-gray-50'}`}>
@@ -174,6 +182,28 @@ const TripHistory = () => {
                   </div>
                 </div>
               ))}
+
+              {filteredTrips.length > itemsPerPage && (
+                <div className="flex justify-between items-center pt-6 border-t border-gray-100">
+                  <button 
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 bg-gray-50 text-gray-700 rounded-lg disabled:opacity-50 hover:bg-gray-100 transition-colors text-sm font-medium"
+                  >
+                    Anterior
+                  </button>
+                  <span className="text-sm text-gray-500 font-medium">
+                    Página {currentPage} de {Math.ceil(filteredTrips.length / itemsPerPage)}
+                  </span>
+                  <button 
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredTrips.length / itemsPerPage)))}
+                    disabled={currentPage === Math.ceil(filteredTrips.length / itemsPerPage)}
+                    className="px-4 py-2 bg-gray-50 text-gray-700 rounded-lg disabled:opacity-50 hover:bg-gray-100 transition-colors text-sm font-medium"
+                  >
+                    Siguiente
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

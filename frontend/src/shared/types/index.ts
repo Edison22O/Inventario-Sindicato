@@ -74,7 +74,12 @@ export interface Vehicle {
   modelo: string;
   año: number;
   color: string;
-  estado_actual: string;
+  chasis?: string;
+  motor?: string;
+  clase?: string;
+  tipo?: string;
+  observacion?: string;
+  estado_actual: 'En Sindicato' | 'Fuera del Sindicato';
   foto_vehiculo?: string;
   
   // Nuevos campos
@@ -137,6 +142,8 @@ export interface DriverProfile {
   licencia: string;
   tipo_licencia: string;
   estado: string;
+  fecha_emision_licencia?: string;
+  fecha_vencimiento_licencia?: string;
   foto?: string | null;
   telefono?: string;
   direccion?: string;

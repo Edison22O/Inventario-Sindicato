@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Users, Search, Plus, Edit2, Trash2, Phone, Droplet, PhoneCall, IdCard } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/shared/services/api';
@@ -192,15 +193,12 @@ const DriversCatalog = () => {
                 </div>
 
                 {/* Mostrar Más Button */}
-                <button 
-                  onClick={() => {
-                    setSelectedDriver(driver);
-                    setIsModalOpen(true);
-                  }}
-                  className="relative z-10 w-full max-w-[200px] mt-auto py-2.5 bg-emerald-950 hover:bg-emerald-800 text-white font-medium rounded-xl shadow-lg transition-colors border border-white/10"
+                <Link 
+                  to={`/vehicles/drivers/${driver.id}`}
+                  className="relative z-10 w-full max-w-[200px] mt-auto py-2.5 bg-emerald-950 hover:bg-emerald-800 text-white font-medium rounded-xl shadow-lg transition-colors border border-white/10 text-center"
                 >
                   Ver Perfil
-                </button>
+                </Link>
               </div>
             );
           })}

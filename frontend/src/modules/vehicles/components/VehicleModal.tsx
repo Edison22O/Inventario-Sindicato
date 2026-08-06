@@ -25,7 +25,12 @@ const VehicleModal: React.FC<VehicleModalProps> = ({ isOpen, onClose, onSave, ve
     odometro_actual: 0,
     combustible_actual_galones: 0,
     mes_matricula: '',
-    fecha_vencimiento_matricula: ''
+    fecha_vencimiento_matricula: '',
+    chasis: '',
+    motor: '',
+    clase: '',
+    tipo: '',
+    observacion: ''
   });
   
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -50,7 +55,12 @@ const VehicleModal: React.FC<VehicleModalProps> = ({ isOpen, onClose, onSave, ve
         odometro_actual: 0,
         combustible_actual_galones: 0,
         mes_matricula: '',
-        fecha_vencimiento_matricula: ''
+        fecha_vencimiento_matricula: '',
+        chasis: '',
+        motor: '',
+        clase: '',
+        tipo: '',
+        observacion: ''
       });
       setPreviewUrl(null);
     }
@@ -164,6 +174,28 @@ const VehicleModal: React.FC<VehicleModalProps> = ({ isOpen, onClose, onSave, ve
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Color *</label>
                 <input required type="text" name="color" value={formData.color} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500" />
+              </div>
+              
+              {/* Nuevos campos del Excel */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Chasis</label>
+                <input type="text" name="chasis" value={formData.chasis || ''} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Motor</label>
+                <input type="text" name="motor" value={formData.motor || ''} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Clase (Ej: AUTOMOVIL)</label>
+                <input type="text" name="clase" value={formData.clase || ''} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500 uppercase" style={{textTransform: 'uppercase'}} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo (Ej: SEDAN)</label>
+                <input type="text" name="tipo" value={formData.tipo || ''} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500 uppercase" style={{textTransform: 'uppercase'}} />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Observación</label>
+                <input type="text" name="observacion" value={formData.observacion || ''} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500" />
               </div>
             </div>
 

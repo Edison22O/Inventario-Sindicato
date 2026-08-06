@@ -83,6 +83,8 @@ class DriverProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='driver_profile')
     licencia = models.CharField(max_length=50)
     tipo_licencia = models.CharField(max_length=20)
+    fecha_emision_licencia = models.DateField(null=True, blank=True)
+    fecha_vencimiento_licencia = models.DateField(null=True, blank=True)
     estado = models.CharField(max_length=20, choices=ESTADO_CONDUCTOR, default='Activo')
     foto = models.ImageField(upload_to='conductores/', null=True, blank=True)
     telefono = models.CharField(max_length=20, blank=True, null=True)

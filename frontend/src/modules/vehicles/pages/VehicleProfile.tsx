@@ -13,6 +13,10 @@ const VehicleProfile = () => {
   const [maintenances, setMaintenances] = useState<VehicleMaintenance[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Pagination for Trips
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
   useEffect(() => {
     fetchVehicleData();
   }, [id]);
@@ -114,6 +118,37 @@ const VehicleProfile = () => {
                     <span className="text-gray-500">Color</span>
                     <span className="font-medium text-gray-900">{vehicle.color}</span>
                   </div>
+                  
+                  {vehicle.chasis && (
+                    <div className="flex justify-between border-b border-gray-50 pb-2">
+                      <span className="text-gray-500">Chasis</span>
+                      <span className="font-medium text-gray-900">{vehicle.chasis}</span>
+                    </div>
+                  )}
+                  {vehicle.motor && (
+                    <div className="flex justify-between border-b border-gray-50 pb-2">
+                      <span className="text-gray-500">Motor</span>
+                      <span className="font-medium text-gray-900">{vehicle.motor}</span>
+                    </div>
+                  )}
+                  {vehicle.clase && (
+                    <div className="flex justify-between border-b border-gray-50 pb-2">
+                      <span className="text-gray-500">Clase</span>
+                      <span className="font-medium text-gray-900 uppercase">{vehicle.clase}</span>
+                    </div>
+                  )}
+                  {vehicle.tipo && (
+                    <div className="flex justify-between border-b border-gray-50 pb-2">
+                      <span className="text-gray-500">Tipo</span>
+                      <span className="font-medium text-gray-900 uppercase">{vehicle.tipo}</span>
+                    </div>
+                  )}
+                  {vehicle.observacion && (
+                    <div className="flex flex-col border-b border-gray-50 pb-2 gap-1">
+                      <span className="text-gray-500 text-xs">Observación</span>
+                      <span className="font-medium text-gray-900 text-sm">{vehicle.observacion}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between border-b border-gray-50 pb-2">
                     <span className="text-gray-500">Tipo Combustible</span>
                     <span className="font-medium text-gray-900">{vehicle.tipo_combustible}</span>
@@ -210,7 +245,7 @@ const VehicleProfile = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {trips.map(trip => (
+                {trips.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map(trip => (
                   <div key={trip.id} className="p-4 rounded-2xl border border-gray-100 hover:border-blue-200 hover:shadow-sm transition-all bg-white group">
                     <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-3">
                       <div>
@@ -270,6 +305,28 @@ const VehicleProfile = () => {
                     )}
                   </div>
                 ))}
+                
+                {trips.length > itemsPerPage && (
+                  <div className="flex justify-between items-center pt-4 border-t border-gray-100">
+                    <button 
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      className="px-4 py-2 bg-gray-50 text-gray-700 rounded-lg disabled:opacity-50 hover:bg-gray-100 transition-colors text-sm font-medium"
+                    >
+                      Anterior
+                    </button>
+                    <span className="text-sm text-gray-500 font-medium">
+                      Página {currentPage} de {Math.ceil(trips.length / itemsPerPage)}
+                    </span>
+                    <button 
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(trips.length / itemsPerPage)))}
+                      disabled={currentPage === Math.ceil(trips.length / itemsPerPage)}
+                      className="px-4 py-2 bg-gray-50 text-gray-700 rounded-lg disabled:opacity-50 hover:bg-gray-100 transition-colors text-sm font-medium"
+                    >
+                      Siguiente
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>

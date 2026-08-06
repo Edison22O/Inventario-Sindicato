@@ -33,6 +33,7 @@ import VehiclesCatalog from '@/modules/vehicles/pages/VehiclesCatalog';
 import VehicleTrips from '@/modules/vehicles/pages/VehicleTrips';
 import TripHistory from '@/modules/vehicles/pages/TripHistory';
 import DriversCatalog from '@/modules/vehicles/pages/DriversCatalog';
+import DriverProfilePage from '@/modules/vehicles/pages/DriverProfile';
 import VehicleProfile from '@/modules/vehicles/pages/VehicleProfile';
 import VehicleReports from '@/modules/vehicles/pages/VehicleReports';
 import VehicleMaintenances from '@/modules/vehicles/pages/VehicleMaintenances';
@@ -81,6 +82,7 @@ function App() {
           <Route element={<RoleGuard allowedRoles={['Conductores', 'Administrador']} />}>
             <Route path="/vehicles/catalog" element={<VehiclesCatalog />} />
             <Route path="/vehicles/drivers" element={<DriversCatalog />} />
+            <Route path="/vehicles/drivers/:id" element={<DriverProfilePage />} />
             <Route path="/vehicles/trips" element={<VehicleTrips />} />
             <Route path="/vehicles/maintenances" element={<VehicleMaintenances />} />
             <Route path="/vehicles/matriculas" element={<VehicleMatriculas />} />

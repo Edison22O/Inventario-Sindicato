@@ -16,6 +16,14 @@ class Vehicle(models.Model):
     modelo = models.CharField(max_length=100)
     año = models.IntegerField()
     color = models.CharField(max_length=50)
+    
+    # Nuevos campos del Excel
+    chasis = models.CharField(max_length=100, blank=True, null=True)
+    motor = models.CharField(max_length=100, blank=True, null=True)
+    clase = models.CharField(max_length=50, blank=True, null=True) # Ej: AUTOMOVIL, CAMIONETA
+    tipo = models.CharField(max_length=50, blank=True, null=True) # Ej: SEDAN, FURGONETA
+    observacion = models.TextField(blank=True, null=True)
+
     estado_actual = models.CharField(max_length=50, choices=ESTADO_CHOICES, default='En Sindicato')
     foto_vehiculo = models.ImageField(upload_to='vehicles/', null=True, blank=True)
     

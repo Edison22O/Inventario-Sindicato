@@ -23,7 +23,9 @@ const DriverModal = ({ isOpen, onClose, onSuccess, driver }: DriverModalProps) =
     telefono: '',
     direccion: '',
     tipo_sangre: '',
-    contacto_emergencia: ''
+    contacto_emergencia: '',
+    fecha_emision_licencia: '',
+    fecha_vencimiento_licencia: ''
   });
   const [fotoFile, setFotoFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>('');
@@ -40,7 +42,9 @@ const DriverModal = ({ isOpen, onClose, onSuccess, driver }: DriverModalProps) =
           telefono: driver.telefono || '',
           direccion: driver.direccion || '',
           tipo_sangre: driver.tipo_sangre || '',
-          contacto_emergencia: driver.contacto_emergencia || ''
+          contacto_emergencia: driver.contacto_emergencia || '',
+          fecha_emision_licencia: driver.fecha_emision_licencia || '',
+          fecha_vencimiento_licencia: driver.fecha_vencimiento_licencia || ''
         });
         setPreviewUrl(driver.foto ? getImageUrl(driver.foto) : '');
       } else {
@@ -52,7 +56,9 @@ const DriverModal = ({ isOpen, onClose, onSuccess, driver }: DriverModalProps) =
           telefono: '',
           direccion: '',
           tipo_sangre: '',
-          contacto_emergencia: ''
+          contacto_emergencia: '',
+          fecha_emision_licencia: '',
+          fecha_vencimiento_licencia: ''
         });
         setPreviewUrl('');
       }
@@ -83,6 +89,8 @@ const DriverModal = ({ isOpen, onClose, onSuccess, driver }: DriverModalProps) =
       if (formData.direccion) payload.append('direccion', formData.direccion);
       if (formData.tipo_sangre) payload.append('tipo_sangre', formData.tipo_sangre);
       if (formData.contacto_emergencia) payload.append('contacto_emergencia', formData.contacto_emergencia);
+      if (formData.fecha_emision_licencia) payload.append('fecha_emision_licencia', formData.fecha_emision_licencia);
+      if (formData.fecha_vencimiento_licencia) payload.append('fecha_vencimiento_licencia', formData.fecha_vencimiento_licencia);
       
       if (fotoFile) {
         payload.append('foto', fotoFile);
@@ -199,6 +207,31 @@ const DriverModal = ({ isOpen, onClose, onSuccess, driver }: DriverModalProps) =
                 <option value="Tipo E1">Tipo E1</option>
                 <option value="Tipo G">Tipo G</option>
               </select>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Emisión Licencia
+                </label>
+                <input
+                  type="date"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                  value={formData.fecha_emision_licencia}
+                  onChange={(e) => setFormData({ ...formData, fecha_emision_licencia: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Vencimiento Licencia
+                </label>
+                <input
+                  type="date"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                  value={formData.fecha_vencimiento_licencia}
+                  onChange={(e) => setFormData({ ...formData, fecha_vencimiento_licencia: e.target.value })}
+                />
+              </div>
             </div>
 
             <div>
