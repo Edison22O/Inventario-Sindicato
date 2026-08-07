@@ -68,14 +68,15 @@ class BackupViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['post'], url_path='import')
     def import_db(self, request):
+        import tempfile
         file = request.FILES.get('file')
         if not file:
             return Response({'error': 'No file provided'}, status=400)
             
-        file_path = '/tmp/backup.sql'
-        with open(file_path, 'wb+') as destination:
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.sql') as destination:
             for chunk in file.chunks():
                 destination.write(chunk)
+            file_path = destination.name
                 
         db_settings = settings.DATABASES['default']
         env = os.environ.copy()
@@ -92,12 +93,14 @@ class BackupViewSet(viewsets.ViewSet):
         
         try:
             result = subprocess.run(cmd, env=env, check=True, capture_output=True)
-            os.remove(file_path)
+            if os.path.exists(file_path):
+                os.remove(file_path)
             return Response({'message': 'Database restored successfully'})
         except subprocess.CalledProcessError as e:
             if os.path.exists(file_path):
                 os.remove(file_path)
             return Response({'error': str(e), 'stderr': e.stderr.decode()}, status=500)
+
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
