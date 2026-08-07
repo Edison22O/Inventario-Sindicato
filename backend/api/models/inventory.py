@@ -1,20 +1,24 @@
+import uuid
 from django.db import models
 from .core import Media
 from .suppliers import Supplier
 
 class Category(models.Model):
+    public_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     name = models.CharField(max_length=60, unique=True)
 
     def __str__(self):
         return self.name
 
 class Department(models.Model):
+    public_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     name = models.CharField(max_length=255, unique=True)
 
     def __str__(self):
         return self.name
 
 class Product(models.Model):
+    public_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     codigo = models.CharField(max_length=100, unique=True)
     cantidad = models.IntegerField(default=0)
     nombre = models.CharField(max_length=255)

@@ -100,7 +100,7 @@ const UserManagement = () => {
 
     try {
       if (editingUser) {
-        await api.patch(`/users/${editingUser.id}/`, payload);
+        await api.patch(`/users/${editingUser.public_id}/`, payload);
         toast.success('Usuario actualizado exitosamente');
       } else {
         await api.post('/users/', payload);

@@ -1,7 +1,9 @@
+import uuid
 from django.db import models
 from .core import User, SystemSettings
 
 class Vehicle(models.Model):
+    public_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     ESTADO_CHOICES = [
         ('En Sindicato', 'En Sindicato'),
         ('Fuera del Sindicato', 'Fuera del Sindicato'),

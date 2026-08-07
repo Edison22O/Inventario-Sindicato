@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
@@ -75,6 +76,7 @@ class ActivityLog(models.Model):
         return f"{self.user} - {self.action} - {self.timestamp}"
 
 class DriverProfile(models.Model):
+    public_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     ESTADO_CONDUCTOR = [
         ('Activo', 'Activo'),
         ('En Viaje', 'En Viaje'),

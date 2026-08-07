@@ -64,7 +64,7 @@ const Suppliers = () => {
 
   const handleSaveSupplier = async (data: Partial<Supplier>) => {
     if (selectedSupplier) {
-      await api.put(`/suppliers/${selectedSupplier.id}/`, data);
+      await api.put(`/suppliers/${selectedSupplier.public_id}/`, data);
       toast.success('Proveedor actualizado');
     } else {
       await api.post('/suppliers/', data);

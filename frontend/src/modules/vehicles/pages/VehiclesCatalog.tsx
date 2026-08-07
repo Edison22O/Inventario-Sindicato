@@ -45,7 +45,7 @@ const VehiclesCatalog = () => {
 
   const handleSaveVehicle = async (formData: FormData) => {
     if (selectedVehicle) {
-      await api.patch(`/vehicles/${selectedVehicle.id}/`, formData);
+      await api.patch(`/vehicles/${selectedVehicle.public_id}/`, formData);
     } else {
       await api.post('/vehicles/', formData);
     }
@@ -188,7 +188,7 @@ const VehiclesCatalog = () => {
                 
                 <div className="mt-auto border-t border-gray-100 pt-4 flex gap-2">
                   <Link 
-                    to={`/vehicles/${vehicle.id}`}
+                    to={`/vehicles/${vehicle.public_id}`}
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 font-medium rounded-xl hover:bg-blue-100 transition-colors"
                   >
                     <Eye className="w-4 h-4" />

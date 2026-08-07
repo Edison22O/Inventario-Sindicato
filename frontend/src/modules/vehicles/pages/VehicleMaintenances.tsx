@@ -84,7 +84,7 @@ const VehicleMaintenances = () => {
 
       // Actualizar la regla de mantenimiento (fechas y km)
       const currentVehicle = vehicles.find(v => v.id === selectedRule.vehicle);
-      await api.patch(`/vehicle-maintenances/${selectedRule.id}/`, {
+      await api.patch(`/vehicle-maintenances/${selectedRule.public_id}/`, {
         fecha_ultimo_cambio: formData.fecha,
         fecha_proximo_cambio: formData.fecha_proximo || null,
         km_ultimo_cambio: currentVehicle?.odometro_actual || 0
@@ -127,7 +127,7 @@ const VehicleMaintenances = () => {
     setIsHistoryModalOpen(true);
     setLoadingHistory(true);
     try {
-      const res = await api.get(`/vehicle-maintenance-records/?vehicle=${vehicle.id}`);
+      const res = await api.get(`/vehicle-maintenance-records/?vehicle=${vehicle.public_id}`);
       setHistoryRecords(res.data);
     } catch (error) {
       toast.error('Error al cargar el historial');

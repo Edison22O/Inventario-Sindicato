@@ -92,7 +92,7 @@ const VehiclesDashboard = () => {
       });
 
       // 2. Update the rule
-      await api.patch(`/vehicle-maintenances/${selectedMaint.id}/`, {
+      await api.patch(`/vehicle-maintenances/${selectedMaint.public_id}/`, {
         fecha_ultimo_cambio: maintForm.fecha,
         fecha_proximo_cambio: maintForm.fecha_proximo || null,
         km_ultimo_cambio: selectedMaint.odometro_actual || 0

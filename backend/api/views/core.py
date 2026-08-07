@@ -14,6 +14,7 @@ from api.mixins import AuditLogMixin
 
 class DriverProfileViewSet(viewsets.ModelViewSet):
     queryset = DriverProfile.objects.select_related('user').all()
+    lookup_field = 'public_id'
     serializer_class = DriverProfileSerializer
     permission_classes = [IsAuthenticated]
 

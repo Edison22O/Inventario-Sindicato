@@ -194,7 +194,7 @@ const DriversCatalog = () => {
 
                 {/* Mostrar Más Button */}
                 <Link 
-                  to={`/vehicles/drivers/${driver.id}`}
+                  to={`/vehicles/drivers/${driver.public_id}`}
                   className="relative z-10 w-full max-w-[200px] mt-auto py-2.5 bg-emerald-950 hover:bg-emerald-800 text-white font-medium rounded-xl shadow-lg transition-colors border border-white/10 text-center"
                 >
                   Ver Perfil

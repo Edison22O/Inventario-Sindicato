@@ -45,7 +45,7 @@ const Categories = () => {
 
   const handleSaveCategory = async (data: Partial<Category>) => {
     if (selectedCategory) {
-      await api.put(`/categories/${selectedCategory.id}/`, data);
+      await api.put(`/categories/${selectedCategory.public_id}/`, data);
     } else {
       await api.post('/categories/', data);
     }
@@ -115,7 +115,7 @@ const Categories = () => {
             {filteredCategories.map((cat) => (
               <div key={cat.id} className="relative group">
                 <Link 
-                  to={`/categories/${cat.id}`}
+                  to={`/categories/${cat.public_id}`}
                   className="block bg-white rounded-2xl border border-gray-100 p-6 hover:shadow-lg hover:border-emerald-200 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-4 h-48"
                 >
                   <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">

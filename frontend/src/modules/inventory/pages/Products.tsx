@@ -85,7 +85,7 @@ const Products = () => {
 
   const handleSaveProduct = async (formData: FormData) => {
     if (selectedProduct) {
-      await api.patch(`/products/${selectedProduct.id}/`, formData);
+      await api.patch(`/products/${selectedProduct.public_id}/`, formData);
     } else {
       await api.post('/products/', formData);
     }

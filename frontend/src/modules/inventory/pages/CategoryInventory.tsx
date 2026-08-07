@@ -83,7 +83,7 @@ const CategoryInventory = () => {
 
   const handleSaveProduct = async (formData: FormData) => {
     if (selectedProduct) {
-      await api.patch(`/products/${selectedProduct.id}/`, formData);
+      await api.patch(`/products/${selectedProduct.public_id}/`, formData);
       toast.success('Producto actualizado');
     } else {
       // Si estamos en la vista de una categoría, forzamos que el nuevo producto sea de esta categoría

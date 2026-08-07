@@ -206,7 +206,7 @@ const addProductPageToDoc = async (
 export const generateProductPDF = async (product: Product) => {
   const toastId = toast.loading('Generando PDF de la ficha técnica...');
   try {
-    const mantRes = await api.get(`/maintenances/?product=${product.id}`);
+    const mantRes = await api.get(`/maintenances/?product=${product.public_id}`);
     const maintenances: MaintenanceLog[] = mantRes.data;
 
     const doc = new jsPDF('portrait', 'mm', 'a4');

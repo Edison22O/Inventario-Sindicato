@@ -97,7 +97,7 @@ const DriverModal = ({ isOpen, onClose, onSuccess, driver }: DriverModalProps) =
       }
 
       if (driver) {
-        await api.patch(`/driver-profiles/${driver.id}/`, payload, {
+        await api.patch(`/driver-profiles/${driver.public_id}/`, payload, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
         toast.success('Conductor actualizado');

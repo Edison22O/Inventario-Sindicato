@@ -14,6 +14,7 @@ from api.models.core import DriverProfile
 
 class VehicleViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = Vehicle.objects.all().order_by('-id')
+    lookup_field = 'public_id'
     serializer_class = VehicleSerializer
     permission_classes = [IsAuthenticated]
     audit_module_name = 'Catálogo de Vehículos'
@@ -28,7 +29,7 @@ class VehicleTripViewSet(AuditLogMixin, viewsets.ModelViewSet):
         queryset = super().get_queryset()
         vehicle_id = self.request.query_params.get('vehicle', None)
         if vehicle_id is not None:
-            queryset = queryset.filter(vehicle_id=vehicle_id)
+            queryset = queryset.filter(vehicle__public_id=vehicle_id)
         return queryset
 
     def perform_create(self, serializer):
@@ -84,7 +85,7 @@ class VehicleRegistrationRecordViewSet(AuditLogMixin, viewsets.ModelViewSet):
         queryset = super().get_queryset()
         vehicle_id = self.request.query_params.get('vehicle', None)
         if vehicle_id is not None:
-            queryset = queryset.filter(vehicle_id=vehicle_id)
+            queryset = queryset.filter(vehicle__public_id=vehicle_id)
         return queryset
 
 class VehicleDashboardStatsView(APIView):

@@ -46,7 +46,7 @@ const Departments = () => {
 
   const handleSaveDepartment = async (data: Partial<Department>) => {
     if (selectedDepartment) {
-      await api.put(`/departments/${selectedDepartment.id}/`, data);
+      await api.put(`/departments/${selectedDepartment.public_id}/`, data);
     } else {
       await api.post('/departments/', data);
     }
@@ -116,7 +116,7 @@ const Departments = () => {
             {filteredDepartments.map((dep) => (
               <div key={dep.id} className="relative group">
                 <Link 
-                  to={`/departments/${dep.id}`}
+                  to={`/departments/${dep.public_id}`}
                   className="block bg-white rounded-2xl border border-gray-100 p-6 hover:shadow-lg hover:border-emerald-200 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-4 h-48"
                 >
                   <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">

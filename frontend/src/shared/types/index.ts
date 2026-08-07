@@ -10,16 +10,19 @@ export interface AuthResponse {
 
 export interface Department {
   id: number;
+  public_id?: string;
   name: string;
 }
 
 export interface Category {
   id: number;
+  public_id?: string;
   name: string;
 }
 
 export interface Supplier {
   id: number;
+  public_id?: string;
   name: string;
   contact_name?: string;
   phone?: string;
@@ -29,6 +32,7 @@ export interface Supplier {
 
 export interface Product {
   id: number;
+  public_id?: string;
   codigo: string;
   cantidad: number;
   nombre: string;
@@ -69,6 +73,7 @@ export interface MaintenanceLog {
 
 export interface Vehicle {
   id: number;
+  public_id?: string;
   placa: string;
   marca: string;
   modelo: string;
@@ -155,6 +160,7 @@ export interface VehicleRegistrationRecord {
 
 export interface DriverProfile {
   id: number;
+  public_id?: string;
   user: number;
   licencia: string;
   tipo_licencia: string;

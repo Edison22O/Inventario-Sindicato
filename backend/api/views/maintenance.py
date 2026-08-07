@@ -12,7 +12,7 @@ class MaintenanceLogViewSet(viewsets.ModelViewSet):
         queryset = MaintenanceLog.objects.select_related('product').all().order_by('-fecha', '-created_at')
         product_id = self.request.query_params.get('product', None)
         if product_id is not None:
-            queryset = queryset.filter(product_id=product_id)
+            queryset = queryset.filter(product__public_id=product_id)
         return queryset
 
 class VehicleMaintenanceViewSet(viewsets.ModelViewSet):
@@ -24,7 +24,7 @@ class VehicleMaintenanceViewSet(viewsets.ModelViewSet):
         queryset = super().get_queryset()
         vehicle_id = self.request.query_params.get('vehicle', None)
         if vehicle_id is not None:
-            queryset = queryset.filter(vehicle_id=vehicle_id)
+            queryset = queryset.filter(vehicle__public_id=vehicle_id)
         return queryset
 
 class VehicleMaintenanceRecordViewSet(viewsets.ModelViewSet):
@@ -36,7 +36,7 @@ class VehicleMaintenanceRecordViewSet(viewsets.ModelViewSet):
         queryset = super().get_queryset()
         vehicle_id = self.request.query_params.get('vehicle', None)
         if vehicle_id is not None:
-            queryset = queryset.filter(vehicle_id=vehicle_id)
+            queryset = queryset.filter(vehicle__public_id=vehicle_id)
         return queryset
 
     def perform_create(self, serializer):

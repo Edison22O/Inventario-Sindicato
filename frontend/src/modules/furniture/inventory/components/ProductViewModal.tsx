@@ -15,7 +15,7 @@ const ProductViewModal: React.FC<ProductViewModalProps> = ({ isOpen, onClose, pr
 
   useEffect(() => {
     if (isOpen && product) {
-      api.get(`/furniture/maintenances/?product=${product.id}`).then(res => {
+      api.get(`/furniture/maintenances/?product=${product.public_id}`).then(res => {
         setMaintenances(res.data);
       }).catch(err => console.error("Error fetching maintenances", err));
     } else {

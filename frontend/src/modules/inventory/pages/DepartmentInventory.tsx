@@ -83,7 +83,7 @@ const DepartmentInventory = () => {
 
   const handleSaveProduct = async (formData: FormData) => {
     if (selectedProduct) {
-      await api.patch(`/products/${selectedProduct.id}/`, formData);
+      await api.patch(`/products/${selectedProduct.public_id}/`, formData);
     } else {
       // Si estamos en la vista de un departamento, forzamos que el nuevo producto sea de este departamento
       formData.set('department', String(id));

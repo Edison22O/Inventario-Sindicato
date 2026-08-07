@@ -88,7 +88,7 @@ const VehicleMaintenanceAdmin = () => {
       };
 
       if (selectedItem) {
-        await api.patch(`/vehicle-maintenances/${selectedItem.id}/`, payload);
+        await api.patch(`/vehicle-maintenances/${selectedItem.public_id}/`, payload);
         toast.success('Programa actualizado');
       } else {
         await api.post('/vehicle-maintenances/', payload);

@@ -6,6 +6,7 @@ from api.mixins import AuditLogMixin
 
 class CategoryViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = Category.objects.all()
+    lookup_field = 'public_id'
     serializer_class = CategorySerializer
     permission_classes = [IsAuthenticated]
     audit_module_name = 'Inventario (Categorías)'

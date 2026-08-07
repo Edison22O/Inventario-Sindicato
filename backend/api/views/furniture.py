@@ -9,6 +9,7 @@ from api.mixins import AuditLogMixin
 
 class FurnitureCategoryViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = FurnitureCategory.objects.all()
+    lookup_field = 'public_id'
     serializer_class = FurnitureCategorySerializer
     permission_classes = [IsAuthenticated]
     audit_module_name = 'Muebles (Categorías)'
@@ -41,5 +42,5 @@ class FurnitureMaintenanceLogViewSet(AuditLogMixin, viewsets.ModelViewSet):
         queryset = FurnitureMaintenanceLog.objects.select_related('product').all().order_by('-fecha', '-created_at')
         product_id = self.request.query_params.get('product', None)
         if product_id is not None:
-            queryset = queryset.filter(product_id=product_id)
+            queryset = queryset.filter(product__public_id=product_id)
         return queryset
