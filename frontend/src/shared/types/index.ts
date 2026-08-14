@@ -1,3 +1,16 @@
+export interface User {
+  id: number;
+  username: string;
+  first_name?: string;
+  last_name?: string;
+  full_name?: string;
+  email?: string;
+  role?: number | null;
+  role_name?: string;
+  is_active?: boolean;
+  last_login?: string | null;
+}
+
 export interface LoginCredentials {
   username: string;
   password?: string;

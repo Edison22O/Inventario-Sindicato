@@ -94,8 +94,8 @@ function App() {
             <Route path="/vehicles/:id" element={<VehicleProfile />} />
           </Route>
 
-          {/* Admin / Settings (Administrador) */}
-          <Route element={<RoleGuard allowedRoles={['Administrador']} />}>
+          {/* Admin / Settings (Administrador / Conductores) */}
+          <Route element={<RoleGuard allowedRoles={['Administrador', 'Conductores', 'Conductor']} />}>
             <Route path="/control-panel" element={<SettingsDashboard />} />
           </Route>
         </Route>

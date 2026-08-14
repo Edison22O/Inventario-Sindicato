@@ -52,10 +52,11 @@ const VehiclesCatalog = () => {
     fetchVehicles();
   };
 
-  const handleDeleteVehicle = async (id: number) => {
+  const handleDeleteVehicle = async (vehicle: Vehicle) => {
     if (await confirmDialog('¿Estás seguro de que deseas eliminar este vehículo permanentemente?')) {
       try {
-        await api.delete(`/vehicles/${id}/`);
+        const identifier = vehicle.public_id || vehicle.id;
+        await api.delete(`/vehicles/${identifier}/`);
         toast.success('Vehículo eliminado');
         fetchVehicles();
       } catch (error) {
@@ -202,7 +203,7 @@ const VehiclesCatalog = () => {
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button 
-                    onClick={() => handleDeleteVehicle(vehicle.id)}
+                    onClick={() => handleDeleteVehicle(vehicle)}
                     className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors border border-gray-200 hover:border-red-100"
                     title="Eliminar"
                   >

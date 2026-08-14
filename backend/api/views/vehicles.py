@@ -19,6 +19,19 @@ class VehicleViewSet(AuditLogMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     audit_module_name = 'Catálogo de Vehículos'
 
+    def get_object(self):
+        queryset = self.filter_queryset(self.get_queryset())
+        val = self.kwargs.get('public_id') or self.kwargs.get('pk')
+        if val is not None:
+            if str(val).isdigit():
+                obj = queryset.filter(pk=int(val)).first()
+                if obj:
+                    return obj
+            obj = queryset.filter(public_id=val).first()
+            if obj:
+                return obj
+        return super().get_object()
+
 class VehicleTripViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = VehicleTrip.objects.select_related('vehicle', 'conductor').all().order_by('-fecha_hora_salida')
     serializer_class = VehicleTripSerializer
@@ -28,8 +41,11 @@ class VehicleTripViewSet(AuditLogMixin, viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = super().get_queryset()
         vehicle_id = self.request.query_params.get('vehicle', None)
+        conductor_id = self.request.query_params.get('conductor', None)
         if vehicle_id is not None:
             queryset = queryset.filter(vehicle__public_id=vehicle_id)
+        if conductor_id is not None:
+            queryset = queryset.filter(conductor_id=conductor_id)
         return queryset
 
     def perform_create(self, serializer):

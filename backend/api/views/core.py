@@ -18,6 +18,19 @@ class DriverProfileViewSet(viewsets.ModelViewSet):
     serializer_class = DriverProfileSerializer
     permission_classes = [IsAuthenticated]
 
+    def get_object(self):
+        queryset = self.filter_queryset(self.get_queryset())
+        val = self.kwargs.get('public_id') or self.kwargs.get('pk')
+        if val is not None:
+            if str(val).isdigit():
+                obj = queryset.filter(pk=int(val)).first()
+                if obj:
+                    return obj
+            obj = queryset.filter(public_id=val).first()
+            if obj:
+                return obj
+        return super().get_object()
+
 class RoleViewSet(viewsets.ModelViewSet):
     queryset = Role.objects.all()
     serializer_class = RoleSerializer

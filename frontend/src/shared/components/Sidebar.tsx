@@ -34,10 +34,10 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   }, []);
 
   const userRole = authService.getUserRole();
-  const isAdmin = userRole === 'Administrador';
-  const showTech = isAdmin || userRole === 'Tecnologico';
-  const showFurniture = isAdmin || userRole === 'Muebles';
-  const showVehicles = isAdmin || userRole === 'Conductores';
+  const isAdmin = authService.isAdmin();
+  const showTech = isAdmin || authService.isTech();
+  const showFurniture = isAdmin || authService.isFurniture();
+  const showVehicles = isAdmin || authService.isConductor();
 
   const inventoryLinks = [
     { to: '/inventory-dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -239,7 +239,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
             </div>
           )}
 
-          {isAdmin && (
+          {(isAdmin || showVehicles) && (
             <div>
               <Link
                 to="/control-panel"

@@ -15,11 +15,16 @@ class RoleSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     role_name = serializers.CharField(source='role.name', read_only=True)
+    full_name = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'password', 'role', 'role_name', 'image', 'is_active', 'last_login']
+        fields = ['id', 'username', 'first_name', 'last_name', 'full_name', 'email', 'password', 'role', 'role_name', 'image', 'is_active', 'last_login']
         extra_kwargs = {'password': {'write_only': True, 'required': False}}
+
+    def get_full_name(self, obj):
+        name = f"{obj.first_name or ''} {obj.last_name or ''}".strip()
+        return name if name else obj.username
 
     def create(self, validated_data):
         password = validated_data.pop('password', None)

@@ -36,10 +36,11 @@ const DriversCatalog = () => {
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (driver: DriverProfile) => {
     if (await confirmDialog('¿Estás seguro de que deseas eliminar el perfil de este conductor?')) {
       try {
-        await api.delete(`/driver-profiles/${id}/`);
+        const identifier = driver.public_id || driver.id;
+        await api.delete(`/driver-profiles/${identifier}/`);
         toast.success('Conductor eliminado');
         fetchData();
       } catch (error) {
@@ -122,7 +123,7 @@ const DriversCatalog = () => {
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button 
-                    onClick={() => handleDelete(driver.id)}
+                    onClick={() => handleDelete(driver)}
                     className="p-2 bg-red-500/80 hover:bg-red-500 text-white rounded-full backdrop-blur-sm transition-colors"
                     title="Eliminar Conductor"
                   >

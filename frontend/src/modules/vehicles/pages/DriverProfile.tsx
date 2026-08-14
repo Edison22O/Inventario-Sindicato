@@ -130,7 +130,7 @@ const DriverProfilePage = () => {
             
             <div className="pt-16 p-6 space-y-6">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">{user.get_full_name || user.first_name + ' ' + user.last_name || user.username}</h2>
+                <h2 className="text-2xl font-bold text-gray-900">{user.full_name || user.username}</h2>
                 <p className="text-sm text-gray-500">{user.email || 'Sin correo registrado'}</p>
               </div>
 

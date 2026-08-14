@@ -27,7 +27,7 @@ class VehicleSerializer(serializers.ModelSerializer):
         return f"{closest.actividad} a los {closest.km_proximo_cambio} KM"
 
 class VehicleTripSerializer(serializers.ModelSerializer):
-    conductor_name = serializers.CharField(source='conductor.username', read_only=True)
+    conductor_name = serializers.SerializerMethodField()
     vehicle_placa = serializers.CharField(source='vehicle.placa', read_only=True)
     vehicle_marca = serializers.CharField(source='vehicle.marca', read_only=True)
     vehicle_modelo = serializers.CharField(source='vehicle.modelo', read_only=True)
@@ -36,6 +36,12 @@ class VehicleTripSerializer(serializers.ModelSerializer):
         model = VehicleTrip
         fields = '__all__'
         read_only_fields = ('fecha_hora_salida', 'fecha_hora_llegada', 'estado_viaje', 'conductor', 'kilometraje_salida', 'km_recorridos', 'costo_combustible_viaje')
+
+    def get_conductor_name(self, obj):
+        if not obj.conductor:
+            return 'Desconocido'
+        full = f"{obj.conductor.first_name or ''} {obj.conductor.last_name or ''}".strip()
+        return full if full else obj.conductor.username
 
 class VehicleRegistrationRecordSerializer(serializers.ModelSerializer):
     vehicle_placa = serializers.CharField(source='vehicle.placa', read_only=True)

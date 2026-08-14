@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Truck, Layers, Wrench, ArrowRight, Monitor, Armchair, FileBarChart } from 'lucide-react';
+import { Package, Truck, Layers, Wrench, ArrowRight, Monitor, Armchair, FileBarChart, LayoutDashboard } from 'lucide-react';
 import { authService } from '@/services/authService';
 import api from '@/shared/services/api';
 
 const Home = () => {
   const userRole = authService.getUserRole();
   const userName = authService.getUserName();
-  const isAdmin = userRole === 'Administrador';
   const [orgName, setOrgName] = useState('Sindicato de Choferes');
   const [logoUrl, setLogoUrl] = useState('/logo.png');
 
@@ -52,6 +51,15 @@ const Home = () => {
 
   const vehicleActions = [
     {
+      title: 'Panel de Control',
+      description: 'Resumen general, alertas e indicadores de vehículos.',
+      icon: LayoutDashboard,
+      to: '/vehicles/dashboard',
+      color: 'bg-emerald-500',
+      lightColor: 'bg-emerald-500/10',
+      textColor: 'text-emerald-500'
+    },
+    {
       title: 'Flota Vehicular',
       description: 'Registra y controla los vehículos del sindicato.',
       icon: Truck,
@@ -71,18 +79,19 @@ const Home = () => {
     }
   ];
 
+  const isAdmin = authService.isAdmin();
+  const isTech = authService.isTech();
+  const isFurniture = authService.isFurniture();
+  const isConductor = authService.isConductor();
+
   let quickActions: any[] = [];
 
   if (isAdmin) {
     quickActions = [...techActions, ...furnitureActions, ...vehicleActions];
-  } else if (userRole === 'Tecnologico') {
-    quickActions = techActions;
-  } else if (userRole === 'Muebles') {
-    quickActions = furnitureActions;
-  } else if (userRole === 'Conductores') {
-    quickActions = vehicleActions;
   } else {
-    quickActions = [];
+    if (isTech) quickActions.push(...techActions);
+    if (isFurniture) quickActions.push(...furnitureActions);
+    if (isConductor) quickActions.push(...vehicleActions);
   }
 
   return (

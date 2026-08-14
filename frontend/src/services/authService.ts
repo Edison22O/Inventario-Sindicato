@@ -44,5 +44,33 @@ export const authService = {
       console.error("Error decoding JWT:", e);
       return null;
     }
+  },
+
+  isAdmin: (): boolean => {
+    const role = authService.getUserRole();
+    if (!role) return false;
+    const r = role.toLowerCase();
+    return r.includes('admin') || r.includes('administrador');
+  },
+
+  isConductor: (): boolean => {
+    const role = authService.getUserRole();
+    if (!role) return false;
+    const r = role.toLowerCase();
+    return r.includes('conductor') || r.includes('chofer') || r.includes('driver');
+  },
+
+  isTech: (): boolean => {
+    const role = authService.getUserRole();
+    if (!role) return false;
+    const r = role.toLowerCase();
+    return r.includes('tecnolog') || r.includes('tech');
+  },
+
+  isFurniture: (): boolean => {
+    const role = authService.getUserRole();
+    if (!role) return false;
+    const r = role.toLowerCase();
+    return r.includes('mueble') || r.includes('mobiliario') || r.includes('furniture');
   }
 };

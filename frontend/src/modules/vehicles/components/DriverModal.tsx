@@ -68,9 +68,28 @@ const DriverModal = ({ isOpen, onClose, onSuccess, driver }: DriverModalProps) =
 
   const fetchUsers = async () => {
     try {
-      // Filtrar usuarios que tienen rol Conductores o que queremos permitir
       const res = await api.get('/users/');
-      setUsers(res.data.filter((u: User) => u.role_name === 'Conductores'));
+      const allUsers: User[] = res.data || [];
+      
+      // Filtrar usuarios con rol de conductor (flexible: "Conductor", "Conductores", "Chofer", "Driver", etc.)
+      const driverUsers = allUsers.filter((u: User) => {
+        if (!u.role_name) return false;
+        const role = u.role_name.toLowerCase();
+        return role.includes('conductor') || role.includes('chofer') || role.includes('driver');
+      });
+
+      // Si se encontraron usuarios con rol de conductor, usamos esos.
+      // De lo contrario, o si se está editando, mostramos todos los usuarios para no bloquear la selección.
+      if (driverUsers.length > 0) {
+        // Si estamos editando y el usuario del conductor actual no está en la lista filtrada, lo agregamos
+        if (driver && driver.user && !driverUsers.some(u => u.id === Number(driver.user))) {
+          const current = allUsers.find(u => u.id === Number(driver.user));
+          if (current) driverUsers.push(current);
+        }
+        setUsers(driverUsers);
+      } else {
+        setUsers(allUsers);
+      }
     } catch (error) {
       console.error('Error fetching users', error);
     }
@@ -172,7 +191,7 @@ const DriverModal = ({ isOpen, onClose, onSuccess, driver }: DriverModalProps) =
                 <option value="">Seleccione un usuario...</option>
                 {users.map((u) => (
                   <option key={u.id} value={u.id}>
-                    {u.username} ({u.email || 'Sin correo'})
+                    {u.username} {u.role_name ? `(${u.role_name})` : '(Sin Rol)'} - {u.email || 'Sin correo'}
                   </option>
                 ))}
               </select>
