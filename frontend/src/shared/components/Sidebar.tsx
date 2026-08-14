@@ -34,10 +34,12 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   }, []);
 
   const userRole = authService.getUserRole();
-  const isAdmin = authService.isAdmin();
-  const showTech = isAdmin || authService.isTech();
-  const showFurniture = isAdmin || authService.isFurniture();
-  const showVehicles = isAdmin || authService.isConductor();
+  const isGlobalAdmin = authService.isGlobalAdmin();
+  const isVehicleAdmin = authService.isVehicleAdmin();
+  const isConductor = authService.isConductor();
+  const showTech = isGlobalAdmin || authService.isTech();
+  const showFurniture = isGlobalAdmin || authService.isFurniture();
+  const showVehicles = isGlobalAdmin || isVehicleAdmin || isConductor;
 
   const inventoryLinks = [
     { to: '/inventory-dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -61,7 +63,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     { to: '/furniture/reports', icon: FileBarChart, label: 'Reportes' },
   ];
 
-  const vehiclesLinks = [
+  const allVehiclesLinks = [
     { to: '/vehicles/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/vehicles/catalog', icon: Truck, label: 'Flota Vehicular' },
     { to: '/vehicles/drivers', icon: Users, label: 'Conductores' },
@@ -71,6 +73,10 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     { to: '/vehicles/history', icon: FileBarChart, label: 'Historial de Viajes' },
     { to: '/vehicles/reports', icon: FileBarChart, label: 'Reportes' },
   ];
+
+  const vehiclesLinks = (isGlobalAdmin || isVehicleAdmin)
+    ? allVehiclesLinks
+    : allVehiclesLinks.filter(link => link.to === '/vehicles/trips' || link.to === '/vehicles/maintenances');
 
   return (
     <>
@@ -239,7 +245,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
             </div>
           )}
 
-          {(isAdmin || showVehicles) && (
+          {(isGlobalAdmin || isVehicleAdmin) && (
             <div>
               <Link
                 to="/control-panel"

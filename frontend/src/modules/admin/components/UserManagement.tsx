@@ -60,7 +60,7 @@ const UserManagement = () => {
       setEditingUser(user);
       setFormData({
         username: user.username,
-        email: user.email,
+        email: user.email || '',
         password: '', // Blank password for editing (only update if typed)
         role: user.role ? user.role.toString() : '',
         is_active: user.is_active,
@@ -81,21 +81,28 @@ const UserManagement = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Client-side password length check
+    if (formData.password && formData.password.length < 6) {
+      toast.error('La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+
+    if (!editingUser && !formData.password) {
+      toast.error('La contraseña es obligatoria para nuevos usuarios.');
+      return;
+    }
+
     // Prepare payload
     const payload: any = {
-      username: formData.username,
-      email: formData.email,
+      username: formData.username.trim(),
+      email: formData.email.trim(),
       role: formData.role ? parseInt(formData.role) : null,
       is_active: formData.is_active,
     };
 
-    // Include password only if creating OR if editing and a new password was typed
-    if (!editingUser || formData.password) {
-      if (!editingUser && !formData.password) {
-        toast.error('La contraseña es obligatoria para nuevos usuarios');
-        return;
-      }
-      payload.password = formData.password;
+    // Include password only if typed
+    if (formData.password.trim()) {
+      payload.password = formData.password.trim();
     }
 
     try {
@@ -109,7 +116,25 @@ const UserManagement = () => {
       setIsModalOpen(false);
       fetchData();
     } catch (error: any) {
-      toast.error(error.response?.data?.username?.[0] || 'Error al guardar el usuario');
+      console.error('Error saving user:', error.response?.data || error);
+      const data = error.response?.data;
+      let errorMsg = 'Error al guardar el usuario';
+      
+      if (data) {
+        if (typeof data === 'string') {
+          errorMsg = data;
+        } else if (data.detail) {
+          errorMsg = data.detail;
+        } else if (typeof data === 'object') {
+          const firstKey = Object.keys(data)[0];
+          if (firstKey) {
+            const firstErr = data[firstKey];
+            const msgStr = Array.isArray(firstErr) ? firstErr[0] : String(firstErr);
+            errorMsg = `${firstKey}: ${msgStr}`;
+          }
+        }
+      }
+      toast.error(errorMsg);
     }
   };
 
@@ -259,9 +284,10 @@ const UserManagement = () => {
                   <input
                     type="password"
                     required={!editingUser}
+                    minLength={6}
                     value={formData.password}
                     onChange={(e) => setFormData({...formData, password: e.target.value})}
-                    placeholder={editingUser ? 'Dejar en blanco para no cambiar' : '••••••••'}
+                    placeholder={editingUser ? 'Dejar en blanco para no cambiar' : 'Mínimo 6 caracteres'}
                     className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                   />
                 </div>

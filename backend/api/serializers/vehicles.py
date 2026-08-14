@@ -49,3 +49,18 @@ class VehicleRegistrationRecordSerializer(serializers.ModelSerializer):
     class Meta:
         model = VehicleRegistrationRecord
         fields = '__all__'
+
+    def to_internal_value(self, data):
+        data = data.copy() if hasattr(data, 'copy') else dict(data)
+        veh_val = data.get('vehicle')
+        if veh_val:
+            if str(veh_val).isdigit():
+                v = Vehicle.objects.filter(pk=int(veh_val)).first()
+            else:
+                try:
+                    v = Vehicle.objects.filter(public_id=veh_val).first()
+                except Exception:
+                    v = None
+            if v:
+                data['vehicle'] = v.pk
+        return super().to_internal_value(data)

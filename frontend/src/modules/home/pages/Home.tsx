@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Truck, Layers, Wrench, ArrowRight, Monitor, Armchair, FileBarChart, LayoutDashboard } from 'lucide-react';
+import { Package, Truck, Layers, ArrowRight, Monitor, Armchair, LayoutDashboard, UserCheck } from 'lucide-react';
 import { authService } from '@/services/authService';
 import api from '@/shared/services/api';
+import DriverSelfProfileModal from '@/modules/vehicles/components/DriverSelfProfileModal';
 
 const Home = () => {
   const userRole = authService.getUserRole();
   const userName = authService.getUserName();
   const [orgName, setOrgName] = useState('Sindicato de Choferes');
   const [logoUrl, setLogoUrl] = useState('/logo.png');
+  const [isDriverModalOpen, setIsDriverModalOpen] = useState(false);
+  const [myProfileStatus, setMyProfileStatus] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchOrgData = async () => {
@@ -23,7 +26,21 @@ const Home = () => {
       }
     };
     fetchOrgData();
+    checkMyProfile();
   }, []);
+
+  const checkMyProfile = async () => {
+    try {
+      const res = await api.get('/driver-profiles/me/');
+      if (res.data && res.data.exists) {
+        setMyProfileStatus('Completado');
+      } else {
+        setMyProfileStatus('Pendiente');
+      }
+    } catch (error) {
+      setMyProfileStatus(null);
+    }
+  };
 
   const techActions = [
     {
@@ -51,7 +68,28 @@ const Home = () => {
 
   const vehicleActions = [
     {
-      title: 'Panel de Control',
+      title: 'Control de Salidas',
+      description: 'Registra entradas, salidas y evidencias de viajes.',
+      icon: Layers,
+      to: '/vehicles/trips',
+      color: 'bg-purple-500',
+      lightColor: 'bg-purple-500/10',
+      textColor: 'text-purple-500'
+    },
+    {
+      title: 'Mantenimiento Vehicular',
+      description: 'Consulta y reporta mantenimientos de la flota.',
+      icon: Truck,
+      to: '/vehicles/maintenances',
+      color: 'bg-blue-500',
+      lightColor: 'bg-blue-500/10',
+      textColor: 'text-blue-500'
+    }
+  ];
+
+  const vehicleAdminActions = [
+    {
+      title: 'Panel de Control Vehicular',
       description: 'Resumen general, alertas e indicadores de vehículos.',
       icon: LayoutDashboard,
       to: '/vehicles/dashboard',
@@ -67,30 +105,23 @@ const Home = () => {
       color: 'bg-blue-500',
       lightColor: 'bg-blue-500/10',
       textColor: 'text-blue-500'
-    },
-    {
-      title: 'Control de Salidas',
-      description: 'Registra entradas, salidas y evidencias.',
-      icon: Layers,
-      to: '/vehicles/trips',
-      color: 'bg-purple-500',
-      lightColor: 'bg-purple-500/10',
-      textColor: 'text-purple-500'
     }
   ];
 
-  const isAdmin = authService.isAdmin();
+  const isGlobalAdmin = authService.isGlobalAdmin();
+  const isVehicleAdmin = authService.isVehicleAdmin();
   const isTech = authService.isTech();
   const isFurniture = authService.isFurniture();
   const isConductor = authService.isConductor();
 
   let quickActions: any[] = [];
 
-  if (isAdmin) {
-    quickActions = [...techActions, ...furnitureActions, ...vehicleActions];
+  if (isGlobalAdmin) {
+    quickActions = [...techActions, ...furnitureActions, ...vehicleAdminActions, ...vehicleActions];
   } else {
     if (isTech) quickActions.push(...techActions);
     if (isFurniture) quickActions.push(...furnitureActions);
+    if (isVehicleAdmin) quickActions.push(...vehicleAdminActions);
     if (isConductor) quickActions.push(...vehicleActions);
   }
 
@@ -105,8 +136,8 @@ const Home = () => {
       
       <div className="relative z-10 max-w-6xl mx-auto w-full px-6 py-12">
         {/* Header Section */}
-        <div className="mb-20 text-center animate-fade-in-up">
-          <div className="relative z-10 flex flex-col items-center pt-20 pb-16 px-4">
+        <div className="mb-12 text-center animate-fade-in-up">
+          <div className="relative z-10 flex flex-col items-center pt-10 pb-8 px-4">
             <div className="w-24 h-24 bg-white rounded-3xl shadow-xl p-2 mb-8 animate-bounce-slow">
               <img src={logoUrl} alt="Logo Sindicato" className="w-full h-full object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
             </div>
@@ -120,6 +151,48 @@ const Home = () => {
             </p>
           </div>
         </div>
+
+        {/* Driver Profile Registration Banner / Card */}
+        {isConductor && (
+          <div className="mb-10 animate-fade-in-up">
+            <div 
+              onClick={() => setIsDriverModalOpen(true)}
+              className="group relative bg-gradient-to-r from-emerald-600 to-teal-700 p-8 rounded-[2.5rem] shadow-xl text-white cursor-pointer hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 overflow-hidden border border-emerald-500/30 flex flex-col md:flex-row items-center justify-between gap-6"
+            >
+              <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-white/10 rounded-full blur-2xl group-hover:scale-125 transition-transform duration-500 pointer-events-none" />
+              
+              <div className="flex items-center gap-6 z-10">
+                <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/30 group-hover:rotate-6 transition-transform duration-300">
+                  <UserCheck className="w-8 h-8 text-white" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-3 mb-1">
+                    <h2 className="text-2xl font-bold">Mi Perfil de Conductor</h2>
+                    {myProfileStatus && (
+                      <span className={`px-3 py-1 rounded-full text-xs font-extrabold tracking-wide uppercase ${
+                        myProfileStatus === 'Completado' 
+                          ? 'bg-emerald-400/30 text-emerald-100 border border-emerald-300/40' 
+                          : 'bg-amber-400/30 text-amber-100 border border-amber-300/40'
+                      }`}>
+                        {myProfileStatus}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-emerald-100 text-sm max-w-xl">
+                    Completa o actualiza tu licencia, teléfono, tipo de sangre y contacto de emergencia para figurar en el directorio oficial de conductores.
+                  </p>
+                </div>
+              </div>
+
+              <div className="z-10 shrink-0">
+                <button className="px-6 py-3 bg-white text-emerald-800 font-bold rounded-2xl shadow-md hover:bg-emerald-50 transition-colors flex items-center gap-2">
+                  <span>{myProfileStatus === 'Completado' ? 'Editar Mi Perfil' : 'Completar Perfil'}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Quick Actions Grid */}
         {quickActions.length > 0 ? (
@@ -157,10 +230,17 @@ const Home = () => {
         )}
 
         {/* Decorative footer text */}
-        <div className="mt-20 text-center text-sm font-semibold text-gray-400 uppercase tracking-widest animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+        <div className="mt-16 text-center text-sm font-semibold text-gray-400 uppercase tracking-widest animate-fade-in-up" style={{ animationDelay: '300ms' }}>
           {quickActions.length > 0 ? 'Selecciona un módulo para comenzar' : ''}
         </div>
       </div>
+
+      {/* Driver Self Profile Modal */}
+      <DriverSelfProfileModal
+        isOpen={isDriverModalOpen}
+        onClose={() => setIsDriverModalOpen(false)}
+        onSuccess={() => checkMyProfile()}
+      />
     </div>
   );
 };

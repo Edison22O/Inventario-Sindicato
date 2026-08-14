@@ -38,7 +38,14 @@ const Login = () => {
       await authService.login({ username, password });
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Credenciales inválidas. Por favor, intenta de nuevo.');
+      if (err.response?.status === 429) {
+        setError(
+          err.response?.data?.detail ||
+          'Has superado el límite de intentos de inicio de sesión. Por favor, espera un momento antes de volver a intentarlo.'
+        );
+      } else {
+        setError(err.response?.data?.detail || 'Credenciales inválidas. Por favor, intenta de nuevo.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -99,6 +106,7 @@ const Login = () => {
                 <input
                   type="text"
                   required
+                  autoComplete="username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="block w-full pl-11 pr-4 py-3.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white shadow-inner focus:shadow-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 sm:text-sm transition-all duration-200"
@@ -118,6 +126,7 @@ const Login = () => {
                 <input
                   type="password"
                   required
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="block w-full pl-11 pr-4 py-3.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white shadow-inner focus:shadow-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 sm:text-sm transition-all duration-200"

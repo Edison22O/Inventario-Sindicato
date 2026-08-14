@@ -51,8 +51,8 @@ function App() {
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<Home />} />
           
-          {/* Inventory Modules (Tecnologico) */}
-          <Route element={<RoleGuard allowedRoles={['Tecnologico']} />}>
+          {/* Inventory Modules (Tecnologia) */}
+          <Route element={<RoleGuard allowedRoles={['Tecnologico', 'Encargado de Tecnología', 'Administrador']} />}>
             <Route path="/inventory-dashboard" element={<Dashboard />} />
             <Route path="/categories" element={<Categories />} />
             <Route path="/categories/:id" element={<CategoryInventory />} />
@@ -66,7 +66,7 @@ function App() {
           </Route>
 
           {/* Furniture Modules (Muebles) */}
-          <Route element={<RoleGuard allowedRoles={['Muebles']} />}>
+          <Route element={<RoleGuard allowedRoles={['Muebles', 'Encargado de Mobiliario', 'Administrador']} />}>
             <Route path="/furniture/inventory-dashboard" element={<FurnitureDashboard />} />
             <Route path="/furniture/categories" element={<FurnitureCategories />} />
             <Route path="/furniture/categories/:id" element={<FurnitureCategoryInventory />} />
@@ -79,23 +79,26 @@ function App() {
             <Route path="/furniture/reports" element={<FurnitureReports />} />
           </Route>
 
-          {/* Vehicles Routes (Conductores) */}
-          <Route element={<RoleGuard allowedRoles={['Conductores', 'Administrador']} />}>
-            {/* Vehicles Routes */}
+          {/* Vehicles Administrative Routes (Administrador General & Administrador de Vehículos) */}
+          <Route element={<RoleGuard allowedRoles={['Administrador', 'vehiculo_admin']} />}>
             <Route path="/vehicles/dashboard" element={<VehiclesDashboard />} />
             <Route path="/vehicles/catalog" element={<VehiclesCatalog />} />
             <Route path="/vehicles/drivers" element={<DriversCatalog />} />
             <Route path="/vehicles/drivers/:id" element={<DriverProfilePage />} />
-            <Route path="/vehicles/trips" element={<VehicleTrips />} />
-            <Route path="/vehicles/maintenances" element={<VehicleMaintenances />} />
             <Route path="/vehicles/matriculas" element={<VehicleMatriculas />} />
             <Route path="/vehicles/history" element={<TripHistory />} />
             <Route path="/vehicles/reports" element={<VehicleReports />} />
             <Route path="/vehicles/:id" element={<VehicleProfile />} />
           </Route>
 
-          {/* Admin / Settings (Administrador / Conductores) */}
-          <Route element={<RoleGuard allowedRoles={['Administrador', 'Conductores', 'Conductor']} />}>
+          {/* Vehicles Operative Routes (Conductores, Administrador de Vehículos, Administrador General) */}
+          <Route element={<RoleGuard allowedRoles={['Conductores', 'Conductor', 'vehiculo_admin', 'Administrador']} />}>
+            <Route path="/vehicles/trips" element={<VehicleTrips />} />
+            <Route path="/vehicles/maintenances" element={<VehicleMaintenances />} />
+          </Route>
+
+          {/* Admin / Settings (Administrador General & Administrador de Flota Vehicular) */}
+          <Route element={<RoleGuard allowedRoles={['Administrador', 'vehiculo_admin', 'admin_vehiculo', 'flota_admin']} />}>
             <Route path="/control-panel" element={<SettingsDashboard />} />
           </Route>
         </Route>

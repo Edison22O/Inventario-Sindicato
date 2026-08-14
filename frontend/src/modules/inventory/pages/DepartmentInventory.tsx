@@ -60,7 +60,8 @@ const DepartmentInventory = () => {
       setSuppliers(supRes.data);
       
       // Filter products by this department
-      const deptProducts = prodRes.data.filter((p: Product) => p.department === Number(id));
+      const targetDeptId = deptRes.data?.id;
+      const deptProducts = prodRes.data.filter((p: Product) => p.department === targetDeptId || String(p.department) === String(id));
       setProducts(deptProducts);
     } catch (error) {
       console.error('Error fetching data:', error);

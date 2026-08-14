@@ -3,10 +3,12 @@ version: '3.8'
 services:
   db:
     image: postgres:15-alpine
+    env_file:
+      - .env
     environment:
-      POSTGRES_DB: inventario_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ${DB_NAME:-inventario_db}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -15,6 +17,8 @@ services:
   backend:
     build: ./backend
     command: bash -c "python manage.py migrate && daphne -b 0.0.0.0 -p 8000 inventory_api.asgi:application"
+    env_file:
+      - .env
     volumes:
       - ./backend:/app
     ports:
@@ -22,23 +26,25 @@ services:
     depends_on:
       - db
     environment:
-      - DB_NAME=inventario_db
-      - DB_USER=postgres
-      - DB_PASSWORD=password
-      - DB_HOST=db
-      - DB_PORT=5432
-      - SECRET_KEY=super-secret-key-1234
-      - DEBUG=True
+      - DB_NAME=${DB_NAME:-inventario_db}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - DB_HOST=${DB_HOST:-db}
+      - DB_PORT=${DB_PORT:-5432}
+      - SECRET_KEY=${SECRET_KEY:-default-secret-key}
+      - DEBUG=${DEBUG:-True}
 
   frontend:
     build: ./frontend
+    env_file:
+      - .env
     volumes:
       - ./frontend:/app
       - /app/node_modules
     ports:
       - "3000:3000"
     environment:
-      - VITE_API_URL=/api/
+      - VITE_API_URL=${VITE_API_URL:-/api/}
     depends_on:
       - backend
 
@@ -54,8 +60,10 @@ services:
 
   ngrok:
     image: ngrok/ngrok:latest
+    env_file:
+      - .env
     environment:
-      - NGROK_AUTHTOKEN=3HJm48ng2s8ADVhdyD6ZblW1ZgW_293yo5zZH4JvyRiEqECBF
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
     command:
       - "http"
       - "nginx:80"

@@ -1,9 +1,50 @@
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_save, post_delete, post_migrate
 from django.dispatch import receiver
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from .models import Product, Department, Category, Supplier
 from .models.furniture import FurnitureProduct, FurnitureDepartment, FurnitureCategory, FurnitureSupplier
+
+@receiver(post_migrate)
+def ensure_default_roles(sender, **kwargs):
+    if sender.name != 'api':
+        return
+    try:
+        from api.models.core import Role, User
+        default_roles_data = [
+            {'name': 'Administrador', 'level': 1},
+            {'name': 'Administrador de Flota Vehicular', 'level': 2},
+            {'name': 'Encargado de Tecnología', 'level': 3},
+            {'name': 'Encargado de Mobiliario', 'level': 4},
+            {'name': 'Conductor', 'level': 5},
+        ]
+        target_roles = {}
+        for role_data in default_roles_data:
+            role_obj = Role.objects.filter(name__iexact=role_data['name']).first()
+            if not role_obj:
+                level = role_data['level']
+                while Role.objects.filter(level=level).exists():
+                    level += 10
+                role_obj = Role.objects.create(name=role_data['name'], level=level, status=True)
+            target_roles[role_data['name']] = role_obj
+
+        role_mappings = {
+            'tecnologico': target_roles['Encargado de Tecnología'],
+            'tecnológico': target_roles['Encargado de Tecnología'],
+            'muebles': target_roles['Encargado de Mobiliario'],
+            'mobiliario': target_roles['Encargado de Mobiliario'],
+            'conductores': target_roles['Conductor'],
+            'choferes': target_roles['Conductor'],
+        }
+
+        for old_name, new_role_obj in role_mappings.items():
+            old_roles = Role.objects.filter(name__iexact=old_name)
+            for old_role in old_roles:
+                if old_role.pk != new_role_obj.pk:
+                    User.objects.filter(role=old_role).update(role=new_role_obj)
+                    old_role.delete()
+    except Exception:
+        pass
 
 def broadcast_inventory_update(model_name, action):
     channel_layer = get_channel_layer()

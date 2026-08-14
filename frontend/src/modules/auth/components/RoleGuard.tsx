@@ -20,6 +20,7 @@ const RoleGuard: React.FC<RoleGuardProps> = ({ allowedRoles, children }) => {
 
   const isAllowed = allowedRoles.some(role => {
     const target = role.toLowerCase();
+    if (target.includes('vehicle_admin') || target.includes('vehiculo_admin') || target.includes('admin_vehiculo')) return authService.isVehicleAdmin();
     if (target.includes('conductor') || target.includes('chofer')) return authService.isConductor();
     if (target.includes('tecnolog')) return authService.isTech();
     if (target.includes('mueble') || target.includes('mobiliario')) return authService.isFurniture();

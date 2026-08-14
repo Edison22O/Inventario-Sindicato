@@ -1,0 +1,61 @@
+# ==========================================
+# ENV VARIABLES & SECRETS
+# ==========================================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# ==========================================
+# LOGS & TEMPORARY FILES
+# ==========================================
+logs
+*.log
+backend_logs.txt
+*.sql
+scratch/
+
+# ==========================================
+# PYTHON / DJANGO
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# ==========================================
+# NODE / REACT / VITE
+# ==========================================
+node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/node_modules/
+
+# ==========================================
+# IDE & OS FILES
+# ==========================================
+.vscode/
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db

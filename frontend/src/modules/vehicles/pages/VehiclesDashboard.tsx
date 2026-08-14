@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Truck, AlertTriangle, CheckCircle, Navigation, TrendingUp, Calendar, Wrench, Users, X, DollarSign, PenTool, RefreshCw } from 'lucide-react';
+import { Truck, AlertTriangle, CheckCircle, Navigation, TrendingUp, Calendar, Wrench, Users, X, DollarSign, PenTool, RefreshCw, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import api from '@/shared/services/api';
 import toast from 'react-hot-toast';
@@ -36,7 +36,7 @@ const VehiclesDashboard = () => {
         const nextYear = currentDate.toISOString().split('T')[0];
         setMatriculaForm(prev => ({ ...prev, nueva_fecha_vencimiento: nextYear, año_matriculado: new Date().getFullYear().toString(), costo: '', notas: '', lugar_tramite: '' }));
       } catch (e) {
-        // Fallback if date is invalid
+        // Fallback
       }
     }
   }, [selectedMatricula]);
@@ -81,7 +81,6 @@ const VehiclesDashboard = () => {
     if (!selectedMaint) return;
     setSubmitting(true);
     try {
-      // 1. Create Maintenance Record
       await api.post('/vehicle-maintenance-records/', {
         vehicle: selectedMaint.vehicle_id,
         maintenance_rule: selectedMaint.id,
@@ -91,8 +90,8 @@ const VehiclesDashboard = () => {
         notas: maintForm.notas
       });
 
-      // 2. Update the rule
-      await api.patch(`/vehicle-maintenances/${selectedMaint.public_id}/`, {
+      const ruleId = selectedMaint.public_id || selectedMaint.id;
+      await api.patch(`/vehicle-maintenances/${ruleId}/`, {
         fecha_ultimo_cambio: maintForm.fecha,
         fecha_proximo_cambio: maintForm.fecha_proximo || null,
         km_ultimo_cambio: selectedMaint.odometro_actual || 0
@@ -111,7 +110,7 @@ const VehiclesDashboard = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
       </div>
     );
   }
@@ -121,117 +120,124 @@ const VehiclesDashboard = () => {
   // Data for Pie Chart (Estado de Flota)
   const pieData = [
     { name: 'En Sindicato', value: stats.kpis.en_sindicato, color: '#10b981' },
-    { name: 'En Ruta', value: stats.kpis.en_ruta, color: '#3b82f6' },
+    { name: 'En Ruta', value: stats.kpis.en_ruta, color: '#0284c7' },
     { name: 'En Taller', value: stats.kpis.en_taller, color: '#ef4444' }
   ].filter(d => d.value > 0);
 
   return (
-    <div className="p-4 sm:p-8 max-w-[1600px] mx-auto space-y-8 pb-32">
-      <div className="flex items-center gap-4 mb-6">
-        <div className="p-3 bg-emerald-100 rounded-2xl">
-          <TrendingUp className="w-8 h-8 text-emerald-600" />
+    <div className="p-4 sm:p-8 max-w-[1600px] mx-auto space-y-8 pb-32 relative">
+      {/* Background Texture */}
+      <div className="absolute inset-0 z-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 pointer-events-none rounded-3xl mix-blend-multiply" />
+
+      {/* Header */}
+      <div className="relative z-10 flex items-center gap-4 mb-6">
+        <div className="p-3 bg-emerald-100 text-emerald-600 rounded-2xl shadow-sm">
+          <TrendingUp className="w-8 h-8" />
         </div>
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900">Dashboard de Flota Vehicular</h1>
-          <p className="text-gray-500 font-medium">Indicadores, gastos y estado en tiempo real</p>
+          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Dashboard de Flota Vehicular</h1>
+          <p className="text-gray-500 font-medium">Indicadores en tiempo real, control de alertas y desglose de gastos.</p>
         </div>
       </div>
 
       {/* KPIs Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
-        <div className="bg-white p-4 sm:p-6 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
-          <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-50 rounded-full group-hover:scale-110 transition-transform"></div>
+      <div className="relative z-10 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
+        <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden group hover:shadow-lg transition-all">
           <div className="relative z-10">
-            <p className="text-gray-500 font-bold uppercase tracking-wider text-xs mb-1">Total Vehículos</p>
-            <h3 className="text-4xl font-black text-gray-900 mb-4">{stats.kpis.total}</h3>
-            <div className="flex items-center gap-2 text-blue-600 bg-blue-50 w-fit px-3 py-1.5 rounded-full text-sm font-bold">
-              <Truck className="w-4 h-4" />
-              <span>Flota Registrada</span>
+            <p className="text-gray-400 font-bold uppercase tracking-wider text-[10px] mb-1">Total Flota</p>
+            <h3 className="text-3xl font-black text-gray-900 mb-3">{stats.kpis.total}</h3>
+            <div className="flex items-center gap-1.5 text-emerald-700 bg-emerald-50 w-fit px-3 py-1 rounded-full text-xs font-bold">
+              <Truck className="w-3.5 h-3.5" />
+              <span>Registrados</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
-          <div className="absolute -right-4 -top-4 w-24 h-24 bg-emerald-50 rounded-full group-hover:scale-110 transition-transform"></div>
+        <div className="bg-white p-5 rounded-3xl border border-blue-100 shadow-sm relative overflow-hidden group hover:shadow-lg transition-all">
           <div className="relative z-10">
-            <p className="text-gray-500 font-bold uppercase tracking-wider text-xs mb-1">En Ruta Actual</p>
-            <h3 className="text-4xl font-black text-gray-900 mb-4">{stats.kpis.en_ruta}</h3>
-            <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 w-fit px-3 py-1.5 rounded-full text-sm font-bold">
-              <Navigation className="w-4 h-4" />
+            <p className="text-gray-400 font-bold uppercase tracking-wider text-[10px] mb-1">En Ruta Actual</p>
+            <h3 className="text-3xl font-black text-blue-600 mb-3">{stats.kpis.en_ruta}</h3>
+            <div className="flex items-center gap-1.5 text-blue-600 bg-blue-50 w-fit px-3 py-1 rounded-full text-xs font-bold">
+              <Navigation className="w-3.5 h-3.5" />
               <span>Viajes en Curso</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-4 sm:p-6 rounded-3xl border border-red-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
-          <div className="absolute -right-4 -top-4 w-24 h-24 bg-red-50 rounded-full group-hover:scale-110 transition-transform"></div>
+        <div className="bg-white p-5 rounded-3xl border border-red-100 shadow-sm relative overflow-hidden group hover:shadow-lg transition-all">
           <div className="relative z-10">
-            <p className="text-gray-500 font-bold uppercase tracking-wider text-xs mb-1">Alertas Mantenimiento</p>
-            <h3 className="text-4xl font-black text-red-600 mb-4">{stats.kpis.mantenimientos_alertas}</h3>
-            <div className="flex items-center gap-2 text-red-600 bg-red-50 w-fit px-3 py-1.5 rounded-full text-sm font-bold">
-              <Wrench className="w-4 h-4" />
-              <span>Requieren Atención</span>
+            <p className="text-gray-400 font-bold uppercase tracking-wider text-[10px] mb-1">Alertas Mantenimiento</p>
+            <h3 className="text-3xl font-black text-red-600 mb-3">{stats.kpis.mantenimientos_alertas}</h3>
+            <div className="flex items-center gap-1.5 text-red-600 bg-red-50 w-fit px-3 py-1 rounded-full text-xs font-bold">
+              <Wrench className="w-3.5 h-3.5" />
+              <span>Urgentes</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-4 sm:p-6 rounded-3xl border border-orange-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
-          <div className="absolute -right-4 -top-4 w-24 h-24 bg-orange-50 rounded-full group-hover:scale-110 transition-transform"></div>
+        <div className="bg-white p-5 rounded-3xl border border-amber-100 shadow-sm relative overflow-hidden group hover:shadow-lg transition-all">
           <div className="relative z-10">
-            <p className="text-gray-500 font-bold uppercase tracking-wider text-xs mb-1">Matrículas por Vencer</p>
-            <h3 className="text-3xl sm:text-4xl font-black text-orange-600 mb-4">{stats.kpis.matriculas_alertas}</h3>
-            <div className="flex items-center gap-2 text-orange-600 bg-orange-50 w-fit px-3 py-1.5 rounded-full text-sm font-bold">
-              <Calendar className="w-4 h-4" />
-              <span>Por Vencer</span>
+            <p className="text-gray-400 font-bold uppercase tracking-wider text-[10px] mb-1">Matrículas por Vencer</p>
+            <h3 className="text-3xl font-black text-amber-600 mb-3">{stats.kpis.matriculas_alertas}</h3>
+            <div className="flex items-center gap-1.5 text-amber-700 bg-amber-50 w-fit px-3 py-1 rounded-full text-xs font-bold">
+              <Calendar className="w-3.5 h-3.5" />
+              <span>Por Renovar</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-4 sm:p-6 rounded-3xl border border-purple-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
-          <div className="absolute -right-4 -top-4 w-24 h-24 bg-purple-50 rounded-full group-hover:scale-110 transition-transform"></div>
+        <div className="bg-white p-5 rounded-3xl border border-emerald-100 shadow-sm relative overflow-hidden group hover:shadow-lg transition-all">
           <div className="relative z-10">
-            <p className="text-gray-500 font-bold uppercase tracking-wider text-[10px] sm:text-xs mb-1">Conductores</p>
-            <h3 className="text-3xl sm:text-4xl font-black text-purple-600 mb-4">{stats.kpis.total_conductores}</h3>
-            <div className="flex items-center gap-2 text-purple-600 bg-purple-50 w-fit px-3 py-1.5 rounded-full text-[10px] sm:text-sm font-bold">
-              <Users className="w-4 h-4" />
-              <span>Personal Activo</span>
+            <p className="text-gray-400 font-bold uppercase tracking-wider text-[10px] mb-1">Conductores</p>
+            <h3 className="text-3xl font-black text-emerald-800 mb-3">{stats.kpis.total_conductores}</h3>
+            <div className="flex items-center gap-1.5 text-emerald-800 bg-emerald-50 w-fit px-3 py-1 rounded-full text-xs font-bold">
+              <Users className="w-3.5 h-3.5" />
+              <span>Personal Habilitado</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 relative z-10">
         {/* Gráfico Gastos Combustible */}
-        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
-          <h2 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
-            Top Gastos de Combustible
-          </h2>
+        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-between">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-lg font-extrabold text-gray-900 flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-emerald-600" />
+              Top Gastos de Combustible
+            </h2>
+            <span className="text-xs font-bold text-gray-400 uppercase">Período Reciente</span>
+          </div>
           <div className="h-[300px] w-full">
             {stats.fuel_expenses.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={stats.fuel_expenses} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                  <XAxis dataKey="placa" axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12}} />
-                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12}} tickFormatter={(value) => `$${value}`} />
+                  <XAxis dataKey="placa" axisLine={false} tickLine={false} tick={{fill: '#4b5563', fontSize: 12, fontWeight: 'bold'}} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#4b5563', fontSize: 12}} tickFormatter={(value) => `$${value}`} />
                   <Tooltip 
-                    cursor={{fill: '#f3f4f6'}}
-                    contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
-                    formatter={(value: number) => [`$${value.toFixed(2)}`, 'Costo']}
+                    cursor={{fill: '#f0fdf4'}}
+                    contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}}
+                    formatter={(value: number) => [`$${value.toFixed(2)}`, 'Costo Combustible']}
                   />
-                  <Bar dataKey="costo_total" fill="#10b981" radius={[6, 6, 0, 0]} maxBarSize={50} />
+                  <Bar dataKey="costo_total" fill="#059669" radius={[10, 10, 0, 0]} maxBarSize={50} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-gray-400 font-medium">No hay gastos registrados</div>
+              <div className="h-full flex items-center justify-center text-gray-400 font-medium">No hay registros de combustible</div>
             )}
           </div>
         </div>
 
         {/* Gráfico Estado de Flota */}
-        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col">
-          <h2 className="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
-            Estado Actual de Flota
-          </h2>
+        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-between">
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-lg font-extrabold text-gray-900 flex items-center gap-2">
+              <Truck className="w-5 h-5 text-emerald-600" />
+              Distribución de Estado de Flota
+            </h2>
+          </div>
           <div className="flex-1 min-h-[300px]">
             {pieData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -240,16 +246,16 @@ const VehiclesDashboard = () => {
                     data={pieData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={80}
-                    outerRadius={110}
-                    paddingAngle={5}
+                    innerRadius={75}
+                    outerRadius={105}
+                    paddingAngle={6}
                     dataKey="value"
                   >
                     {pieData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                  <Tooltip contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}} />
                   <Legend verticalAlign="bottom" height={36} iconType="circle" />
                 </PieChart>
               </ResponsiveContainer>
@@ -260,97 +266,98 @@ const VehiclesDashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Alertas Inmediatas: Mantenimientos */}
-        <div className="bg-white rounded-3xl border border-red-100 shadow-sm overflow-hidden flex flex-col">
-          <div className="px-6 py-4 bg-red-50/50 border-b border-red-100 flex justify-between items-center">
-            <h2 className="font-bold text-red-900 flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-red-600" />
-              Mantenimientos Urgentes
+      {/* Alert Lists */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 relative z-10">
+        {/* Mantenimientos Urgentes */}
+        <div className="bg-white rounded-3xl border border-red-100 shadow-sm overflow-hidden flex flex-col justify-between">
+          <div className="px-6 py-4 bg-gradient-to-r from-red-50 to-red-100/40 border-b border-red-100 flex justify-between items-center">
+            <h2 className="font-extrabold text-red-950 flex items-center gap-2 text-sm">
+              <ShieldAlert className="w-5 h-5 text-red-600" />
+              Mantenimientos que Requieren Atención
             </h2>
-            <span className="bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full">{stats.alerts.mantenimientos.length}</span>
+            <span className="bg-red-600 text-white text-xs font-black px-3 py-1 rounded-full">{stats.alerts.mantenimientos.length}</span>
           </div>
-          <div className="p-4 flex-1">
+          <div className="p-5 flex-1 space-y-3">
             {stats.alerts.mantenimientos.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-emerald-600 font-bold gap-2">
-                <CheckCircle className="w-5 h-5" /> Todo al día
+              <div className="py-12 text-center text-emerald-600 font-bold flex flex-col items-center justify-center gap-2">
+                <CheckCircle2 className="w-10 h-10" />
+                <span>¡Excelente! Todos los mantenimientos están al día.</span>
               </div>
             ) : (
-              <div className="space-y-3">
-                {stats.alerts.mantenimientos.map((m: any, i: number) => (
-                  <div key={i} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
-                    <div>
-                      <h4 className="font-bold text-gray-900">{m.vehiculo}</h4>
-                      <p className="text-sm text-gray-500">{m.actividad}</p>
-                    </div>
-                    <div className="text-right flex flex-col items-end gap-2">
-                      <div>
-                        <span className={`text-xs font-bold px-2 py-1 rounded uppercase ${
-                          m.estado === 'CAMBIO URGENTE' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
-                        }`}>
-                          {m.estado}
-                        </span>
-                        <p className={`text-sm font-bold mt-1 ${m.km_restantes < 0 ? 'text-red-600' : 'text-orange-600'}`}>
-                          {m.km_restantes} KM
-                        </p>
-                      </div>
-                      <button 
-                        onClick={() => setSelectedMaint(m)}
-                        className="text-xs font-bold bg-white border border-gray-200 px-3 py-1 rounded-full text-emerald-600 hover:bg-emerald-50 hover:border-emerald-200 transition-colors"
-                      >
-                        Resolver
-                      </button>
-                    </div>
+              stats.alerts.mantenimientos.map((m: any, i: number) => (
+                <div key={i} className="flex justify-between items-center p-4 bg-gray-50/80 rounded-2xl border border-gray-100 hover:border-red-200 transition-colors">
+                  <div>
+                    <h4 className="font-extrabold text-gray-900">{m.vehiculo}</h4>
+                    <p className="text-xs font-semibold text-gray-600">{m.actividad}</p>
                   </div>
-                ))}
-              </div>
+                  <div className="text-right flex items-center gap-3">
+                    <div>
+                      <span className={`text-[10px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider ${
+                        m.estado === 'CAMBIO URGENTE' ? 'bg-red-600 text-white' : 'bg-amber-500 text-white'
+                      }`}>
+                        {m.estado}
+                      </span>
+                      <p className={`text-xs font-extrabold mt-1 ${m.km_restantes < 0 ? 'text-red-600' : 'text-amber-600'}`}>
+                        {m.km_restantes} KM
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => setSelectedMaint(m)}
+                      className="text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl transition-all shadow-sm flex items-center gap-1"
+                    >
+                      <PenTool className="w-3.5 h-3.5" />
+                      Resolver
+                    </button>
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </div>
 
-        {/* Alertas Inmediatas: Matrículas */}
-        <div className="bg-white rounded-3xl border border-orange-100 shadow-sm overflow-hidden flex flex-col">
-          <div className="px-6 py-4 bg-orange-50/50 border-b border-orange-100 flex justify-between items-center">
-            <h2 className="font-bold text-orange-900 flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-orange-600" />
-              Matrículas por Vencer
+        {/* Matrículas por Vencer */}
+        <div className="bg-white rounded-3xl border border-amber-100 shadow-sm overflow-hidden flex flex-col justify-between">
+          <div className="px-6 py-4 bg-gradient-to-r from-amber-50 to-amber-100/40 border-b border-amber-100 flex justify-between items-center">
+            <h2 className="font-extrabold text-amber-950 flex items-center gap-2 text-sm">
+              <Calendar className="w-5 h-5 text-amber-600" />
+              Matrículas por Renovar
             </h2>
-            <span className="bg-orange-100 text-orange-700 text-xs font-bold px-3 py-1 rounded-full">{stats.alerts.matriculas.length}</span>
+            <span className="bg-amber-500 text-white text-xs font-black px-3 py-1 rounded-full">{stats.alerts.matriculas.length}</span>
           </div>
-          <div className="p-4 flex-1">
+          <div className="p-5 flex-1 space-y-3">
             {stats.alerts.matriculas.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-emerald-600 font-bold gap-2">
-                <CheckCircle className="w-5 h-5" /> Todo al día
+              <div className="py-12 text-center text-emerald-600 font-bold flex flex-col items-center justify-center gap-2">
+                <CheckCircle2 className="w-10 h-10" />
+                <span>¡Todo al día! No hay matrículas vencidas ni próximas a vencer.</span>
               </div>
             ) : (
-              <div className="space-y-3">
-                {stats.alerts.matriculas.map((m: any, i: number) => (
-                  <div key={i} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
-                    <div>
-                      <h4 className="font-bold text-gray-900">{m.vehiculo}</h4>
-                      <p className="text-sm text-gray-500">Vence: {m.vencimiento}</p>
-                    </div>
-                    <div className="text-right flex flex-col items-end gap-2">
-                      <div>
-                        <span className={`text-xs font-bold px-2 py-1 rounded uppercase ${
-                          m.estado === 'MATRÍCULA VENCIDA' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
-                        }`}>
-                          {m.estado}
-                        </span>
-                        <p className={`text-sm font-bold mt-1 ${m.dias < 0 ? 'text-red-600' : 'text-orange-600'}`}>
-                          {m.dias} Días
-                        </p>
-                      </div>
-                      <button 
-                        onClick={() => setSelectedMatricula(m)}
-                        className="text-xs font-bold bg-white border border-gray-200 px-3 py-1 rounded-full text-blue-600 hover:bg-blue-50 hover:border-blue-200 transition-colors"
-                      >
-                        Renovar
-                      </button>
-                    </div>
+              stats.alerts.matriculas.map((m: any, i: number) => (
+                <div key={i} className="flex justify-between items-center p-4 bg-gray-50/80 rounded-2xl border border-gray-100 hover:border-amber-200 transition-colors">
+                  <div>
+                    <h4 className="font-extrabold text-gray-900">{m.vehiculo}</h4>
+                    <p className="text-xs font-semibold text-gray-500">Vencimiento: {m.vencimiento}</p>
                   </div>
-                ))}
-              </div>
+                  <div className="text-right flex items-center gap-3">
+                    <div>
+                      <span className={`text-[10px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider ${
+                        m.estado === 'MATRÍCULA VENCIDA' ? 'bg-red-600 text-white' : 'bg-amber-500 text-white'
+                      }`}>
+                        {m.estado}
+                      </span>
+                      <p className={`text-xs font-extrabold mt-1 ${m.dias < 0 ? 'text-red-600' : 'text-amber-600'}`}>
+                        {m.dias} Días
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => setSelectedMatricula(m)}
+                      className="text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl transition-all shadow-sm flex items-center gap-1"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      Renovar
+                    </button>
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </div>
@@ -360,104 +367,95 @@ const VehiclesDashboard = () => {
       
       {/* Maintenance Modal */}
       {selectedMaint && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                <PenTool className="w-5 h-5 text-emerald-600" />
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-800 text-white">
+              <h2 className="text-lg font-extrabold flex items-center gap-2">
+                <PenTool className="w-5 h-5" />
                 Registrar Servicio Realizado
               </h2>
-              <button onClick={() => setSelectedMaint(null)} className="text-gray-400 hover:text-gray-600 transition-colors">
-                <X className="w-6 h-6" />
+              <button onClick={() => setSelectedMaint(null)} className="p-1 hover:bg-white/20 rounded-lg transition-colors">
+                <X className="w-5 h-5" />
               </button>
             </div>
             
             <form onSubmit={handleUpdateMaintenance} className="p-6 space-y-4">
-              <div className="bg-emerald-50 text-emerald-800 p-4 rounded-xl text-sm font-medium mb-2 border border-emerald-100 flex gap-3">
-                <AlertTriangle className="w-5 h-5 shrink-0" />
-                <p>Al guardar, el odómetro actual ({selectedMaint.odometro_actual || 0} km) se registrará como el kilometraje del último cambio para <b>"{selectedMaint.actividad}"</b>.</p>
+              <div className="bg-emerald-50 text-emerald-900 p-4 rounded-2xl text-xs font-semibold border border-emerald-100 flex gap-3">
+                <AlertTriangle className="w-5 h-5 shrink-0 text-emerald-600" />
+                <p>Al guardar, el odómetro actual ({selectedMaint.odometro_actual || 0} km) se registrará como el nuevo cambio para <b>"{selectedMaint.actividad}"</b>.</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Fecha del Servicio *</label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                      type="date"
-                      required
-                      value={maintForm.fecha}
-                      onChange={e => setMaintForm({...maintForm, fecha: e.target.value})}
-                      className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
-                    />
-                  </div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Fecha Servicio *</label>
+                  <input
+                    type="date"
+                    required
+                    value={maintForm.fecha}
+                    onChange={e => setMaintForm({...maintForm, fecha: e.target.value})}
+                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium outline-none"
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Próximo Cambio</label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                      type="date"
-                      value={maintForm.fecha_proximo}
-                      onChange={e => setMaintForm({...maintForm, fecha_proximo: e.target.value})}
-                      className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
-                    />
-                  </div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Próximo Cambio</label>
+                  <input
+                    type="date"
+                    value={maintForm.fecha_proximo}
+                    onChange={e => setMaintForm({...maintForm, fecha_proximo: e.target.value})}
+                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium outline-none"
+                  />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">Taller / Proveedor *</label>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Taller / Proveedor *</label>
                 <input
                   type="text"
                   required
                   placeholder="Ej. Taller Mecánico Los Andes"
                   value={maintForm.taller}
                   onChange={e => setMaintForm({...maintForm, taller: e.target.value})}
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">Costo Total ($) *</label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    required
-                    placeholder="0.00"
-                    value={maintForm.costo}
-                    onChange={e => setMaintForm({...maintForm, costo: e.target.value})}
-                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-                  />
-                </div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Costo Total ($) *</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  required
+                  placeholder="0.00"
+                  value={maintForm.costo}
+                  onChange={e => setMaintForm({...maintForm, costo: e.target.value})}
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium outline-none"
+                />
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">Notas u Observaciones (Opcional)</label>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Observaciones</label>
                 <textarea
-                  rows={3}
+                  rows={2}
                   value={maintForm.notas}
                   onChange={e => setMaintForm({...maintForm, notas: e.target.value})}
-                  placeholder="Detalles sobre aceites usados, piezas reemplazadas, etc."
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all resize-none"
+                  placeholder="Detalles sobre aceites usados, repuestos..."
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium outline-none resize-none"
                 />
               </div>
 
-              <div className="pt-4 flex justify-end gap-3">
+              <div className="pt-3 flex justify-end gap-3 border-t border-gray-100">
                 <button
                   type="button"
                   onClick={() => setSelectedMaint(null)}
-                  className="px-5 py-2.5 rounded-xl font-bold text-gray-500 hover:bg-gray-100 transition-colors"
+                  className="px-5 py-2.5 rounded-xl font-bold text-gray-600 hover:bg-gray-100 transition-colors text-xs"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-5 py-2.5 rounded-xl font-bold bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm transition-all disabled:opacity-50"
+                  className="px-5 py-2.5 rounded-xl font-bold bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-600/20 transition-all text-xs disabled:opacity-50"
                 >
                   {submitting ? 'Guardando...' : 'Confirmar Servicio'}
                 </button>
@@ -469,71 +467,64 @@ const VehiclesDashboard = () => {
 
       {/* Matricula Modal */}
       {selectedMatricula && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="px-6 py-4 bg-[#0a5c36] text-white flex justify-between items-center shrink-0">
-              <h2 className="text-lg font-bold flex items-center gap-2">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-800 text-white shrink-0">
+              <h2 className="text-lg font-extrabold flex items-center gap-2">
                 <RefreshCw className="w-5 h-5" />
-                Renovar Matrícula
+                Renovar Matrícula Vehicular
               </h2>
-              <button onClick={() => setSelectedMatricula(null)} className="text-white/70 hover:text-white transition-colors">
-                <X className="w-6 h-6" />
+              <button onClick={() => setSelectedMatricula(null)} className="p-1 hover:bg-white/20 rounded-lg transition-colors">
+                <X className="w-5 h-5" />
               </button>
             </div>
             
             <div className="overflow-y-auto p-6">
               <form id="matriculaForm" onSubmit={handleUpdateMatricula} className="space-y-4">
-                <div className="bg-emerald-50 text-emerald-800 p-4 rounded-xl text-sm border border-emerald-100">
-                  <p>Vas a renovar la matrícula del vehículo <b>{selectedMatricula.vehiculo}</b>.</p>
-                  <p>Actualmente vence el {selectedMatricula.vencimiento}.</p>
+                <div className="bg-emerald-50 text-emerald-900 p-4 rounded-2xl text-xs font-medium border border-emerald-100">
+                  Renovación de matrícula del vehículo <b>{selectedMatricula.vehiculo}</b>. Vence: {selectedMatricula.vencimiento}.
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-bold text-[#1a2b3c] mb-1">Año Matriculado *</label>
-                    <input type="number" required value={matriculaForm.año_matriculado} onChange={e => setMatriculaForm({...matriculaForm, año_matriculado: e.target.value})} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0a5c36] outline-none" />
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Año Matriculado *</label>
+                    <input type="number" required value={matriculaForm.año_matriculado} onChange={e => setMatriculaForm({...matriculaForm, año_matriculado: e.target.value})} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium outline-none" />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-[#1a2b3c] mb-1">Costo Total ($) *</label>
-                    <input type="number" step="0.01" required value={matriculaForm.costo} onChange={e => setMatriculaForm({...matriculaForm, costo: e.target.value})} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0a5c36] outline-none" />
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Costo Total ($) *</label>
+                    <input type="number" step="0.01" required value={matriculaForm.costo} onChange={e => setMatriculaForm({...matriculaForm, costo: e.target.value})} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium outline-none" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-bold text-[#1a2b3c] mb-1">Fecha de Pago *</label>
-                    <div className="relative">
-                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                      <input type="date" required value={matriculaForm.fecha_pago} onChange={e => setMatriculaForm({...matriculaForm, fecha_pago: e.target.value})} className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0a5c36] outline-none text-sm" />
-                    </div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Fecha de Pago *</label>
+                    <input type="date" required value={matriculaForm.fecha_pago} onChange={e => setMatriculaForm({...matriculaForm, fecha_pago: e.target.value})} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium outline-none" />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-[#1a2b3c] mb-1">Nueva Fecha Vencimiento *</label>
-                    <div className="relative">
-                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                      <input type="date" required value={matriculaForm.nueva_fecha_vencimiento} onChange={e => setMatriculaForm({...matriculaForm, nueva_fecha_vencimiento: e.target.value})} className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0a5c36] outline-none text-sm" />
-                    </div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Nueva Fecha Venc. *</label>
+                    <input type="date" required value={matriculaForm.nueva_fecha_vencimiento} onChange={e => setMatriculaForm({...matriculaForm, nueva_fecha_vencimiento: e.target.value})} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium outline-none" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-[#1a2b3c] mb-1">Lugar de Trámite</label>
-                  <input type="text" placeholder="Ej. Agencia ANT..." value={matriculaForm.lugar_tramite} onChange={e => setMatriculaForm({...matriculaForm, lugar_tramite: e.target.value})} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0a5c36] outline-none" />
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Lugar de Trámite</label>
+                  <input type="text" placeholder="Ej. Agencia ANT Tulcán..." value={matriculaForm.lugar_tramite} onChange={e => setMatriculaForm({...matriculaForm, lugar_tramite: e.target.value})} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium outline-none" />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-[#1a2b3c] mb-1">Notas u Observaciones</label>
-                  <textarea rows={2} placeholder="Pago de multas, retenciones..." value={matriculaForm.notas} onChange={e => setMatriculaForm({...matriculaForm, notas: e.target.value})} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0a5c36] outline-none resize-none" />
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Notas u Observaciones</label>
+                  <textarea rows={2} placeholder="Pago de multas, retenciones..." value={matriculaForm.notas} onChange={e => setMatriculaForm({...matriculaForm, notas: e.target.value})} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium outline-none resize-none" />
                 </div>
               </form>
             </div>
 
             <div className="p-6 border-t border-gray-100 flex justify-end gap-3 shrink-0 bg-white">
-              <button type="button" onClick={() => setSelectedMatricula(null)} className="px-5 py-2.5 rounded-xl font-bold text-gray-500 hover:bg-gray-100 transition-colors">
+              <button type="button" onClick={() => setSelectedMatricula(null)} className="px-5 py-2.5 rounded-xl font-bold text-gray-600 hover:bg-gray-100 transition-colors text-xs">
                 Cancelar
               </button>
-              <button type="submit" form="matriculaForm" disabled={submitting} className="px-5 py-2.5 rounded-xl font-bold bg-[#0a5c36] text-white hover:bg-[#08482a] transition-all flex items-center gap-2">
-                <CheckCircle className="w-5 h-5" />
+              <button type="submit" form="matriculaForm" disabled={submitting} className="px-5 py-2.5 rounded-xl font-bold bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-600/20 transition-all text-xs flex items-center gap-1.5">
+                <CheckCircle className="w-4 h-4" />
                 {submitting ? 'Guardando...' : 'Confirmar Renovación'}
               </button>
             </div>

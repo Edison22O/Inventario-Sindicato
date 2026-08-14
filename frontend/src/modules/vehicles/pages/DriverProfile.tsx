@@ -169,34 +169,72 @@ const DriverProfilePage = () => {
           <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
             <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
               <IdCard className="w-5 h-5 text-emerald-600" />
-              Detalles de Licencia
+              Detalles de Licencias Registradas
             </h3>
             
             <div className="space-y-4">
-              <div className="flex justify-between items-center border-b border-gray-50 pb-3">
-                <span className="text-gray-500 text-sm">Número de Licencia</span>
-                <span className="font-bold text-gray-900 text-lg">{driver.licencia}</span>
-              </div>
-              <div className="flex justify-between items-center border-b border-gray-50 pb-3">
-                <span className="text-gray-500 text-sm">Categoría</span>
-                <span className="font-medium px-3 py-1 bg-gray-100 rounded-lg text-gray-800">{driver.tipo_licencia}</span>
-              </div>
-              <div className="flex justify-between items-center border-b border-gray-50 pb-3">
-                <span className="text-gray-500 text-sm">Fecha de Emisión</span>
-                <span className="font-medium text-gray-900">{driver.fecha_emision_licencia || 'No registrada'}</span>
-              </div>
-              <div className="flex flex-col gap-2 pt-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-500 text-sm">Fecha de Vencimiento</span>
-                  <span className="font-medium text-gray-900">{driver.fecha_vencimiento_licencia || 'No registrada'}</span>
-                </div>
-                {daysLeft !== null && (
-                  <div className={`mt-2 p-3 rounded-xl border flex items-center justify-center gap-2 font-bold text-sm ${statusColor}`}>
-                    {daysLeft < 0 ? <AlertTriangle className="w-4 h-4 shrink-0" /> : <Calendar className="w-4 h-4 shrink-0" />}
-                    <span>{statusBadge} ({Math.abs(daysLeft)} DÍAS {daysLeft < 0 ? 'VENCIDOS' : 'VIGENTES'})</span>
-                  </div>
-                )}
-              </div>
+              {(() => {
+                const licList = Array.isArray((driver as any).licencias) && (driver as any).licencias.length > 0
+                  ? (driver as any).licencias
+                  : [{ 
+                      id: '1',
+                      tipo_licencia: driver.tipo_licencia, 
+                      licencia: driver.licencia, 
+                      fecha_emision_licencia: driver.fecha_emision_licencia, 
+                      fecha_vencimiento_licencia: driver.fecha_vencimiento_licencia 
+                    }];
+
+                return licList.map((lic: any, index: number) => {
+                  const licDaysLeft = calculateDaysLeft(lic.fecha_vencimiento_licencia);
+                  let licStatusBadge = 'VIGENTE';
+                  let licStatusColor = 'bg-emerald-100 text-emerald-800 border-emerald-200';
+                  
+                  if (licDaysLeft !== null) {
+                    if (licDaysLeft < 0) {
+                      licStatusBadge = 'VENCIDA';
+                      licStatusColor = 'bg-red-100 text-red-800 border-red-200';
+                    } else if (licDaysLeft <= 30) {
+                      licStatusBadge = 'PRÓXIMA A VENCER';
+                      licStatusColor = 'bg-orange-100 text-orange-800 border-orange-200';
+                    }
+                  }
+
+                  return (
+                    <div key={lic.id || index} className="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-3">
+                      <div className="flex justify-between items-center border-b border-gray-200/60 pb-2">
+                        <span className="font-bold text-gray-800 text-sm">
+                          Licencia #{index + 1}
+                        </span>
+                        <span className="font-bold px-3 py-1 bg-emerald-100 text-emerald-800 rounded-lg text-xs">
+                          {lic.tipo_licencia}
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-500">Número de Licencia</span>
+                        <span className="font-bold text-gray-900">{lic.licencia}</span>
+                      </div>
+
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-500">Fecha de Emisión</span>
+                        <span className="font-medium text-gray-800">{lic.fecha_emision_licencia || 'No registrada'}</span>
+                      </div>
+
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-500">Fecha de Vencimiento</span>
+                        <span className="font-medium text-gray-800">{lic.fecha_vencimiento_licencia || 'No registrada'}</span>
+                      </div>
+
+                      {licDaysLeft !== null && (
+                        <div className={`mt-2 p-2.5 rounded-xl border flex items-center justify-center gap-2 font-bold text-xs ${licStatusColor}`}>
+                          {licDaysLeft < 0 ? <AlertTriangle className="w-3.5 h-3.5 shrink-0" /> : <Calendar className="w-3.5 h-3.5 shrink-0" />}
+                          <span>{licStatusBadge} ({Math.abs(licDaysLeft)} DÍAS {licDaysLeft < 0 ? 'VENCIDOS' : 'VIGENTES'})</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                });
+              })()}
             </div>
           </div>
         </div>

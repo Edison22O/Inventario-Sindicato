@@ -60,7 +60,8 @@ const CategoryInventory = () => {
       setSuppliers(supRes.data);
       
       // Filter products by this category
-      const catProducts = prodRes.data.filter((p: Product) => p.category === Number(id));
+      const targetCatId = catRes.data?.id;
+      const catProducts = prodRes.data.filter((p: Product) => p.category === targetCatId || String(p.category) === String(id));
       setProducts(catProducts);
     } catch (error) {
       console.error('Error fetching data:', error);

@@ -93,6 +93,7 @@ class DriverProfile(models.Model):
     direccion = models.TextField(blank=True, null=True)
     tipo_sangre = models.CharField(max_length=10, blank=True, null=True)
     contacto_emergencia = models.CharField(max_length=100, blank=True, null=True)
+    licencias = models.JSONField(default=list, blank=True)
     
     def __str__(self):
         return f"Conductor: {self.user.get_full_name() or self.user.username}"

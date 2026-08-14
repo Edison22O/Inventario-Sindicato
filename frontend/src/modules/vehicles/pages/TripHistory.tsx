@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { FileBarChart, Search, User } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { FileBarChart, Search, User, Calendar, MapPin, Gauge, Fuel, CheckCircle2, Clock, Image as ImageIcon, X, ArrowRight, TrendingUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/shared/services/api';
 import type { VehicleTrip } from '@/shared/types';
@@ -9,23 +9,25 @@ const TripHistory = () => {
   const [trips, setTrips] = useState<VehicleTrip[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // Para filtrar por usuario
   const [selectedUser, setSelectedUser] = useState<string>('');
+  const [selectedStatus, setSelectedStatus] = useState<string>('');
 
-  // Paginación
+  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 8;
+
+  // Image Modal Preview
+  const [selectedImage, setSelectedImage] = useState<{ url: string; title: string } | null>(null);
 
   useEffect(() => {
     fetchTrips();
-    fetchUsers();
   }, []);
 
   const fetchTrips = async () => {
+    setLoading(true);
     try {
       const res = await api.get('/vehicle-trips/');
-      setTrips(res.data);
+      setTrips(res.data || []);
     } catch (error) {
       toast.error('Error al cargar el historial de viajes');
     } finally {
@@ -33,64 +35,133 @@ const TripHistory = () => {
     }
   };
 
-  const fetchUsers = async () => {
-    try {
-      const res = await api.get('/roles/'); // Or wherever users can be fetched if roles endpoint returns users, but roles endpoint is for roles. 
-      // Actually there's a Users endpoint in core. Let's try /users/ if it exists. 
-      // Let's assume /users/ exists from core, otherwise we just map unique conductors from trips.
-      // We will map unique conductors from the trips to be safe and avoid additional endpoints if not needed.
-    } catch (error) {
-      // Ignorar
-    }
-  };
+  const uniqueConductors = useMemo(() => {
+    return Array.from(new Set(trips.map(t => t.conductor_name))).filter(Boolean).sort();
+  }, [trips]);
 
-  // Extraer usuarios únicos de los viajes
-  const uniqueConductors = Array.from(new Set(trips.map(t => t.conductor_name))).filter(Boolean);
-
-  const filteredTrips = trips.filter(trip => {
-    const matchesSearch = 
-      trip.vehicle_placa?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      trip.descripcion_salida.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      trip.conductor_name?.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredTrips = useMemo(() => {
+    return trips.filter(trip => {
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch = 
+        (trip.vehicle_placa || '').toLowerCase().includes(searchLower) || 
+        (trip.descripcion_salida || '').toLowerCase().includes(searchLower) ||
+        (trip.conductor_name || '').toLowerCase().includes(searchLower) ||
+        (trip.vehicle_marca || '').toLowerCase().includes(searchLower) ||
+        (trip.vehicle_modelo || '').toLowerCase().includes(searchLower);
+        
+      const matchesUser = selectedUser ? trip.conductor_name === selectedUser : true;
+      const matchesStatus = selectedStatus ? trip.estado_viaje === selectedStatus : true;
       
-    const matchesUser = selectedUser ? trip.conductor_name === selectedUser : true;
-    
-    return matchesSearch && matchesUser;
-  });
+      return matchesSearch && matchesUser && matchesStatus;
+    });
+  }, [trips, searchTerm, selectedUser, selectedStatus]);
 
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedUser]);
+  }, [searchTerm, selectedUser, selectedStatus]);
+
+  // KPIs
+  const totalKmRecorridos = useMemo(() => {
+    return filteredTrips.reduce((acc, t) => acc + (t.km_recorridos || 0), 0);
+  }, [filteredTrips]);
+
+  const totalViajesFinalizados = useMemo(() => {
+    return filteredTrips.filter(t => t.estado_viaje === 'Finalizado').length;
+  }, [filteredTrips]);
+
+  const totalViajesEnCurso = useMemo(() => {
+    return filteredTrips.filter(t => t.estado_viaje === 'En Curso').length;
+  }, [filteredTrips]);
+
+  const paginatedTrips = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredTrips.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredTrips, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filteredTrips.length / itemsPerPage);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-full py-16">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-4 sm:p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-3">
-          <FileBarChart className="w-8 h-8 text-blue-600" />
-          Historial de Viajes
-        </h1>
-        <p className="text-gray-500 mt-2 text-lg">
-          Registro histórico de todas las salidas y llegadas de la flota
-        </p>
+    <div className="p-4 sm:p-8 max-w-7xl mx-auto pb-32 relative">
+      {/* Dynamic Background Pattern */}
+      <div className="absolute inset-0 z-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 pointer-events-none rounded-3xl mix-blend-multiply" />
+
+      {/* Header */}
+      <div className="relative z-10 mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
+            <div className="p-2.5 bg-emerald-100 text-emerald-600 rounded-2xl shadow-sm">
+              <FileBarChart className="w-7 h-7" />
+            </div>
+            Historial de Viajes
+          </h1>
+          <p className="text-gray-500 mt-1.5 text-base font-medium">
+            Registro cronológico y detallado de todas las salidas y retornos de la flota.
+          </p>
+        </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
-        <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
+      {/* KPI Summary Cards */}
+      <div className="relative z-10 grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+        <div className="bg-white rounded-3xl p-6 shadow-sm border border-emerald-100 flex items-center gap-4 relative overflow-hidden group">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0">
+            <CheckCircle2 className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Viajes Finalizados</p>
+            <p className="text-2xl font-black text-gray-900">{totalViajesFinalizados}</p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-3xl p-6 shadow-sm border border-amber-100 flex items-center gap-4 relative overflow-hidden group">
+          <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold shrink-0">
+            <Clock className="w-6 h-6 animate-spin-slow" />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Viajes En Curso</p>
+            <p className="text-2xl font-black text-amber-600">{totalViajesEnCurso}</p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-3xl p-6 shadow-sm border border-blue-100 flex items-center gap-4 relative overflow-hidden group">
+          <div className="w-12 h-12 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold shrink-0">
+            <TrendingUp className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Total KM Recorridos</p>
+            <p className="text-2xl font-black text-gray-900">{totalKmRecorridos.toLocaleString('es-EC')} km</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Filter and Search Bar */}
+      <div className="relative z-10 bg-white rounded-3xl shadow-sm border border-gray-100 p-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Búsqueda general */}
+          <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
-              placeholder="Buscar por placa, conductor o motivo..."
-              className="w-full pl-12 pr-4 py-3 bg-gray-50 border-transparent focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200 rounded-xl transition-all"
+              placeholder="Buscar por placa, modelo, motivo..."
+              className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent rounded-xl text-sm font-medium transition-all"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="relative w-full sm:w-64">
+
+          {/* Filtro Conductor */}
+          <div className="relative">
             <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
             <select
-              className="w-full pl-12 pr-4 py-3 bg-gray-50 border-transparent focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200 rounded-xl transition-all appearance-none"
+              className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent rounded-xl text-sm font-medium transition-all appearance-none"
               value={selectedUser}
               onChange={(e) => setSelectedUser(e.target.value)}
             >
@@ -100,114 +171,257 @@ const TripHistory = () => {
               ))}
             </select>
           </div>
-        </div>
 
-        <div className="p-6">
-          {loading ? (
-            <div className="text-center py-12 text-gray-500">Cargando historial...</div>
-          ) : filteredTrips.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">No se encontraron registros que coincidan con la búsqueda.</div>
-          ) : (
-            <div className="space-y-6">
-              {filteredTrips.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map(trip => (
-                <div key={trip.id} className="border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-                  {/* Cabecera del Viaje */}
-                  <div className={`p-4 flex items-center justify-between border-b border-gray-200 ${trip.estado_viaje === 'En Curso' ? 'bg-red-50' : 'bg-gray-50'}`}>
-                    <div>
-                      <h3 className="font-bold text-gray-900 text-lg">
-                        Vehículo: {trip.vehicle_placa} {trip.vehicle_marca} {trip.vehicle_modelo}
-                      </h3>
-                      <p className="text-sm font-medium text-gray-700 mt-1 flex items-center gap-2">
-                        <User className="w-4 h-4" /> Conductor: {trip.conductor_name}
-                      </p>
+          {/* Filtro Estado */}
+          <div className="relative">
+            <select
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent rounded-xl text-sm font-medium transition-all appearance-none"
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+            >
+              <option value="">Todos los Estados</option>
+              <option value="Finalizado">Finalizado</option>
+              <option value="En Curso">En Curso</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Timeline Trips List */}
+      <div className="relative z-10 space-y-6">
+        {filteredTrips.length === 0 ? (
+          <div className="bg-white rounded-3xl p-12 text-center border border-gray-100 shadow-sm">
+            <FileBarChart className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <h3 className="text-lg font-bold text-gray-900">No se encontraron viajes</h3>
+            <p className="text-gray-500 mt-1 text-sm">Intenta ajustar los términos de búsqueda o filtros seleccionados.</p>
+          </div>
+        ) : (
+          paginatedTrips.map(trip => {
+            const isEnCurso = trip.estado_viaje === 'En Curso';
+
+            return (
+              <div 
+                key={trip.id}
+                className="bg-white rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group"
+              >
+                {/* Header de la tarjeta del viaje */}
+                <div className={`p-5 px-8 flex flex-wrap items-center justify-between gap-4 border-b border-gray-100 ${
+                  isEnCurso ? 'bg-gradient-to-r from-amber-50 to-amber-100/40' : 'bg-gradient-to-r from-emerald-50/70 to-emerald-100/30'
+                }`}>
+                  <div className="flex items-center gap-4">
+                    <div className="px-4 py-1.5 bg-gray-900 text-white rounded-xl text-lg font-black tracking-wider shadow-sm">
+                      {trip.vehicle_placa}
                     </div>
                     <div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${trip.estado_viaje === 'En Curso' ? 'bg-red-200 text-red-800' : 'bg-green-200 text-green-800'}`}>
-                        {trip.estado_viaje}
-                      </span>
+                      <h3 className="font-bold text-gray-900 text-base flex items-center gap-2">
+                        {trip.vehicle_marca} {trip.vehicle_modelo}
+                      </h3>
+                      <p className="text-xs font-semibold text-gray-500 flex items-center gap-1.5 mt-0.5">
+                        <User className="w-3.5 h-3.5 text-emerald-600" />
+                        Conductor: <span className="text-gray-800 font-bold">{trip.conductor_name}</span>
+                      </p>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-200">
-                    {/* Detalle de Salida */}
-                    <div className="p-6">
-                      <h4 className="font-bold text-emerald-800 mb-4 flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                        Datos de Salida
-                      </h4>
-                      <div className="space-y-3 text-sm">
-                        <p><span className="text-gray-500 font-medium">Fecha y Hora:</span> <span className="font-semibold">{new Date(trip.fecha_hora_salida!).toLocaleString()}</span></p>
-                        <p><span className="text-gray-500 font-medium">Motivo/Destino:</span> {trip.descripcion_salida}</p>
-                        <p><span className="text-gray-500 font-medium">Kilometraje:</span> {trip.kilometraje_salida} KM</p>
-                        <p><span className="text-gray-500 font-medium">Gasolina:</span> {trip.gasolina_salida}%</p>
-                        {trip.foto_evidencia_salida && (
-                          <div className="mt-4">
-                            <span className="text-gray-500 font-medium block mb-2">Foto Evidencia (Tablero):</span>
-                            <a href={getImageUrl(trip.foto_evidencia_salida)} target="_blank" rel="noreferrer">
-                              <img src={getImageUrl(trip.foto_evidencia_salida)} alt="Salida" className="w-full max-h-48 object-cover rounded-xl border border-gray-200 hover:opacity-80 transition-opacity" />
-                            </a>
+                  <div className="flex items-center gap-3">
+                    {trip.km_recorridos > 0 && (
+                      <span className="px-3.5 py-1 bg-white rounded-full text-xs font-bold text-emerald-700 border border-emerald-200 shadow-sm">
+                        + {trip.km_recorridos} KM
+                      </span>
+                    )}
+                    <span className={`px-4 py-1.5 rounded-full text-xs font-black tracking-wide uppercase shadow-sm flex items-center gap-1.5 ${
+                      isEnCurso 
+                        ? 'bg-amber-500 text-white animate-pulse' 
+                        : 'bg-emerald-600 text-white'
+                    }`}>
+                      {isEnCurso ? <Clock className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                      {trip.estado_viaje}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Contenido comparativo Salida vs Llegada */}
+                <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-100">
+                  {/* Bloque Salida */}
+                  <div className="p-6 md:p-8 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full bg-emerald-500 ring-4 ring-emerald-100" />
+                        <h4 className="font-bold text-emerald-900 text-sm uppercase tracking-wider">Datos de Salida</h4>
+                      </div>
+                      <span className="text-xs font-semibold text-gray-400 flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5" />
+                        {new Date(trip.fecha_hora_salida!).toLocaleString()}
+                      </span>
+                    </div>
+
+                    <div className="bg-gray-50/80 p-4 rounded-2xl space-y-2.5 border border-gray-100 text-sm">
+                      <div className="flex items-start gap-2">
+                        <MapPin className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                        <div>
+                          <span className="text-xs text-gray-400 font-bold uppercase block">Destino / Motivo</span>
+                          <span className="font-bold text-gray-900">{trip.descripcion_salida}</span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-200/50">
+                        <div className="flex items-center gap-2">
+                          <Gauge className="w-4 h-4 text-gray-400 shrink-0" />
+                          <div>
+                            <span className="text-[10px] text-gray-400 font-bold uppercase block">KM Inicial</span>
+                            <span className="font-extrabold text-gray-800">{trip.kilometraje_salida} km</span>
                           </div>
-                        )}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <Fuel className="w-4 h-4 text-gray-400 shrink-0" />
+                          <div>
+                            <span className="text-[10px] text-gray-400 font-bold uppercase block">Gasolina</span>
+                            <span className="font-extrabold text-gray-800">{trip.gasolina_salida}%</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Detalle de Llegada */}
-                    <div className="p-6">
-                      <h4 className="font-bold text-blue-800 mb-4 flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                        Datos de Llegada
-                      </h4>
-                      {trip.estado_viaje === 'En Curso' ? (
-                        <div className="h-full flex items-center justify-center text-gray-400 italic">
-                          El vehículo aún no ha regresado.
+                    {/* Evidencia Salida */}
+                    {trip.foto_evidencia_salida && (
+                      <div 
+                        onClick={() => setSelectedImage({ url: getImageUrl(trip.foto_evidencia_salida), title: `Evidencia Salida - ${trip.vehicle_placa}` })}
+                        className="group/img relative rounded-2xl overflow-hidden cursor-pointer border border-gray-200 bg-gray-900 max-h-36 shadow-sm hover:shadow-md transition-all"
+                      >
+                        <img 
+                          src={getImageUrl(trip.foto_evidencia_salida)} 
+                          alt="Evidencia Salida" 
+                          className="w-full h-36 object-cover group-hover/img:scale-105 group-hover/img:opacity-85 transition-all duration-300"
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white font-bold text-xs backdrop-blur-[2px]">
+                          <ImageIcon className="w-4 h-4" />
+                          <span>Ver Evidencia Salida</span>
                         </div>
-                      ) : (
-                        <div className="space-y-3 text-sm">
-                          <p><span className="text-gray-500 font-medium">Fecha y Hora:</span> <span className="font-semibold">{new Date(trip.fecha_hora_llegada!).toLocaleString()}</span></p>
-                          <p><span className="text-gray-500 font-medium">Novedades:</span> {trip.descripcion_llegada || 'Ninguna novedad reportada'}</p>
-                          <p><span className="text-gray-500 font-medium">Kilometraje:</span> {trip.kilometraje_llegada} KM</p>
-                          <p><span className="text-gray-500 font-medium">Gasolina:</span> {trip.gasolina_llegada}%</p>
-                          
-                          {trip.foto_evidencia_llegada && (
-                            <div className="mt-4">
-                              <span className="text-gray-500 font-medium block mb-2">Foto Evidencia (Tablero):</span>
-                              <a href={getImageUrl(trip.foto_evidencia_llegada)} target="_blank" rel="noreferrer">
-                                <img src={getImageUrl(trip.foto_evidencia_llegada)} alt="Llegada" className="w-full max-h-48 object-cover rounded-xl border border-gray-200 hover:opacity-80 transition-opacity" />
-                              </a>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Bloque Llegada */}
+                  <div className="p-6 md:p-8 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-3 h-3 rounded-full ${isEnCurso ? 'bg-amber-400 ring-4 ring-amber-100' : 'bg-blue-500 ring-4 ring-blue-100'}`} />
+                        <h4 className="font-bold text-gray-900 text-sm uppercase tracking-wider">
+                          {isEnCurso ? 'En Ruta' : 'Datos de Llegada'}
+                        </h4>
+                      </div>
+                      {trip.fecha_hora_llegada && (
+                        <span className="text-xs font-semibold text-gray-400 flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5" />
+                          {new Date(trip.fecha_hora_llegada).toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+
+                    {isEnCurso ? (
+                      <div className="h-44 bg-amber-50/50 rounded-2xl border border-dashed border-amber-200 flex flex-col items-center justify-center text-center p-6">
+                        <Clock className="w-10 h-10 text-amber-500 mb-2 animate-bounce-slow" />
+                        <p className="font-bold text-amber-900 text-sm">Vehículo actualmente en carretera</p>
+                        <p className="text-xs text-amber-700/80 mt-1">Esperando registro de retorno por parte del conductor.</p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="bg-gray-50/80 p-4 rounded-2xl space-y-2.5 border border-gray-100 text-sm">
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <span className="text-[10px] text-gray-400 font-bold uppercase block">KM Final</span>
+                              <span className="font-extrabold text-gray-900">{trip.kilometraje_llegada} km</span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-gray-400 font-bold uppercase block">Gasolina</span>
+                              <span className="font-extrabold text-gray-900">{trip.gasolina_llegada}%</span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-gray-400 font-bold uppercase block">Costo Comb.</span>
+                              <span className="font-extrabold text-emerald-600">${parseFloat(trip.costo_combustible_viaje || '0').toFixed(2)}</span>
+                            </div>
+                          </div>
+
+                          {trip.novedades_observaciones && (
+                            <div className="mt-3 pt-3 border-t border-gray-200/50">
+                              <span className="text-[10px] text-amber-800 font-bold uppercase block mb-1">Novedades / Observaciones</span>
+                              <p className="text-xs font-semibold text-amber-900 bg-amber-50 p-2.5 rounded-xl border border-amber-200/60">
+                                "{trip.novedades_observaciones}"
+                              </p>
                             </div>
                           )}
                         </div>
-                      )}
-                    </div>
+
+                        {/* Evidencia Llegada */}
+                        {trip.foto_evidencia_llegada && (
+                          <div 
+                            onClick={() => setSelectedImage({ url: getImageUrl(trip.foto_evidencia_llegada), title: `Evidencia Llegada - ${trip.vehicle_placa}` })}
+                            className="group/img relative rounded-2xl overflow-hidden cursor-pointer border border-gray-200 bg-gray-900 max-h-36 shadow-sm hover:shadow-md transition-all"
+                          >
+                            <img 
+                              src={getImageUrl(trip.foto_evidencia_llegada)} 
+                              alt="Evidencia Llegada" 
+                              className="w-full h-36 object-cover group-hover/img:scale-105 group-hover/img:opacity-85 transition-all duration-300"
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white font-bold text-xs backdrop-blur-[2px]">
+                              <ImageIcon className="w-4 h-4" />
+                              <span>Ver Evidencia Llegada</span>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                 </div>
-              ))}
-
-              {filteredTrips.length > itemsPerPage && (
-                <div className="flex justify-between items-center pt-6 border-t border-gray-100">
-                  <button 
-                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                    disabled={currentPage === 1}
-                    className="px-4 py-2 bg-gray-50 text-gray-700 rounded-lg disabled:opacity-50 hover:bg-gray-100 transition-colors text-sm font-medium"
-                  >
-                    Anterior
-                  </button>
-                  <span className="text-sm text-gray-500 font-medium">
-                    Página {currentPage} de {Math.ceil(filteredTrips.length / itemsPerPage)}
-                  </span>
-                  <button 
-                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredTrips.length / itemsPerPage)))}
-                    disabled={currentPage === Math.ceil(filteredTrips.length / itemsPerPage)}
-                    className="px-4 py-2 bg-gray-50 text-gray-700 rounded-lg disabled:opacity-50 hover:bg-gray-100 transition-colors text-sm font-medium"
-                  >
-                    Siguiente
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+              </div>
+            );
+          })
+        )}
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="relative z-10 flex justify-between items-center mt-8 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+          <button 
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="px-5 py-2.5 bg-gray-100 text-gray-700 font-bold rounded-xl disabled:opacity-50 hover:bg-gray-200 transition-colors text-sm"
+          >
+            Anterior
+          </button>
+          <span className="text-sm font-extrabold text-gray-600">
+            Página {currentPage} de {totalPages}
+          </span>
+          <button 
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+            className="px-5 py-2.5 bg-gray-100 text-gray-700 font-bold rounded-xl disabled:opacity-50 hover:bg-gray-200 transition-colors text-sm"
+          >
+            Siguiente
+          </button>
+        </div>
+      )}
+
+      {/* Fullscreen Image Preview Lightbox */}
+      {selectedImage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+          <div className="relative max-w-4xl w-full bg-white rounded-3xl overflow-hidden shadow-2xl flex flex-col">
+            <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+              <h3 className="font-bold text-gray-900 text-base">{selectedImage.title}</h3>
+              <button 
+                onClick={() => setSelectedImage(null)} 
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 flex items-center justify-center max-h-[75vh] bg-black/5 overflow-hidden">
+              <img src={selectedImage.url} alt="Evidencia Full" className="max-h-[70vh] w-auto object-contain rounded-xl shadow-lg" />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

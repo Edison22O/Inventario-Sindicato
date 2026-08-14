@@ -76,9 +76,25 @@ class VehicleTripViewSet(AuditLogMixin, viewsets.ModelViewSet):
         if not kilometraje_llegada or not foto_evidencia_llegada:
             return Response({'detail': 'Kilometraje y foto de evidencia son obligatorios para la llegada.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        try:
+            km_llegada = int(kilometraje_llegada)
+            if km_llegada < 0:
+                return Response({'detail': 'El kilometraje de llegada no puede ser negativo.'}, status=status.HTTP_400_BAD_REQUEST)
+            if km_llegada < trip.kilometraje_salida:
+                return Response({'detail': f'El kilometraje de llegada ({km_llegada} km) debe ser mayor o igual al de salida ({trip.kilometraje_salida} km).'}, status=status.HTTP_400_BAD_REQUEST)
+        except (ValueError, TypeError):
+            return Response({'detail': 'El kilometraje ingresado no es válido.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            galones = float(galones_recargados or 0)
+            if galones < 0:
+                return Response({'detail': 'Los galones recargados no pueden ser negativos.'}, status=status.HTTP_400_BAD_REQUEST)
+        except (ValueError, TypeError):
+            return Response({'detail': 'La cantidad de galones ingresada no es válida.'}, status=status.HTTP_400_BAD_REQUEST)
+
         # Actualizar viaje
-        trip.kilometraje_llegada = int(kilometraje_llegada)
-        trip.galones_recargados = galones_recargados
+        trip.kilometraje_llegada = km_llegada
+        trip.galones_recargados = galones
         trip.novedades_observaciones = novedades_observaciones
         trip.foto_evidencia_llegada = foto_evidencia_llegada
         trip.fecha_hora_llegada = timezone.now()

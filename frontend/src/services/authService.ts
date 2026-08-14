@@ -46,6 +46,13 @@ export const authService = {
     }
   },
 
+  isGlobalAdmin: (): boolean => {
+    const role = authService.getUserRole();
+    if (!role) return false;
+    const r = role.toLowerCase();
+    return (r === 'administrador' || r === 'admin' || r === 'superadmin') && !r.includes('flota') && !r.includes('vehiculo') && !r.includes('vehículo');
+  },
+
   isAdmin: (): boolean => {
     const role = authService.getUserRole();
     if (!role) return false;
@@ -72,5 +79,17 @@ export const authService = {
     if (!role) return false;
     const r = role.toLowerCase();
     return r.includes('mueble') || r.includes('mobiliario') || r.includes('furniture');
+  },
+
+  isVehicleAdmin: (): boolean => {
+    if (authService.isGlobalAdmin()) return true;
+    const role = authService.getUserRole();
+    if (!role) return false;
+    const r = role.toLowerCase();
+    return r.includes('flota') || (r.includes('admin') && (r.includes('vehiculo') || r.includes('vehículo')));
+  },
+
+  isConductorOnly: (): boolean => {
+    return authService.isConductor() && !authService.isVehicleAdmin();
   }
 };

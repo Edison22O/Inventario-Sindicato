@@ -17,8 +17,25 @@ class MaintenanceLogViewSet(viewsets.ModelViewSet):
 
 class VehicleMaintenanceViewSet(viewsets.ModelViewSet):
     queryset = VehicleMaintenance.objects.select_related('vehicle').all().order_by('-fecha_ultimo_cambio')
+    lookup_field = 'public_id'
     serializer_class = VehicleMaintenanceSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        queryset = self.filter_queryset(self.get_queryset())
+        val = self.kwargs.get('public_id') or self.kwargs.get('pk')
+        if val is not None:
+            if str(val).isdigit():
+                obj = queryset.filter(pk=int(val)).first()
+                if obj:
+                    return obj
+            try:
+                obj = queryset.filter(public_id=val).first()
+                if obj:
+                    return obj
+            except Exception:
+                pass
+        return super().get_object()
 
     def get_queryset(self):
         queryset = super().get_queryset()

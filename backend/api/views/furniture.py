@@ -9,10 +9,22 @@ from api.mixins import AuditLogMixin
 
 class FurnitureCategoryViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = FurnitureCategory.objects.all()
-    lookup_field = 'public_id'
     serializer_class = FurnitureCategorySerializer
     permission_classes = [IsAuthenticated]
     audit_module_name = 'Muebles (Categorías)'
+
+    def get_object(self):
+        queryset = self.filter_queryset(self.get_queryset())
+        val = self.kwargs.get('public_id') or self.kwargs.get('pk')
+        if val is not None:
+            if str(val).isdigit():
+                obj = queryset.filter(pk=int(val)).first()
+                if obj:
+                    return obj
+            obj = queryset.filter(public_id=val).first()
+            if obj:
+                return obj
+        return super().get_object()
 
 class FurnitureDepartmentViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = FurnitureDepartment.objects.all()
@@ -20,17 +32,56 @@ class FurnitureDepartmentViewSet(AuditLogMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     audit_module_name = 'Muebles (Departamentos)'
 
+    def get_object(self):
+        queryset = self.filter_queryset(self.get_queryset())
+        val = self.kwargs.get('public_id') or self.kwargs.get('pk')
+        if val is not None:
+            if str(val).isdigit():
+                obj = queryset.filter(pk=int(val)).first()
+                if obj:
+                    return obj
+            obj = queryset.filter(public_id=val).first()
+            if obj:
+                return obj
+        return super().get_object()
+
 class FurnitureSupplierViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = FurnitureSupplier.objects.all()
     serializer_class = FurnitureSupplierSerializer
     permission_classes = [IsAuthenticated]
     audit_module_name = 'Muebles (Proveedores)'
 
+    def get_object(self):
+        queryset = self.filter_queryset(self.get_queryset())
+        val = self.kwargs.get('public_id') or self.kwargs.get('pk')
+        if val is not None:
+            if str(val).isdigit():
+                obj = queryset.filter(pk=int(val)).first()
+                if obj:
+                    return obj
+            obj = queryset.filter(public_id=val).first()
+            if obj:
+                return obj
+        return super().get_object()
+
 class FurnitureProductViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = FurnitureProduct.objects.select_related('department', 'category', 'supplier', 'media').all()
     serializer_class = FurnitureProductSerializer
     permission_classes = [IsAuthenticated]
     audit_module_name = 'Inventario de Mobiliario'
+
+    def get_object(self):
+        queryset = self.filter_queryset(self.get_queryset())
+        val = self.kwargs.get('public_id') or self.kwargs.get('pk')
+        if val is not None:
+            if str(val).isdigit():
+                obj = queryset.filter(pk=int(val)).first()
+                if obj:
+                    return obj
+            obj = queryset.filter(public_id=val).first()
+            if obj:
+                return obj
+        return super().get_object()
 
 class FurnitureMaintenanceLogViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = FurnitureMaintenanceLog.objects.all()

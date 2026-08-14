@@ -22,6 +22,11 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'first_name', 'last_name', 'full_name', 'email', 'password', 'role', 'role_name', 'image', 'is_active', 'last_login']
         extra_kwargs = {'password': {'write_only': True, 'required': False}}
 
+    def validate_password(self, value):
+        if value and len(value) < 6:
+            raise serializers.ValidationError("La contraseña debe tener al menos 6 caracteres.")
+        return value
+
     def get_full_name(self, obj):
         name = f"{obj.first_name or ''} {obj.last_name or ''}".strip()
         return name if name else obj.username

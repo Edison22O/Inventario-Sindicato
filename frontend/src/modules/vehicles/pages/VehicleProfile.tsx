@@ -77,7 +77,7 @@ const VehicleProfile = () => {
     try {
       await api.post('/vehicle-registrations/', {
         ...formData,
-        vehicle: id,
+        vehicle: vehicle.id,
         costo: parseFloat(formData.costo || '0'),
         año_matriculado: parseInt(formData.año_matriculado)
       });
