@@ -87,8 +87,9 @@ const CategoryInventory = () => {
       await api.patch(`/furniture/products/${selectedProduct.public_id}/`, formData);
       toast.success('Producto actualizado');
     } else {
-      // Si estamos en la vista de una categoría, forzamos que el nuevo producto sea de esta categoría
-      formData.set('category', String(id));
+      if (!formData.get('category')) {
+        formData.set('category', String(category?.id || targetCatId || id));
+      }
       await api.post('/furniture/products/', formData);
       toast.success('Producto creado con éxito');
     }
@@ -375,6 +376,7 @@ const CategoryInventory = () => {
         departments={departments}
         categories={categories}
         suppliers={suppliers}
+        initialCategoryId={category?.id}
       />
       
       <ProductViewModal

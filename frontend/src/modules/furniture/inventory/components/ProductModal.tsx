@@ -12,15 +12,27 @@ interface ProductModalProps {
   departments: Department[];
   categories: Category[];
   suppliers: Supplier[];
+  initialDepartmentId?: number;
+  initialCategoryId?: number;
 }
 
-const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSave, product, departments, categories, suppliers }) => {
+const ProductModal: React.FC<ProductModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onSave, 
+  product, 
+  departments, 
+  categories, 
+  suppliers,
+  initialDepartmentId,
+  initialCategoryId
+}) => {
   const [formData, setFormData] = useState<Partial<Product>>({
     codigo: '',
     nombre: '',
     cantidad: 1,
-    department: departments[0]?.id || 1,
-    category: categories[0]?.id || undefined,
+    department: initialDepartmentId || departments[0]?.id || 1,
+    category: initialCategoryId || categories[0]?.id || undefined,
     supplier: suppliers[0]?.id || undefined,
     estado: 'Bueno',
     costo: '0.00',
@@ -42,8 +54,8 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSave, pr
       codigo: '',
       nombre: '',
       cantidad: 1,
-      department: departments[0]?.id || 1,
-      category: categories[0]?.id || undefined,
+      department: initialDepartmentId || departments[0]?.id || 1,
+      category: initialCategoryId || categories[0]?.id || undefined,
       supplier: suppliers[0]?.id || undefined,
       estado: 'Bueno',
       costo: '0.00',
@@ -68,7 +80,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSave, pr
       setPreviewUrl(null);
     }
     setImageFile(null);
-  }, [product, departments, categories, suppliers, isOpen]);
+  }, [product, departments, categories, suppliers, initialDepartmentId, initialCategoryId, isOpen]);
 
   if (!isOpen) return null;
 
