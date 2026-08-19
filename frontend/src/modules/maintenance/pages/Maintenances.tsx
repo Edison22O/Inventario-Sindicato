@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Wrench, Search, FileDown, Eye, Printer } from 'lucide-react';
+import { Wrench, Search, FileDown, Eye, Printer, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/shared/services/api';
 import type { MaintenanceLog, Product } from '@/shared/types';
@@ -7,6 +7,7 @@ import jsPDF from 'jspdf';
 import { applyAutoTable } from '@/shared/utils/pdfHelper';
 import { useInventoryWebSocket } from '@/modules/inventory/hooks/useInventoryWebSocket';
 import ProductViewModal from '@/modules/inventory/components/ProductViewModal';
+import EditMaintenanceLogModal from '@/modules/maintenance/components/EditMaintenanceLogModal';
 import { generateProductPDF, generateBulkProductsPDF } from '@/modules/inventory/utils/productPdfGenerator';
 
 const Maintenances = () => {
@@ -17,6 +18,11 @@ const Maintenances = () => {
   const [isExportingTabla, setIsExportingTabla] = useState(false);
   const [isExportingFichas, setIsExportingFichas] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+
+  // States for Edit and Delete
+  const [editingLog, setEditingLog] = useState<MaintenanceLog | null>(null);
+  const [deletingLog, setDeletingLog] = useState<MaintenanceLog | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchLogs();
@@ -51,6 +57,27 @@ const Maintenances = () => {
       await generateProductPDF(res.data);
     } catch (error) {
       toast.error('Error al cargar datos del equipo para imprimir');
+    }
+  };
+
+  const handleSaveEdit = async (id: number, data: any) => {
+    await api.put(`/maintenances/${id}/`, data);
+    fetchLogs();
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingLog) return;
+    setIsDeleting(true);
+    try {
+      await api.delete(`/maintenances/${deletingLog.id}/`);
+      toast.success('Mantenimiento eliminado con éxito');
+      setDeletingLog(null);
+      fetchLogs();
+    } catch (error) {
+      console.error('Error al eliminar mantenimiento:', error);
+      toast.error('Error al eliminar el mantenimiento');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -262,20 +289,34 @@ const Maintenances = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <div className="flex justify-center gap-2">
+                    <div className="flex justify-center gap-1">
                       <button
                         onClick={() => handleViewProduct(log.product)}
-                        className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                         title="Ver Detalles del Equipo"
                       >
-                        <Eye className="w-5 h-5" />
+                        <Eye className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handlePrintProduct(log.product)}
-                        className="p-1 text-gray-400 hover:text-indigo-600 transition-colors"
+                        className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                         title="Imprimir Ficha Técnica"
                       >
-                        <Printer className="w-5 h-5" />
+                        <Printer className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setEditingLog(log)}
+                        className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                        title="Editar Mantenimiento"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setDeletingLog(log)}
+                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Eliminar Mantenimiento"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </td>
@@ -283,7 +324,7 @@ const Maintenances = () => {
               ))}
               {filteredLogs.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500 bg-gray-50/30">
+                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500 bg-gray-50/30">
                     <Wrench className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                     <p className="text-lg font-medium text-gray-900">No hay registros</p>
                     <p className="text-sm">No se encontraron mantenimientos que coincidan con la búsqueda.</p>
@@ -295,11 +336,61 @@ const Maintenances = () => {
         </div>
       </div>
 
+      {/* View Product Modal */}
       <ProductViewModal 
         isOpen={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
         product={selectedProduct}
       />
+
+      {/* Edit Maintenance Log Modal */}
+      <EditMaintenanceLogModal
+        isOpen={!!editingLog}
+        onClose={() => setEditingLog(null)}
+        onSave={handleSaveEdit}
+        log={editingLog}
+      />
+
+      {/* Delete Maintenance Confirmation Modal */}
+      {deletingLog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 overflow-hidden">
+            <div className="flex items-center gap-3 text-red-600 mb-4">
+              <div className="p-3 bg-red-100 rounded-full">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">¿Eliminar Mantenimiento?</h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-6">
+              ¿Estás seguro de que deseas eliminar el registro de mantenimiento para el equipo{' '}
+              <span className="font-semibold text-gray-900">{deletingLog.product_nombre}</span> ({deletingLog.product_codigo})?
+              Esta acción no se puede deshacer.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDeletingLog(null)}
+                disabled={isDeleting}
+                className="px-5 py-2.5 rounded-xl font-medium text-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="px-5 py-2.5 rounded-xl font-medium text-white bg-red-600 hover:bg-red-700 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2"
+              >
+                {isDeleting ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  'Eliminar'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

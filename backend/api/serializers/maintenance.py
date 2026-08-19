@@ -17,6 +17,16 @@ class MaintenanceLogSerializer(serializers.ModelSerializer):
         product.save()
         return maintenance_log
 
+    def update(self, instance, validated_data):
+        maintenance_log = super().update(instance, validated_data)
+        product = maintenance_log.product
+        latest = product.maintenances.order_by('-fecha', '-created_at').first()
+        if latest:
+            product.estado = latest.estado_resultante
+            product.fecha_ultimo_mantenimiento = latest.fecha
+            product.save()
+        return maintenance_log
+
 class VehicleMaintenanceSerializer(serializers.ModelSerializer):
     vehicle_placa = serializers.CharField(source='vehicle.placa', read_only=True)
     km_proximo_cambio = serializers.ReadOnlyField()

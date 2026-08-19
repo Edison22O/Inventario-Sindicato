@@ -3,6 +3,7 @@ from django.dispatch import receiver
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from .models import Product, Department, Category, Supplier
+from .models.maintenance import MaintenanceLog
 from .models.furniture import FurnitureProduct, FurnitureDepartment, FurnitureCategory, FurnitureSupplier
 
 @receiver(post_migrate)
@@ -65,6 +66,12 @@ def broadcast_inventory_update(model_name, action):
 def product_changed(sender, instance, **kwargs):
     action = 'delete' if 'created' not in kwargs else ('create' if kwargs['created'] else 'update')
     broadcast_inventory_update('Product', action)
+
+@receiver(post_save, sender=MaintenanceLog)
+@receiver(post_delete, sender=MaintenanceLog)
+def maintenance_log_changed(sender, instance, **kwargs):
+    action = 'delete' if 'created' not in kwargs else ('create' if kwargs['created'] else 'update')
+    broadcast_inventory_update('MaintenanceLog', action)
 
 @receiver(post_save, sender=Department)
 @receiver(post_delete, sender=Department)
