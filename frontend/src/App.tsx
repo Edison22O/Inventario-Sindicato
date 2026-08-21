@@ -39,6 +39,9 @@ import VehicleProfile from '@/modules/vehicles/pages/VehicleProfile';
 import VehicleReports from '@/modules/vehicles/pages/VehicleReports';
 import VehicleMaintenances from '@/modules/vehicles/pages/VehicleMaintenances';
 import VehicleMatriculas from '@/modules/vehicles/pages/VehicleMatriculas';
+import VehicleFuelControl from '@/modules/vehicles/pages/VehicleFuelControl';
+import VehicleSuppliersCatalog from '@/modules/vehicles/pages/VehicleSuppliersCatalog';
+import VehicleSupplierProfile from '@/modules/vehicles/pages/VehicleSupplierProfile';
 
 function App() {
   return (
@@ -85,17 +88,21 @@ function App() {
             <Route path="/vehicles/catalog" element={<VehiclesCatalog />} />
             <Route path="/vehicles/drivers" element={<DriversCatalog />} />
             <Route path="/vehicles/drivers/:id" element={<DriverProfilePage />} />
+            <Route path="/vehicles/suppliers" element={<VehicleSuppliersCatalog />} />
+            <Route path="/vehicles/suppliers/:id" element={<VehicleSupplierProfile />} />
+            <Route path="/vehicles/fuel-control" element={<VehicleFuelControl />} />
             <Route path="/vehicles/matriculas" element={<VehicleMatriculas />} />
+            <Route path="/vehicles/maintenances" element={<VehicleMaintenances />} />
             <Route path="/vehicles/history" element={<TripHistory />} />
             <Route path="/vehicles/reports" element={<VehicleReports />} />
             <Route path="/vehicles/:id" element={<VehicleProfile />} />
           </Route>
 
-          {/* Vehicles Operative Routes (Conductores, Administrador de Vehículos, Administrador General) */}
+          {/* Vehicles Operative Routes (Control de Salidas para Conductores) */}
           <Route element={<RoleGuard allowedRoles={['Conductores', 'Conductor', 'vehiculo_admin', 'Administrador']} />}>
             <Route path="/vehicles/trips" element={<VehicleTrips />} />
-            <Route path="/vehicles/maintenances" element={<VehicleMaintenances />} />
           </Route>
+
 
           {/* Admin / Settings (Administrador General & Administrador de Flota Vehicular) */}
           <Route element={<RoleGuard allowedRoles={['Administrador', 'vehiculo_admin', 'admin_vehiculo', 'flota_admin']} />}>

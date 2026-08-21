@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Truck, Layers, ArrowRight, Monitor, Armchair, LayoutDashboard, UserCheck } from 'lucide-react';
+import { Truck, Layers, ArrowRight, Monitor, Armchair, LayoutDashboard, UserCheck } from 'lucide-react';
 import { authService } from '@/services/authService';
 import api from '@/shared/services/api';
 import DriverSelfProfileModal from '@/modules/vehicles/components/DriverSelfProfileModal';
@@ -66,7 +66,7 @@ const Home = () => {
     }
   ];
 
-  const vehicleActions = [
+  const conductorActions = [
     {
       title: 'Control de Salidas',
       description: 'Registra entradas, salidas y evidencias de viajes.',
@@ -75,7 +75,11 @@ const Home = () => {
       color: 'bg-purple-500',
       lightColor: 'bg-purple-500/10',
       textColor: 'text-purple-500'
-    },
+    }
+  ];
+
+  const vehicleActions = [
+    ...conductorActions,
     {
       title: 'Mantenimiento Vehicular',
       description: 'Consulta y reporta mantenimientos de la flota.',
@@ -122,7 +126,7 @@ const Home = () => {
     if (isTech) quickActions.push(...techActions);
     if (isFurniture) quickActions.push(...furnitureActions);
     if (isVehicleAdmin) quickActions.push(...vehicleAdminActions);
-    if (isConductor) quickActions.push(...vehicleActions);
+    if (isConductor) quickActions.push(...conductorActions);
   }
 
   return (

@@ -166,7 +166,7 @@ const VehicleTrips = () => {
                         {vehicle.placa}
                       </div>
                       <h3 className="font-extrabold text-gray-900 text-base">{vehicle.marca} {vehicle.modelo}</h3>
-                      <p className="text-xs text-gray-500 font-semibold mt-0.5">Odómetro: {vehicle.odometro_actual.toLocaleString()} KM</p>
+                      <p className="text-xs text-gray-500 font-semibold mt-0.5">Odómetro: {(vehicle.odometro_actual || 0).toLocaleString()} KM</p>
                     </div>
 
                     <button 

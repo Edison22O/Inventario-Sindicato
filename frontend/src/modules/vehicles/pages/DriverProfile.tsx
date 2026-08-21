@@ -49,7 +49,6 @@ const DriverProfilePage = () => {
     if (!dateString) return null;
     const today = new Date();
     today.setHours(0,0,0,0);
-    const target = new Date(dateString);
     const [y, m, d] = dateString.split('-');
     const localTarget = new Date(parseInt(y), parseInt(m)-1, parseInt(d));
     const diff = localTarget.getTime() - today.getTime();
@@ -68,20 +67,6 @@ const DriverProfilePage = () => {
     return (
       <div className="p-8 text-center text-gray-500">Conductor no encontrado</div>
     );
-  }
-
-  const daysLeft = calculateDaysLeft(driver.fecha_vencimiento_licencia);
-  let statusBadge = 'VIGENTE';
-  let statusColor = 'bg-emerald-100 text-emerald-800 border-emerald-200';
-  
-  if (daysLeft !== null) {
-    if (daysLeft < 0) {
-      statusBadge = 'VENCIDA';
-      statusColor = 'bg-red-100 text-red-800 border-red-200';
-    } else if (daysLeft <= 30) {
-      statusBadge = 'PRÓXIMA A VENCER';
-      statusColor = 'bg-orange-100 text-orange-800 border-orange-200';
-    }
   }
 
   return (

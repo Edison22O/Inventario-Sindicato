@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { FileBarChart, Search, User, Calendar, MapPin, Gauge, Fuel, CheckCircle2, Clock, Image as ImageIcon, X, ArrowRight, TrendingUp } from 'lucide-react';
+import { FileBarChart, Search, User, Calendar, MapPin, Gauge, Fuel, CheckCircle2, Clock, Image as ImageIcon, X, TrendingUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/shared/services/api';
 import type { VehicleTrip } from '@/shared/types';
@@ -224,7 +224,7 @@ const TripHistory = () => {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    {trip.km_recorridos > 0 && (
+                    {(trip.km_recorridos || 0) > 0 && (
                       <span className="px-3.5 py-1 bg-white rounded-full text-xs font-bold text-emerald-700 border border-emerald-200 shadow-sm">
                         + {trip.km_recorridos} KM
                       </span>
@@ -339,7 +339,7 @@ const TripHistory = () => {
                             </div>
                             <div>
                               <span className="text-[10px] text-gray-400 font-bold uppercase block">Costo Comb.</span>
-                              <span className="font-extrabold text-emerald-600">${parseFloat(trip.costo_combustible_viaje || '0').toFixed(2)}</span>
+                              <span className="font-extrabold text-emerald-600">${parseFloat(String(trip.costo_combustible_viaje || 0)).toFixed(2)}</span>
                             </div>
                           </div>
 

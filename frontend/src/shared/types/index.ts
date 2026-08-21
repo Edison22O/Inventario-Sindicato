@@ -97,7 +97,7 @@ export interface Vehicle {
   clase?: string;
   tipo?: string;
   observacion?: string;
-  estado_actual: 'En Sindicato' | 'Fuera del Sindicato';
+  estado_actual: 'En Sindicato' | 'Fuera del Sindicato' | 'En Taller';
   foto_vehiculo?: string;
   
   // Nuevos campos
@@ -128,10 +128,12 @@ export interface VehicleTrip {
   descripcion_salida: string;
   fecha_hora_salida?: string;
   kilometraje_salida: number;
+  gasolina_salida?: number;
   foto_evidencia_salida?: string;
   
   fecha_hora_llegada?: string;
   kilometraje_llegada?: number;
+  gasolina_llegada?: number;
   foto_evidencia_llegada?: string;
   novedades_observaciones?: string;
   
@@ -142,13 +144,19 @@ export interface VehicleTrip {
 
 export interface VehicleMaintenance {
   id: number;
+  public_id?: string;
   vehicle: number;
   vehicle_placa?: string;
+  vehicle_marca?: string;
+  vehicle_modelo?: string;
+  tipo_mantenimiento?: 'Preventivo' | 'Correctivo';
   actividad: string;
   fecha_ultimo_cambio: string;
   fecha_proximo_cambio?: string | null;
   km_ultimo_cambio: number;
-  frecuencia_km: number;
+  frecuencia_km?: number | null;
+  fallo_observado?: string;
+  solucion_aplicada?: string;
   km_proximo_cambio: number;
   km_recorridos_desde_cambio: number;
   dias_transcurridos: number;
@@ -158,18 +166,75 @@ export interface VehicleMaintenance {
   notas?: string;
 }
 
+export interface VehicleMaintenanceRecord {
+  id: number;
+  vehicle: number;
+  vehicle_placa?: string;
+  vehicle_marca?: string;
+  vehicle_modelo?: string;
+  maintenance_rule?: number | null;
+  supplier?: number | null;
+  supplier_name?: string | null;
+  tipo_mantenimiento?: 'Preventivo' | 'Correctivo';
+  fecha: string;
+  taller: string;
+  subtotal_mano_obra?: string | number;
+  subtotal_materiales?: string | number;
+  costo: string | number;
+  numero_factura?: string;
+  factura_foto?: string | null;
+  fallo_observado?: string;
+  solucion_aplicada?: string;
+  notas?: string;
+  actividad_nombre?: string;
+  created_at?: string;
+}
+
 export interface VehicleRegistrationRecord {
   id: number;
   vehicle: number;
   vehicle_placa?: string;
+  vehicle_marca?: string;
+  vehicle_modelo?: string;
   fecha_pago: string;
   año_matriculado: number;
-  costo: string;
+  costo: string | number;
   lugar_tramite?: string;
   nueva_fecha_vencimiento: string;
+  observaciones_pendientes?: string;
+  documento_pdf_1?: string | null;
+  documento_pdf_2?: string | null;
+  documento_pdf_3?: string | null;
   notas?: string;
   created_at?: string;
 }
+
+export interface VehicleFuelLog {
+  id: number;
+  vehicle: number;
+  vehicle_placa?: string;
+  vehicle_marca?: string;
+  vehicle_modelo?: string;
+  conductor?: number | null;
+  conductor_name?: string;
+  responsable?: string;
+  supervisado_por?: string;
+  fecha_vale: string;
+  numero_vale: string;
+  galones: string | number;
+  precio_por_galon?: string | number;
+  costo_total: string | number;
+  odometro_recarga: number;
+  tipo_combustible: 'EXTRA' | 'DIESEL';
+
+  tipo_transaccion?: string;
+  concepto?: string;
+  foto_vale?: string | null;
+  created_at?: string;
+}
+
+
+
 
 export interface DriverProfile {
   id: number;

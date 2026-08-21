@@ -151,9 +151,8 @@ const DriverSelfProfileModal = ({ isOpen, onClose, onSuccess }: DriverSelfProfil
         payload.append('foto', fotoFile);
       }
 
-      await api.patch('/driver-profiles/me/', payload, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      await api.patch('/driver-profiles/me/', payload);
+
 
       toast.success(hasExistingProfile ? 'Perfil de Conductor actualizado' : 'Perfil de Conductor creado exitosamente');
       if (onSuccess) onSuccess();

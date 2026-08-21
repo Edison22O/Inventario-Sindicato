@@ -1,48 +1,63 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Wrench, Search, FileText, PenTool, X, Calendar, DollarSign, AlertTriangle, CheckCircle2, ShieldAlert, Clock, LayoutGrid, Table, Plus, Trash2 } from 'lucide-react';
+import { Wrench, Search, FileText, PenTool, X, Calendar, DollarSign, AlertTriangle, CheckCircle2, ShieldAlert, LayoutGrid, Table, Plus, Trash2, Store } from 'lucide-react';
+
 import toast from 'react-hot-toast';
 import api from '@/shared/services/api';
-import type { Vehicle, VehicleMaintenance } from '@/shared/types';
+import type { Vehicle, VehicleMaintenance, VehicleMaintenanceRecord, Supplier } from '@/shared/types';
 import { confirmDialog } from '@/shared/utils/confirmDialog';
-
-interface MaintenanceRecord {
-  id: number;
-  fecha: string;
-  taller: string;
-  costo: string;
-  actividad_nombre: string;
-  notas: string;
-}
+import { getImageUrl } from '@/shared/utils/getImageUrl';
 
 const VehicleMaintenances = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [maintenances, setMaintenances] = useState<VehicleMaintenance[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('todos');
+  const [tipoFilter, setTipoFilter] = useState<'todos' | 'Preventivo' | 'Correctivo'>('todos');
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
 
-  // Estados para Modal de Registrar Servicio
+
+
+  // Modal para Registrar Servicio
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
   const [selectedRule, setSelectedRule] = useState<VehicleMaintenance | null>(null);
-  const [formData, setFormData] = useState({ fecha: new Date().toISOString().split('T')[0], fecha_proximo: '', taller: '', costo: '', notas: '' });
+  const [recordForm, setRecordForm] = useState({
+    tipo_mantenimiento: 'Preventivo' as 'Preventivo' | 'Correctivo',
+    fecha: new Date().toISOString().split('T')[0],
+    fecha_proximo: '',
+    taller: '',
+    supplier: '',
+    subtotal_mano_obra: '',
+    subtotal_materiales: '',
+    costo: '',
+    numero_factura: '',
+    fallo_observado: '',
+    solucion_aplicada: '',
+    notas: ''
+  });
+  const [facturaFile, setFacturaFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Estados para Modal de Crear Regla
+  // Modal para Crear Programa
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createData, setCreateData] = useState({
     vehicle: '',
+    tipo_mantenimiento: 'Preventivo' as 'Preventivo' | 'Correctivo',
     actividad: '',
     fecha_ultimo_cambio: new Date().toISOString().split('T')[0],
     fecha_proximo_cambio: '',
     km_ultimo_cambio: '0',
-    frecuencia_km: '5000'
+    frecuencia_km: '5000',
+    fallo_observado: '',
+    solucion_aplicada: '',
+    notas: ''
   });
 
-  // Estados para Modal de Historial
+  // Modal para Historial por Vehículo
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [selectedVehicleForHistory, setSelectedVehicleForHistory] = useState<Vehicle | null>(null);
-  const [historyRecords, setHistoryRecords] = useState<MaintenanceRecord[]>([]);
+  const [historyRecords, setHistoryRecords] = useState<VehicleMaintenanceRecord[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
   useEffect(() => {
@@ -51,12 +66,14 @@ const VehicleMaintenances = () => {
 
   const fetchData = async () => {
     try {
-      const [vehRes, maintRes] = await Promise.all([
+      const [vehRes, maintRes, suppRes] = await Promise.all([
         api.get('/vehicles/'),
-        api.get('/vehicle-maintenances/')
+        api.get('/vehicle-maintenances/'),
+        api.get('/vehicle-suppliers/')
       ]);
       setVehicles(vehRes.data || []);
       setMaintenances(maintRes.data || []);
+      setSuppliers(suppRes.data || []);
     } catch (error) {
       toast.error('Error al cargar datos de mantenimiento');
     } finally {
@@ -64,10 +81,89 @@ const VehicleMaintenances = () => {
     }
   };
 
+
+  const handleOpenCreateModal = () => {
+    setCreateData({
+      vehicle: vehicles[0]?.id.toString() || '',
+      tipo_mantenimiento: 'Preventivo',
+      actividad: 'Aceite de Motor y Filtro',
+      fecha_ultimo_cambio: new Date().toISOString().split('T')[0],
+      fecha_proximo_cambio: '',
+      km_ultimo_cambio: '0',
+      frecuencia_km: '5000',
+      fallo_observado: '',
+      solucion_aplicada: '',
+      notas: ''
+    });
+    setIsCreateModalOpen(true);
+  };
+
+  const handleCreateRule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const isCorrective = createData.tipo_mantenimiento === 'Correctivo';
+      await api.post('/vehicle-maintenances/', {
+        vehicle: parseInt(createData.vehicle),
+        tipo_mantenimiento: createData.tipo_mantenimiento,
+        actividad: createData.actividad,
+        fecha_ultimo_cambio: createData.fecha_ultimo_cambio,
+        fecha_proximo_cambio: isCorrective ? null : (createData.fecha_proximo_cambio || null),
+        km_ultimo_cambio: parseInt(createData.km_ultimo_cambio || '0'),
+        frecuencia_km: isCorrective ? null : parseInt(createData.frecuencia_km || '0'),
+        fallo_observado: isCorrective ? createData.fallo_observado : null,
+        solucion_aplicada: isCorrective ? createData.solucion_aplicada : null,
+        notas: createData.notas
+      });
+
+      toast.success(isCorrective ? 'Mantenimiento correctivo registrado' : 'Programa de mantenimiento creado');
+      setIsCreateModalOpen(false);
+      fetchData();
+    } catch (error) {
+      toast.error('Error al guardar el mantenimiento');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleOpenRecordModal = (rule: VehicleMaintenance) => {
     setSelectedRule(rule);
-    setFormData({ fecha: new Date().toISOString().split('T')[0], fecha_proximo: rule.fecha_proximo_cambio || '', taller: '', costo: '', notas: '' });
+    setRecordForm({
+      tipo_mantenimiento: rule.tipo_mantenimiento || 'Preventivo',
+      fecha: new Date().toISOString().split('T')[0],
+      fecha_proximo: rule.fecha_proximo_cambio || '',
+      taller: '',
+      supplier: '',
+      subtotal_mano_obra: '',
+      subtotal_materiales: '',
+      costo: '',
+      numero_factura: '',
+      fallo_observado: rule.fallo_observado || '',
+      solucion_aplicada: rule.solucion_aplicada || '',
+      notas: ''
+    });
+    setFacturaFile(null);
     setIsRecordModalOpen(true);
+  };
+
+  const calculateTotal = (manoObra: string, materiales: string) => {
+    const mo = parseFloat(manoObra || '0');
+    const mat = parseFloat(materiales || '0');
+    return (mo + mat).toFixed(2);
+  };
+
+  const handleManoObraChange = (val: string) => {
+    setRecordForm(prev => {
+      const calc = calculateTotal(val, prev.subtotal_materiales);
+      return { ...prev, subtotal_mano_obra: val, costo: calc };
+    });
+  };
+
+  const handleMaterialesChange = (val: string) => {
+    setRecordForm(prev => {
+      const calc = calculateTotal(prev.subtotal_mano_obra, val);
+      return { ...prev, subtotal_materiales: val, costo: calc };
+    });
   };
 
   const handleSubmitRecord = async (e: React.FormEvent) => {
@@ -76,65 +172,76 @@ const VehicleMaintenances = () => {
 
     setSubmitting(true);
     try {
-      await api.post('/vehicle-maintenance-records/', {
-        vehicle: selectedRule.vehicle,
-        maintenance_rule: selectedRule.id,
-        fecha: formData.fecha,
-        taller: formData.taller,
-        costo: parseFloat(formData.costo),
-        notas: formData.notas
-      });
+      const postData = new FormData();
+      postData.append('vehicle', selectedRule.vehicle.toString());
+      if (selectedRule.id) {
+        postData.append('maintenance_rule', selectedRule.id.toString());
+      }
+      postData.append('tipo_mantenimiento', recordForm.tipo_mantenimiento);
+      postData.append('fecha', recordForm.fecha);
+      postData.append('taller', recordForm.taller || 'Taller Interno');
+      if (recordForm.supplier) postData.append('supplier', recordForm.supplier);
+      
+      const mo = parseFloat(recordForm.subtotal_mano_obra || '0');
+      const mat = parseFloat(recordForm.subtotal_materiales || '0');
+      const total = parseFloat(recordForm.costo || '0') || (mo + mat);
+      
+      postData.append('subtotal_mano_obra', mo.toString());
+      postData.append('subtotal_materiales', mat.toString());
+      postData.append('costo', total.toString());
+      if (recordForm.numero_factura) postData.append('numero_factura', recordForm.numero_factura);
+      if (recordForm.fallo_observado) postData.append('fallo_observado', recordForm.fallo_observado);
+      if (recordForm.solucion_aplicada) postData.append('solucion_aplicada', recordForm.solucion_aplicada);
+      if (facturaFile) {
+        postData.append('factura_foto', facturaFile);
+      }
 
-      // Actualizar la regla de mantenimiento (fechas y km)
+      await api.post('/vehicle-maintenance-records/', postData);
+
+
+
+      // Actualizar la regla si existe
       const currentVehicle = vehicles.find(v => v.id === selectedRule.vehicle);
       const ruleId = selectedRule.public_id || selectedRule.id;
-      await api.patch(`/vehicle-maintenances/${ruleId}/`, {
-        fecha_ultimo_cambio: formData.fecha,
-        fecha_proximo_cambio: formData.fecha_proximo || null,
-        km_ultimo_cambio: currentVehicle?.odometro_actual || 0
-      });
+      if (ruleId) {
+        try {
+          await api.patch(`/vehicle-maintenances/${ruleId}/`, {
+            fecha_ultimo_cambio: recordForm.fecha,
+            fecha_proximo_cambio: recordForm.fecha_proximo || null,
+            km_ultimo_cambio: currentVehicle?.odometro_actual || 0
+          });
+        } catch (e) {
+          console.warn('Could not update maintenance rule:', e);
+        }
+      }
+
 
       toast.success('Servicio registrado exitosamente');
       setIsRecordModalOpen(false);
       fetchData();
-    } catch (error) {
-      toast.error('Error al registrar el servicio');
+    } catch (error: any) {
+      console.error('API Error Response:', error.response?.data);
+      const serverMsg = error.response?.data 
+        ? (typeof error.response.data === 'object' 
+            ? Object.entries(error.response.data).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join(' | ')
+            : String(error.response.data))
+        : 'Error al registrar el servicio';
+      toast.error(`Error al registrar el servicio: ${serverMsg}`);
     } finally {
-      setSubmitting(false);
-    }
-  };
 
-  const handleCreateRule = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      await api.post('/vehicle-maintenances/', {
-        vehicle: createData.vehicle,
-        actividad: createData.actividad,
-        fecha_ultimo_cambio: createData.fecha_ultimo_cambio,
-        fecha_proximo_cambio: createData.fecha_proximo_cambio || null,
-        km_ultimo_cambio: parseInt(createData.km_ultimo_cambio),
-        frecuencia_km: parseInt(createData.frecuencia_km)
-      });
-      toast.success('Programa de mantenimiento creado');
-      setIsCreateModalOpen(false);
-      fetchData();
-    } catch (error) {
-      toast.error('Error al crear programa');
-    } finally {
       setSubmitting(false);
     }
   };
 
   const handleDeleteRule = async (rule: VehicleMaintenance) => {
-    if (await confirmDialog('¿Deseas eliminar este programa de mantenimiento?')) {
+    if (await confirmDialog('¿Deseas eliminar este registro de mantenimiento?')) {
       try {
         const identifier = rule.public_id || rule.id;
         await api.delete(`/vehicle-maintenances/${identifier}/`);
-        toast.success('Programa eliminado');
+        toast.success('Mantenimiento eliminado');
         fetchData();
       } catch (error) {
-        toast.error('Error al eliminar programa');
+        toast.error('Error al eliminar mantenimiento');
       }
     }
   };
@@ -167,19 +274,21 @@ const VehicleMaintenances = () => {
 
       if (!matchesSearch) return false;
 
+      if (tipoFilter !== 'todos' && m.tipo_mantenimiento !== tipoFilter) return false;
+
       if (statusFilter === 'urgente') return m.estado_alerta === 'CAMBIO URGENTE';
       if (statusFilter === 'proximo') return m.estado_alerta === 'PRÓXIMO';
       if (statusFilter === 'aldia') return m.estado_alerta === 'AL DÍA' || m.estado_alerta === 'VIGENTE';
 
       return true;
     });
-  }, [maintenances, vehicles, searchTerm, statusFilter]);
+  }, [maintenances, vehicles, searchTerm, statusFilter, tipoFilter]);
 
   // KPIs
   const totalRules = maintenances.length;
+  const countPreventivos = maintenances.filter(m => m.tipo_mantenimiento === 'Preventivo').length;
+  const countCorrectivos = maintenances.filter(m => m.tipo_mantenimiento === 'Correctivo').length;
   const countUrgentes = maintenances.filter(m => m.estado_alerta === 'CAMBIO URGENTE').length;
-  const countProximos = maintenances.filter(m => m.estado_alerta === 'PRÓXIMO').length;
-  const countAlDia = maintenances.filter(m => m.estado_alerta === 'AL DÍA' || m.estado_alerta === 'VIGENTE').length;
 
   if (loading) {
     return (
@@ -204,26 +313,16 @@ const VehicleMaintenances = () => {
             Control de Mantenimientos
           </h1>
           <p className="text-gray-500 mt-1.5 text-base font-medium">
-            Planificación de mantenimientos preventivos, alertas de cambio y registro de servicios.
+            Clasificación de mantenimientos preventivos (con frecuencia) y correctivos (detallando falla y solución), control de facturas y proveedores.
           </p>
         </div>
         
         <button 
-          onClick={() => {
-            setCreateData({
-              vehicle: vehicles[0]?.id.toString() || '',
-              actividad: 'Aceite de Motor y Filtro',
-              fecha_ultimo_cambio: new Date().toISOString().split('T')[0],
-              fecha_proximo_cambio: '',
-              km_ultimo_cambio: '0',
-              frecuencia_km: '5000'
-            });
-            setIsCreateModalOpen(true);
-          }}
+          onClick={handleOpenCreateModal}
           className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-emerald-700 transition-all shadow-md shadow-emerald-600/20"
         >
           <Plus className="w-5 h-5" />
-          Añadir Programa
+          Añadir Mantenimiento
         </button>
       </div>
 
@@ -234,28 +333,8 @@ const VehicleMaintenances = () => {
             <Wrench className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Programas Totales</p>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Mantenimientos Totales</p>
             <p className="text-2xl font-black text-gray-900">{totalRules}</p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-3xl p-5 shadow-sm border border-red-100 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center font-bold">
-            <ShieldAlert className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs font-bold text-red-700 uppercase tracking-wider">Cambios Urgentes</p>
-            <p className="text-2xl font-black text-red-600">{countUrgentes}</p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-3xl p-5 shadow-sm border border-amber-100 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold">
-            <Clock className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs font-bold text-amber-700 uppercase tracking-wider">Próximos Cambios</p>
-            <p className="text-2xl font-black text-amber-600">{countProximos}</p>
           </div>
         </div>
 
@@ -264,8 +343,28 @@ const VehicleMaintenances = () => {
             <CheckCircle2 className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Servicios al Día</p>
-            <p className="text-2xl font-black text-emerald-600">{countAlDia}</p>
+            <p className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Preventivos Programados</p>
+            <p className="text-2xl font-black text-emerald-600">{countPreventivos}</p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-3xl p-5 shadow-sm border border-red-100 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center font-bold">
+            <AlertTriangle className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-red-700 uppercase tracking-wider">Correctivos Registrados</p>
+            <p className="text-2xl font-black text-red-600">{countCorrectivos}</p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-3xl p-5 shadow-sm border border-amber-100 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold">
+            <ShieldAlert className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-amber-700 uppercase tracking-wider">Cambios Urgentes</p>
+            <p className="text-2xl font-black text-amber-600">{countUrgentes}</p>
           </div>
         </div>
       </div>
@@ -285,40 +384,41 @@ const VehicleMaintenances = () => {
             />
           </div>
 
-          {/* Status Quick Filters */}
+          {/* Quick Filters for Tipo: Preventivo vs Correctivo */}
           <div className="flex flex-wrap gap-2 w-full sm:w-auto">
             <button
-              onClick={() => setStatusFilter('todos')}
+              onClick={() => { setTipoFilter('todos'); setStatusFilter('todos'); }}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                statusFilter === 'todos' ? 'bg-gray-900 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                tipoFilter === 'todos' && statusFilter === 'todos' ? 'bg-gray-900 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              Todos ({totalRules})
+              Todos los tipos
+            </button>
+            <button
+              onClick={() => { setTipoFilter('Preventivo'); setStatusFilter('todos'); }}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                tipoFilter === 'Preventivo' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+              }`}
+            >
+              Preventivos ({countPreventivos})
+            </button>
+            <button
+              onClick={() => { setTipoFilter('Correctivo'); setStatusFilter('todos'); }}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                tipoFilter === 'Correctivo' ? 'bg-red-600 text-white shadow-sm' : 'bg-red-50 text-red-700 hover:bg-red-100'
+              }`}
+            >
+              Correctivos ({countCorrectivos})
             </button>
             <button
               onClick={() => setStatusFilter('urgente')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                statusFilter === 'urgente' ? 'bg-red-600 text-white shadow-sm' : 'bg-red-50 text-red-700 hover:bg-red-100'
+                statusFilter === 'urgente' ? 'bg-amber-600 text-white shadow-sm' : 'bg-amber-50 text-amber-800 hover:bg-amber-100'
               }`}
             >
               Urgentes ({countUrgentes})
             </button>
-            <button
-              onClick={() => setStatusFilter('proximo')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                statusFilter === 'proximo' ? 'bg-amber-500 text-white shadow-sm' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
-              }`}
-            >
-              Próximos ({countProximos})
-            </button>
-            <button
-              onClick={() => setStatusFilter('aldia')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                statusFilter === 'aldia' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-              }`}
-            >
-              Al Día ({countAlDia})
-            </button>
+
           </div>
         </div>
 
@@ -329,17 +429,17 @@ const VehicleMaintenances = () => {
             className={`p-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
               viewMode === 'table' ? 'bg-white text-emerald-800 shadow-sm' : 'text-gray-500 hover:text-gray-900'
             }`}
-            title="Vista de Tabla Extendida"
+            title="Vista de Tabla"
           >
             <Table className="w-4 h-4" />
-            <span>Tabla Pro</span>
+            <span>Tabla</span>
           </button>
           <button
             onClick={() => setViewMode('cards')}
             className={`p-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
               viewMode === 'cards' ? 'bg-white text-emerald-800 shadow-sm' : 'text-gray-500 hover:text-gray-900'
             }`}
-            title="Vista de Tarjetas por Vehículo"
+            title="Vista de Tarjetas"
           >
             <LayoutGrid className="w-4 h-4" />
             <span>Tarjetas</span>
@@ -351,29 +451,26 @@ const VehicleMaintenances = () => {
       {filteredMaintenances.length === 0 ? (
         <div className="bg-white rounded-3xl p-12 text-center border border-gray-100 shadow-sm">
           <Wrench className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <h3 className="text-lg font-bold text-gray-900">No hay programas de mantenimiento</h3>
-          <p className="text-gray-500 mt-1 text-sm">Prueba ajustando el término de búsqueda o cambia los filtros de estado.</p>
+          <h3 className="text-lg font-bold text-gray-900">No hay mantenimientos que coincidan</h3>
+          <p className="text-gray-500 mt-1 text-sm">Prueba ajustando el término de búsqueda o cambia los filtros.</p>
         </div>
       ) : viewMode === 'table' ? (
-        /* VISTA DE TABLA PRO EXTENDIDA */
+        /* VISTA DE TABLA PRO */
         <div className="relative z-10 bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-xs text-left whitespace-nowrap border-collapse">
               <thead>
                 <tr className="bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-800 text-white font-bold uppercase tracking-wider shadow-sm">
                   <th className="px-4 py-4 text-center">Nº</th>
-                  <th className="px-4 py-4">Vehículo / Placa</th>
-                  <th className="px-4 py-4">Actividad / Servicio</th>
-                  <th className="px-4 py-4 text-center">Último Cambio</th>
-                  <th className="px-4 py-4 text-center">KM Últ. Cambio</th>
-                  <th className="px-4 py-4 text-center">Frecuencia</th>
-                  <th className="px-4 py-4 text-center">KM Próx. Cambio</th>
-                  <th className="px-4 py-4 text-center">Odómetro Actual</th>
-                  <th className="px-4 py-4 text-center">KM Recorridos</th>
-                  <th className="px-4 py-4 text-center">Fecha Próxima</th>
-                  <th className="px-4 py-4 text-center">KM Restantes</th>
-                  <th className="px-4 py-4 text-center">Estado / Alerta</th>
-                  <th className="px-4 py-4 text-center">Acciones</th>
+                  <th className="px-4 py-4">TIPO</th>
+                  <th className="px-4 py-4">VEHÍCULO / PLACA</th>
+                  <th className="px-4 py-4">ACTIVIDAD / SERVICIO</th>
+                  <th className="px-4 py-4 text-center">ÚLTIMO CAMBIO</th>
+                  <th className="px-4 py-4 text-center">FRECUENCIA (KM)</th>
+                  <th className="px-4 py-4 text-center">KM PRÓXIMO</th>
+                  <th className="px-4 py-4 text-center">ODÓMETRO ACTUAL</th>
+                  <th className="px-4 py-4 text-center">ESTADO / ALERTA</th>
+                  <th className="px-4 py-4 text-center">ACCIONES</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 font-medium">
@@ -381,6 +478,7 @@ const VehicleMaintenances = () => {
                   const v = vehicles.find(vh => vh.id === m.vehicle);
                   if (!v) return null;
 
+                  const isCorrective = m.tipo_mantenimiento === 'Correctivo';
                   const isUrgent = m.estado_alerta === 'CAMBIO URGENTE';
                   const isWarning = m.estado_alerta === 'PRÓXIMO';
 
@@ -388,11 +486,19 @@ const VehicleMaintenances = () => {
                     <tr 
                       key={m.id} 
                       className={`hover:bg-gray-50/80 transition-colors ${
-                        isUrgent ? 'bg-red-50/30' : isWarning ? 'bg-amber-50/30' : ''
+                        isCorrective ? 'bg-red-50/20' : isUrgent ? 'bg-amber-50/20' : ''
                       }`}
                     >
                       <td className="px-4 py-3.5 text-center text-gray-400 font-bold">{index + 1}</td>
                       
+                      <td className="px-4 py-3.5">
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                          isCorrective ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white'
+                        }`}>
+                          {m.tipo_mantenimiento || 'Preventivo'}
+                        </span>
+                      </td>
+
                       <td className="px-4 py-3.5">
                         <div className="font-extrabold text-gray-900 text-sm">{v.placa}</div>
                         <div className="text-[10px] font-semibold text-gray-500">{v.marca} {v.modelo}</div>
@@ -400,48 +506,32 @@ const VehicleMaintenances = () => {
 
                       <td className="px-4 py-3.5">
                         <div className="font-bold text-gray-800">{m.actividad}</div>
+                        {isCorrective && m.fallo_observado && (
+                          <div className="text-[10px] text-red-700 font-semibold truncate max-w-xs">
+                            Falló: {m.fallo_observado}
+                          </div>
+                        )}
                       </td>
 
                       <td className="px-4 py-3.5 text-center text-gray-700">
                         {m.fecha_ultimo_cambio || '-'}
                       </td>
 
-                      <td className="px-4 py-3.5 text-center font-semibold text-gray-800">
-                        {m.km_ultimo_cambio.toLocaleString()} km
-                      </td>
-
                       <td className="px-4 py-3.5 text-center text-gray-600">
-                        cada {m.frecuencia_km.toLocaleString()} km
+                        {m.frecuencia_km ? `cada ${m.frecuencia_km.toLocaleString()} km` : <span className="text-gray-400 font-bold">No requiere</span>}
                       </td>
 
                       <td className="px-4 py-3.5 text-center font-bold text-gray-900">
-                        {m.km_proximo_cambio.toLocaleString()} km
+                        {m.frecuencia_km ? `${m.km_proximo_cambio.toLocaleString()} km` : '-'}
                       </td>
 
                       <td className="px-4 py-3.5 text-center font-extrabold text-blue-600">
-                        {v.odometro_actual.toLocaleString()} km
-                      </td>
-
-                      <td className="px-4 py-3.5 text-center text-gray-700">
-                        {m.km_recorridos_desde_cambio.toLocaleString()} km
-                      </td>
-
-                      <td className="px-4 py-3.5 text-center text-gray-600">
-                        {m.fecha_proximo_cambio || '-'}
-                      </td>
-
-                      <td className="px-4 py-3.5 text-center">
-                        <span className={`font-black px-3 py-1 rounded-lg text-xs ${
-                          m.km_restantes_para_proximo_cambio < 0 ? 'bg-red-100 text-red-800' :
-                          m.km_restantes_para_proximo_cambio <= 500 ? 'bg-amber-100 text-amber-800' :
-                          'bg-emerald-100 text-emerald-800'
-                        }`}>
-                          {m.km_restantes_para_proximo_cambio > 0 ? `${m.km_restantes_para_proximo_cambio.toLocaleString()} km` : `VENCIDO (${Math.abs(m.km_restantes_para_proximo_cambio)} km)`}
-                        </span>
+                        {(v.odometro_actual || 0).toLocaleString()} km
                       </td>
 
                       <td className="px-4 py-3.5 text-center">
                         <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shadow-sm inline-flex items-center gap-1 ${
+                          isCorrective ? 'bg-red-600 text-white' :
                           isUrgent ? 'bg-red-600 text-white animate-pulse' :
                           isWarning ? 'bg-amber-500 text-white' :
                           'bg-emerald-600 text-white'
@@ -463,7 +553,7 @@ const VehicleMaintenances = () => {
                           </button>
                           
                           <button 
-                            title="Historial de Mantenimientos"
+                            title="Historial por Vehículo"
                             onClick={() => handleOpenHistoryModal(v)}
                             className="p-2 bg-gray-100 text-gray-700 hover:bg-blue-100 hover:text-blue-700 rounded-xl transition-colors"
                           >
@@ -471,7 +561,7 @@ const VehicleMaintenances = () => {
                           </button>
 
                           <button 
-                            title="Eliminar Programa"
+                            title="Eliminar"
                             onClick={() => handleDeleteRule(m)}
                             className="p-2 bg-gray-100 text-gray-400 hover:bg-red-100 hover:text-red-600 rounded-xl transition-colors"
                           >
@@ -493,6 +583,7 @@ const VehicleMaintenances = () => {
             const v = vehicles.find(vh => vh.id === m.vehicle);
             if (!v) return null;
 
+            const isCorrective = m.tipo_mantenimiento === 'Correctivo';
             const isUrgent = m.estado_alerta === 'CAMBIO URGENTE';
             const isWarning = m.estado_alerta === 'PRÓXIMO';
 
@@ -500,11 +591,12 @@ const VehicleMaintenances = () => {
               <div 
                 key={m.id}
                 className={`bg-white rounded-3xl border shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col justify-between ${
-                  isUrgent ? 'border-red-200' : isWarning ? 'border-amber-200' : 'border-gray-100'
+                  isCorrective ? 'border-red-200' : isUrgent ? 'border-red-200' : isWarning ? 'border-amber-200' : 'border-gray-100'
                 }`}
               >
                 {/* Card Header */}
                 <div className={`p-5 flex justify-between items-start ${
+                  isCorrective ? 'bg-gradient-to-r from-red-50 to-red-100/50' :
                   isUrgent ? 'bg-gradient-to-r from-red-50 to-red-100/50' :
                   isWarning ? 'bg-gradient-to-r from-amber-50 to-amber-100/50' :
                   'bg-gradient-to-r from-emerald-50 to-emerald-100/40'
@@ -517,11 +609,12 @@ const VehicleMaintenances = () => {
                   </div>
 
                   <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shadow-sm ${
+                    isCorrective ? 'bg-red-600 text-white' :
                     isUrgent ? 'bg-red-600 text-white animate-pulse' :
                     isWarning ? 'bg-amber-500 text-white' :
                     'bg-emerald-600 text-white'
                   }`}>
-                    {m.estado_alerta}
+                    {m.tipo_mantenimiento || 'Preventivo'}
                   </span>
                 </div>
 
@@ -532,35 +625,37 @@ const VehicleMaintenances = () => {
                     {m.actividad}
                   </h3>
 
-                  <div className="bg-gray-50 p-4 rounded-2xl space-y-2 border border-gray-100 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-gray-500 font-medium">Último Cambio:</span>
-                      <span className="font-bold text-gray-800">{m.fecha_ultimo_cambio || 'Sin registro'} ({m.km_ultimo_cambio.toLocaleString()} km)</span>
+                  {isCorrective ? (
+                    <div className="bg-red-50/60 p-4 rounded-2xl space-y-2 border border-red-100 text-xs">
+                      {m.fallo_observado && (
+                        <p className="text-red-900 font-semibold"><b className="text-red-700">¿Qué falló?:</b> {m.fallo_observado}</p>
+                      )}
+                      {m.solucion_aplicada && (
+                        <p className="text-emerald-900 font-semibold"><b className="text-emerald-700">Solución:</b> {m.solucion_aplicada}</p>
+                      )}
                     </div>
+                  ) : (
+                    <div className="bg-gray-50 p-4 rounded-2xl space-y-2 border border-gray-100 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 font-medium">Último Cambio:</span>
+                        <span className="font-bold text-gray-800">{m.fecha_ultimo_cambio || 'Sin registro'} ({m.km_ultimo_cambio.toLocaleString()} km)</span>
+                      </div>
 
-                    <div className="flex justify-between">
-                      <span className="text-gray-500 font-medium">Frecuencia Programada:</span>
-                      <span className="font-bold text-gray-800">Cada {m.frecuencia_km.toLocaleString()} km</span>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 font-medium">Frecuencia Programada:</span>
+                        <span className="font-bold text-gray-800">Cada {m.frecuencia_km?.toLocaleString()} km</span>
+                      </div>
+
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 font-medium">Próximo Cambio Objetivo:</span>
+                        <span className="font-bold text-gray-900">{m.km_proximo_cambio.toLocaleString()} km</span>
+                      </div>
                     </div>
+                  )}
 
-                    <div className="flex justify-between">
-                      <span className="text-gray-500 font-medium">Próximo Cambio Objetivo:</span>
-                      <span className="font-bold text-gray-900">{m.km_proximo_cambio.toLocaleString()} km</span>
-                    </div>
-
-                    <div className="flex justify-between pt-2 border-t border-gray-200">
-                      <span className="text-gray-500 font-medium">Odómetro Actual Vehículo:</span>
-                      <span className="font-extrabold text-blue-600">{v.odometro_actual.toLocaleString()} km</span>
-                    </div>
-                  </div>
-
-                  {/* Restantes Highlight */}
-                  <div className={`p-3 rounded-2xl text-center font-bold text-xs border ${
-                    m.km_restantes_para_proximo_cambio < 0 ? 'bg-red-50 text-red-800 border-red-200' :
-                    m.km_restantes_para_proximo_cambio <= 500 ? 'bg-amber-50 text-amber-800 border-amber-200' :
-                    'bg-emerald-50 text-emerald-800 border-emerald-200'
-                  }`}>
-                    KM Restantes: <span className="font-black text-sm">{m.km_restantes_para_proximo_cambio.toLocaleString()} km</span>
+                  <div className="flex justify-between items-center p-3 bg-blue-50/50 rounded-2xl border border-blue-100 text-xs">
+                    <span className="text-blue-800 font-bold">Odómetro Vehículo:</span>
+                    <span className="font-black text-blue-600 text-sm">{(v.odometro_actual || 0).toLocaleString()} km</span>
                   </div>
                 </div>
 
@@ -585,7 +680,6 @@ const VehicleMaintenances = () => {
                   <button
                     onClick={() => handleDeleteRule(m)}
                     className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
-                    title="Eliminar Programa"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -596,98 +690,155 @@ const VehicleMaintenances = () => {
         </div>
       )}
 
-      {/* Modal para Crear Regla */}
+      {/* Modal para Crear Programa / Mantenimiento (Basado en la imagen adjunta) */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-emerald-50 to-emerald-100/40">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-800 text-white">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-emerald-600 text-white rounded-xl shadow-sm">
-                  <Wrench className="w-5 h-5" />
+                <div className="p-2 bg-white/20 rounded-xl shadow-sm">
+                  <Wrench className="w-5 h-5 text-white" />
                 </div>
-                <h2 className="text-xl font-bold text-gray-900">Crear Programa de Mantenimiento</h2>
+                <h2 className="text-xl font-extrabold">Crear Mantenimiento</h2>
               </div>
-              <button onClick={() => setIsCreateModalOpen(false)} className="p-2 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-white/60">
+              <button onClick={() => setIsCreateModalOpen(false)} className="p-1 hover:bg-white/20 rounded-lg transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
             
-            <form onSubmit={handleCreateRule} className="p-6 space-y-4">
+            <form onSubmit={handleCreateRule} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar">
+              {/* Selector Tipo: Preventivo vs Correctivo */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Tipo de Mantenimiento *</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setCreateData({ ...createData, tipo_mantenimiento: 'Preventivo' })}
+                    className={`py-2.5 px-4 rounded-xl text-xs font-bold border transition-all ${
+                      createData.tipo_mantenimiento === 'Preventivo'
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
+                        : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                    }`}
+                  >
+                    Preventivo (Requiere Frecuencia)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCreateData({ ...createData, tipo_mantenimiento: 'Correctivo' })}
+                    className={`py-2.5 px-4 rounded-xl text-xs font-bold border transition-all ${
+                      createData.tipo_mantenimiento === 'Correctivo'
+                        ? 'bg-red-600 text-white border-red-600 shadow-md'
+                        : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                    }`}
+                  >
+                    Correctivo (Sin Frecuencia)
+                  </button>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Vehículo *</label>
                 <select
                   required
                   value={createData.vehicle}
                   onChange={e => setCreateData({...createData, vehicle: e.target.value})}
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium transition-all"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium"
                 >
-                  <option value="">Seleccione vehículo...</option>
                   {vehicles.map(v => (
-                    <option key={v.id} value={v.id}>{v.placa} - {v.marca} {v.modelo}</option>
+                    <option key={v.id} value={v.id.toString()}>{v.placa} - {v.marca} {v.modelo}</option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Actividad de Mantenimiento *</label>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Actividad / Servicio de Mantenimiento *</label>
                 <input
                   type="text"
                   required
-                  placeholder="Ej. Cambio de Aceite de Motor y Filtro"
+                  placeholder="Ej. Aceite de Motor y Filtro, Frenos, Amortiguadores..."
                   value={createData.actividad}
                   onChange={e => setCreateData({...createData, actividad: e.target.value})}
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium transition-all"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Frecuencia (KM) *</label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    placeholder="5000"
-                    value={createData.frecuencia_km}
-                    onChange={e => setCreateData({...createData, frecuencia_km: e.target.value})}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">KM Último Cambio *</label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    placeholder="0"
-                    value={createData.km_ultimo_cambio}
-                    onChange={e => setCreateData({...createData, km_ultimo_cambio: e.target.value})}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium transition-all"
-                  />
-                </div>
-              </div>
+              {/* Si es Preventivo: Frecuencia y Fechas */}
+              {createData.tipo_mantenimiento === 'Preventivo' ? (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Frecuencia (KM) *</label>
+                      <input
+                        type="number"
+                        required
+                        min="1"
+                        placeholder="5000"
+                        value={createData.frecuencia_km}
+                        onChange={e => setCreateData({...createData, frecuencia_km: e.target.value})}
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">KM Último Cambio *</label>
+                      <input
+                        type="number"
+                        required
+                        min="0"
+                        placeholder="0"
+                        value={createData.km_ultimo_cambio}
+                        onChange={e => setCreateData({...createData, km_ultimo_cambio: e.target.value})}
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium"
+                      />
+                    </div>
+                  </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Fecha Último Cambio *</label>
-                  <input
-                    type="date"
-                    required
-                    value={createData.fecha_ultimo_cambio}
-                    onChange={e => setCreateData({...createData, fecha_ultimo_cambio: e.target.value})}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium transition-all"
-                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Fecha Último Cambio *</label>
+                      <input
+                        type="date"
+                        required
+                        value={createData.fecha_ultimo_cambio}
+                        onChange={e => setCreateData({...createData, fecha_ultimo_cambio: e.target.value})}
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Fecha Próximo Cambio</label>
+                      <input
+                        type="date"
+                        value={createData.fecha_proximo_cambio}
+                        onChange={e => setCreateData({...createData, fecha_proximo_cambio: e.target.value})}
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium"
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* Si es Correctivo: Qué falló y Solución */
+                <div className="space-y-3 bg-red-50/50 p-4 rounded-2xl border border-red-100">
+                  <div>
+                    <label className="block text-xs font-bold text-red-900 uppercase tracking-wider mb-1">¿Qué falló? (Causa del Mantenimiento)</label>
+                    <textarea
+                      rows={2}
+                      placeholder="Describe la falla reportada o piezas averiadas..."
+                      value={createData.fallo_observado}
+                      onChange={e => setCreateData({...createData, fallo_observado: e.target.value})}
+                      className="w-full px-3 py-2 bg-white border border-red-200 rounded-xl text-sm font-medium resize-none focus:ring-2 focus:ring-red-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-emerald-900 uppercase tracking-wider mb-1">Detalle de Solución (Acción Aplicada)</label>
+                    <textarea
+                      rows={2}
+                      placeholder="Describe el trabajo realizado para solucionar la falla..."
+                      value={createData.solucion_aplicada}
+                      onChange={e => setCreateData({...createData, solucion_aplicada: e.target.value})}
+                      className="w-full px-3 py-2 bg-white border border-emerald-200 rounded-xl text-sm font-medium resize-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Fecha Próximo Cambio</label>
-                  <input
-                    type="date"
-                    value={createData.fecha_proximo_cambio}
-                    onChange={e => setCreateData({...createData, fecha_proximo_cambio: e.target.value})}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium transition-all"
-                  />
-                </div>
-              </div>
+              )}
 
               <div className="pt-4 flex justify-end gap-3 border-t border-gray-100">
                 <button
@@ -702,7 +853,7 @@ const VehicleMaintenances = () => {
                   disabled={submitting}
                   className="px-6 py-2.5 rounded-xl font-bold bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-600/20 transition-all disabled:opacity-50"
                 >
-                  {submitting ? 'Guardando...' : 'Crear Programa'}
+                  {submitting ? 'Guardando...' : 'Confirmar Mantenimiento'}
                 </button>
               </div>
             </form>
@@ -710,111 +861,178 @@ const VehicleMaintenances = () => {
         </div>
       )}
 
-      {/* Modal para Registrar Mantenimiento Realizado */}
+      {/* Modal para Registrar Servicio Realizado y Facturación */}
       {isRecordModalOpen && selectedRule && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-emerald-50 to-emerald-100/40">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-800 text-white">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-emerald-600 text-white rounded-xl shadow-sm">
-                  <PenTool className="w-5 h-5" />
+                <div className="p-2 bg-white/20 rounded-xl shadow-sm">
+                  <PenTool className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900">Registrar Servicio Realizado</h2>
-                  <p className="text-xs font-semibold text-emerald-700">{selectedRule.actividad}</p>
+                  <h2 className="text-xl font-extrabold">Registrar Servicio Realizado</h2>
+                  <p className="text-xs font-semibold text-emerald-200">{selectedRule.actividad}</p>
                 </div>
               </div>
-              <button onClick={() => setIsRecordModalOpen(false)} className="p-2 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-white/60">
+              <button onClick={() => setIsRecordModalOpen(false)} className="p-1 hover:bg-white/20 rounded-lg transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
             
-            <form onSubmit={handleSubmitRecord} className="p-6 space-y-4">
+            <form onSubmit={handleSubmitRecord} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar">
               <div className="bg-emerald-50 text-emerald-900 p-4 rounded-2xl text-xs font-semibold border border-emerald-200 flex gap-3 shadow-sm">
                 <AlertTriangle className="w-5 h-5 text-emerald-600 shrink-0" />
-                <p>Al confirmar, el odómetro actual (<b>{vehicles.find(v => v.id === selectedRule.vehicle)?.odometro_actual} km</b>) se actualizará como el nuevo kilometraje del último cambio.</p>
+                <p>Al confirmar, el odómetro actual (<b>{vehicles.find(v => v.id === selectedRule.vehicle)?.odometro_actual} km</b>) se actualizará como el nuevo kilometraje de cambio.</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Fecha Servicio *</label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <input
-                      type="date"
-                      required
-                      value={formData.fecha}
-                      onChange={e => setFormData({...formData, fecha: e.target.value})}
-                      className="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium transition-all"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Próxima Fecha</label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <input
-                      type="date"
-                      value={formData.fecha_proximo}
-                      onChange={e => setFormData({...formData, fecha_proximo: e.target.value})}
-                      className="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium transition-all"
-                    />
-                  </div>
-                </div>
+              {/* Taller / Proveedor Dropdown */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1 flex items-center gap-1">
+                  <Store className="w-4 h-4 text-emerald-600" /> Proveedor / Taller *
+                </label>
+                <select
+                  value={recordForm.supplier}
+                  onChange={e => {
+                    const suppId = e.target.value;
+                    const found = suppliers.find(s => s.id.toString() === suppId);
+                    setRecordForm(prev => ({
+                      ...prev,
+                      supplier: suppId,
+                      taller: found ? found.name : prev.taller
+                    }));
+                  }}
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium"
+                >
+                  <option value="">Seleccione o ingrese proveedor...</option>
+                  {suppliers.map(s => (
+                    <option key={s.id} value={s.id.toString()}>{s.name} ({s.phone || 'Sin tel'})</option>
+                  ))}
+                </select>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Taller / Proveedor *</label>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Nombre Taller Libre</label>
                 <input
                   type="text"
                   required
-                  placeholder="Ej. Taller Mecánico Especializado Los Andes"
-                  value={formData.taller}
-                  onChange={e => setFormData({...formData, taller: e.target.value})}
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium transition-all"
+                  placeholder="Ej. Taller Mecánico Los Andes"
+                  value={recordForm.taller}
+                  onChange={e => setRecordForm({...recordForm, taller: e.target.value})}
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium"
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Costo Total ($) *</label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    required
-                    placeholder="0.00"
-                    value={formData.costo}
-                    onChange={e => setFormData({...formData, costo: e.target.value})}
-                    className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium transition-all"
-                  />
+              {/* Desglose de Facturación: Subtotal 1 Mano de obra + Subtotal 2 Materiales = Total */}
+              <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-3">
+                <p className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1">
+                  <DollarSign className="w-4 h-4 text-emerald-600" /> Desglose de Costos de Factura
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-600 mb-1">Subtotal 1: Mano de Obra ($)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0.00"
+                      value={recordForm.subtotal_mano_obra}
+                      onChange={e => handleManoObraChange(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-600 mb-1">Subtotal 2: Materiales ($)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0.00"
+                      value={recordForm.subtotal_materiales}
+                      onChange={e => handleMaterialesChange(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-900"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                  <span className="text-xs font-black text-gray-700 uppercase">Total Facturado (Subtotal 3):</span>
+                  <span className="text-xl font-black text-emerald-600">${recordForm.costo || '0.00'}</span>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Observaciones (Opcional)</label>
-                <textarea
-                  rows={2}
-                  value={formData.notas}
-                  onChange={e => setFormData({...formData, notas: e.target.value})}
-                  placeholder="Detalles sobre marca de insumos usados, piezas cambiadas..."
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium transition-all resize-none"
-                />
+              {/* Número de Factura y Foto */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">N.º Factura</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. FAC-00123"
+                    value={recordForm.numero_factura}
+                    onChange={e => setRecordForm({...recordForm, numero_factura: e.target.value})}
+                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Fotografía de Factura * (JPG/PNG)</label>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                    onChange={e => {
+                      const file = e.target.files ? e.target.files[0] : null;
+                      if (file && !file.type.startsWith('image/')) {
+                        toast.error('Solo se permiten fotografías/imágenes (JPG, PNG, WEBP)');
+                        e.target.value = '';
+                        setFacturaFile(null);
+                        return;
+                      }
+                      setFacturaFile(file);
+                    }}
+                    className="w-full text-xs text-gray-500 file:mr-2 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
+                  />
+                  <p className="text-[10px] text-gray-400 font-medium mt-1">Únicamente imágenes/fotografías (sin PDF)</p>
+                </div>
+
               </div>
+
+              {/* Si es Correctivo: Qué falló y Solución */}
+              {selectedRule.tipo_mantenimiento === 'Correctivo' && (
+                <div className="space-y-3 bg-red-50/50 p-4 rounded-2xl border border-red-100">
+                  <div>
+                    <label className="block text-xs font-bold text-red-900 uppercase mb-1">¿Qué falló?</label>
+                    <textarea
+                      rows={2}
+                      value={recordForm.fallo_observado}
+                      onChange={e => setRecordForm({...recordForm, fallo_observado: e.target.value})}
+                      placeholder="Describe la falla reportada..."
+                      className="w-full px-3 py-2 bg-white border border-red-200 rounded-xl text-sm font-medium resize-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-emerald-900 uppercase mb-1">Detalle de Solución</label>
+                    <textarea
+                      rows={2}
+                      value={recordForm.solucion_aplicada}
+                      onChange={e => setRecordForm({...recordForm, solucion_aplicada: e.target.value})}
+                      placeholder="Describe la solución realizada..."
+                      className="w-full px-3 py-2 bg-white border border-emerald-200 rounded-xl text-sm font-medium resize-none"
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="pt-4 flex justify-end gap-3 border-t border-gray-100">
                 <button
                   type="button"
                   onClick={() => setIsRecordModalOpen(false)}
-                  className="px-5 py-2.5 rounded-xl font-bold text-gray-600 hover:bg-gray-100 transition-colors text-sm"
+                  className="px-5 py-2.5 rounded-xl font-bold text-gray-600 hover:bg-gray-100 transition-colors text-xs"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-6 py-2.5 rounded-xl font-bold bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-600/20 transition-all text-sm disabled:opacity-50"
+                  className="px-6 py-2.5 rounded-xl font-bold bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-600/20 transition-all text-xs disabled:opacity-50"
                 >
                   {submitting ? 'Guardando...' : 'Confirmar Servicio'}
                 </button>
@@ -824,7 +1042,7 @@ const VehicleMaintenances = () => {
         </div>
       )}
 
-      {/* Modal para Historial de Mantenimientos por Vehículo */}
+      {/* Modal para Historial por Vehículo */}
       {isHistoryModalOpen && selectedVehicleForHistory && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[85vh] shadow-2xl flex flex-col overflow-hidden">
@@ -852,30 +1070,53 @@ const VehicleMaintenances = () => {
                 <div className="text-center py-12">
                   <Wrench className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                   <h3 className="text-lg font-bold text-gray-900">Sin mantenimientos registrados</h3>
-                  <p className="text-gray-500 mt-1 text-sm">Este vehículo aún no posee mantenimientos registrados en la plataforma.</p>
+                  <p className="text-gray-500 mt-1 text-sm">Este vehículo aún no posee mantenimientos registrados.</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {historyRecords.map(record => (
                     <div key={record.id} className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col sm:flex-row justify-between gap-4">
                       <div>
-                        <h4 className="font-extrabold text-gray-900 text-lg flex items-center gap-2">
-                          <Wrench className="w-4 h-4 text-emerald-600" />
-                          {record.actividad_nombre}
-                        </h4>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                            record.tipo_mantenimiento === 'Correctivo' ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white'
+                          }`}>
+                            {record.tipo_mantenimiento || 'Preventivo'}
+                          </span>
+                          <h4 className="font-extrabold text-gray-900 text-base">
+                            {record.actividad_nombre}
+                          </h4>
+                        </div>
+
                         <div className="mt-2 space-y-1 text-xs font-semibold text-gray-600">
                           <p className="flex items-center gap-2"><Calendar className="w-3.5 h-3.5 text-gray-400" /> <b>Fecha:</b> {record.fecha}</p>
-                          <p className="flex items-center gap-2"><Wrench className="w-3.5 h-3.5 text-gray-400" /> <b>Taller:</b> {record.taller}</p>
+                          <p className="flex items-center gap-2"><Store className="w-3.5 h-3.5 text-gray-400" /> <b>Taller / Proveedor:</b> {record.taller} {record.supplier_name ? `(${record.supplier_name})` : ''}</p>
+                          {record.numero_factura && <p><b>N.º Factura:</b> {record.numero_factura}</p>}
                         </div>
-                        {record.notas && (
-                          <div className="mt-3 p-3 bg-gray-50 rounded-xl text-xs italic text-gray-600 border border-gray-100">
-                            "{record.notas}"
+
+                        {record.tipo_mantenimiento === 'Correctivo' && (
+                          <div className="mt-3 p-3 bg-red-50/60 rounded-xl text-xs space-y-1 border border-red-100">
+                            {record.fallo_observado && <p className="text-red-900 font-semibold"><b>¿Qué falló?:</b> {record.fallo_observado}</p>}
+                            {record.solucion_aplicada && <p className="text-emerald-900 font-semibold"><b>Solución:</b> {record.solucion_aplicada}</p>}
                           </div>
                         )}
                       </div>
+
                       <div className="flex flex-col items-end justify-center shrink-0">
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Costo Total</span>
-                        <span className="text-2xl font-black text-emerald-600">${parseFloat(record.costo).toLocaleString('es-EC', { minimumFractionDigits: 2 })}</span>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase">Mano de Obra: ${parseFloat(record.subtotal_mano_obra?.toString() || '0').toFixed(2)}</span>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase">Materiales: ${parseFloat(record.subtotal_materiales?.toString() || '0').toFixed(2)}</span>
+                        <span className="text-xl font-black text-emerald-600 mt-1">${parseFloat(record.costo?.toString() || '0').toLocaleString('es-EC', { minimumFractionDigits: 2 })}</span>
+                        
+                        {record.factura_foto && (
+                          <a
+                            href={getImageUrl(record.factura_foto)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-2 text-xs font-bold text-blue-600 hover:underline flex items-center gap-1"
+                          >
+                            <FileText className="w-3.5 h-3.5" /> Ver Factura
+                          </a>
+                        )}
                       </div>
                     </div>
                   ))}

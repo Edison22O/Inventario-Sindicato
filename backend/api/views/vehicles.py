@@ -4,10 +4,10 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
-from django.db.models import Sum
-from api.models.vehicles import Vehicle, VehicleTrip, VehicleRegistrationRecord
-from api.models.maintenance import VehicleMaintenance
-from api.serializers.vehicles import VehicleSerializer, VehicleTripSerializer, VehicleRegistrationRecordSerializer
+from django.db.models import Sum, Count
+from api.models.vehicles import Vehicle, VehicleTrip, VehicleRegistrationRecord, VehicleFuelLog
+from api.models.maintenance import VehicleMaintenance, VehicleMaintenanceRecord
+from api.serializers.vehicles import VehicleSerializer, VehicleTripSerializer, VehicleRegistrationRecordSerializer, VehicleFuelLogSerializer
 from api.mixins import AuditLogMixin
 from api.signals import broadcast_inventory_update
 from api.models.core import DriverProfile
@@ -43,7 +43,10 @@ class VehicleTripViewSet(AuditLogMixin, viewsets.ModelViewSet):
         vehicle_id = self.request.query_params.get('vehicle', None)
         conductor_id = self.request.query_params.get('conductor', None)
         if vehicle_id is not None:
-            queryset = queryset.filter(vehicle__public_id=vehicle_id)
+            if str(vehicle_id).isdigit():
+                queryset = queryset.filter(vehicle_id=int(vehicle_id))
+            else:
+                queryset = queryset.filter(vehicle__public_id=vehicle_id)
         if conductor_id is not None:
             queryset = queryset.filter(conductor_id=conductor_id)
         return queryset
@@ -117,8 +120,43 @@ class VehicleRegistrationRecordViewSet(AuditLogMixin, viewsets.ModelViewSet):
         queryset = super().get_queryset()
         vehicle_id = self.request.query_params.get('vehicle', None)
         if vehicle_id is not None:
-            queryset = queryset.filter(vehicle__public_id=vehicle_id)
+            if str(vehicle_id).isdigit():
+                queryset = queryset.filter(vehicle_id=int(vehicle_id))
+            else:
+                queryset = queryset.filter(vehicle__public_id=vehicle_id)
         return queryset
+
+class VehicleFuelLogViewSet(AuditLogMixin, viewsets.ModelViewSet):
+    queryset = VehicleFuelLog.objects.select_related('vehicle', 'conductor').all().order_by('-fecha_vale', '-created_at')
+    serializer_class = VehicleFuelLogSerializer
+    permission_classes = [IsAuthenticated]
+    audit_module_name = 'Vales de Combustible'
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        vehicle_id = self.request.query_params.get('vehicle', None)
+        conductor_id = self.request.query_params.get('conductor', None)
+        if vehicle_id is not None:
+            if str(vehicle_id).isdigit():
+                queryset = queryset.filter(vehicle_id=int(vehicle_id))
+            else:
+                queryset = queryset.filter(vehicle__public_id=vehicle_id)
+        if conductor_id is not None:
+            queryset = queryset.filter(conductor_id=conductor_id)
+        return queryset
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            print("!!! VEHICLE FUEL LOG VALIDATION ERRORS !!!:", serializer.errors)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def perform_create(self, serializer):
+        serializer.save(conductor=self.request.user if not serializer.validated_data.get('conductor') else serializer.validated_data.get('conductor'))
+
 
 class VehicleDashboardStatsView(APIView):
     permission_classes = [IsAuthenticated]
@@ -142,18 +180,71 @@ class VehicleDashboardStatsView(APIView):
         mantenimientos_proximos = [m for m in mantenimientos if m.estado_alerta == 'PRÓXIMO']
         mantenimientos_alertas = len(mantenimientos_vencidos) + len(mantenimientos_proximos)
 
-        # Gastos de Combustible
+        # Datasets para Gráficas Dinámicas
+        
+        # 1. Kilometraje por Vehículo
+        odometer_data = [
+            {
+                'id': v.id,
+                'placa': v.placa,
+                'marca': v.marca,
+                'modelo': v.modelo,
+                'odometro': v.odometro_actual
+            } for v in vehicles.order_by('-odometro_actual')
+        ]
+
+        # 2. Gastos de Combustible por Vehículo
         fuel_expenses = []
         for v in vehicles:
-            trips = VehicleTrip.objects.filter(vehicle=v)
-            total_spent = trips.aggregate(total=Sum('costo_combustible_viaje'))['total'] or 0
-            if total_spent > 0:
+            trips_cost = VehicleTrip.objects.filter(vehicle=v).aggregate(total=Sum('costo_combustible_viaje'))['total'] or 0
+            logs_cost = VehicleFuelLog.objects.filter(vehicle=v).aggregate(total=Sum('costo_total'))['total'] or 0
+            total_spent = float(trips_cost) + float(logs_cost)
+            if total_spent > 0 or v.odometro_actual > 0:
                 fuel_expenses.append({
+                    'id': v.id,
                     'placa': v.placa,
                     'marca': v.marca,
-                    'costo_total': total_spent,
+                    'modelo': v.modelo,
+                    'costo_total': round(total_spent, 2),
                 })
-        fuel_expenses = sorted(fuel_expenses, key=lambda x: x['costo_total'], reverse=True)[:5]
+        fuel_expenses = sorted(fuel_expenses, key=lambda x: x['costo_total'], reverse=True)
+
+        # 3. Desglose Mantenimientos Correctivos vs Preventivos por Conductor y Año (Ej: "En el año X, Edison tuvo X correctivos y Y preventivos")
+        maint_records = VehicleMaintenanceRecord.objects.select_related('vehicle', 'maintenance_rule').all()
+        
+        # Agrupar mantenimientos por Año y Conductor (asociado a viajes o vehículo)
+        driver_maint_stats = {}
+        for record in maint_records:
+            year = record.fecha.year if record.fecha else timezone.now().year
+            # Obtener conductor principal asociado al vehículo o viaje reciente
+            recent_trip = VehicleTrip.objects.filter(vehicle=record.vehicle).order_by('-fecha_hora_salida').first()
+            driver_name = "Sin Conductor Asignado"
+            if recent_trip and recent_trip.conductor:
+                full = f"{recent_trip.conductor.first_name or ''} {recent_trip.conductor.last_name or ''}".strip()
+                driver_name = full if full else recent_trip.conductor.username
+
+            key = (year, driver_name)
+            if key not in driver_maint_stats:
+                driver_maint_stats[key] = {
+                    'año': year,
+                    'conductor': driver_name,
+                    'correctivos': 0,
+                    'preventivos': 0,
+                    'costo_correctivos': 0.0,
+                    'costo_preventivos': 0.0,
+                }
+            
+            is_corrective = record.tipo_mantenimiento == 'Correctivo' or (record.maintenance_rule and record.maintenance_rule.tipo_mantenimiento == 'Correctivo')
+            cost = float(record.costo or 0)
+            if is_corrective:
+                driver_maint_stats[key]['correctivos'] += 1
+                driver_maint_stats[key]['costo_correctivos'] += cost
+            else:
+                driver_maint_stats[key]['preventivos'] += 1
+                driver_maint_stats[key]['costo_preventivos'] += cost
+
+        driver_stats_list = list(driver_maint_stats.values())
+        driver_stats_list = sorted(driver_stats_list, key=lambda x: (x['año'], x['conductor']), reverse=True)
 
         # Viajes Activos
         active_trips = VehicleTrip.objects.filter(estado_viaje='En Curso').select_related('vehicle', 'conductor')
@@ -167,6 +258,38 @@ class VehicleDashboardStatsView(APIView):
             } for t in active_trips
         ]
 
+        # Totales financieros para gráficas del Dashboard
+        total_fuel_cost = round(sum(item['costo_total'] for item in fuel_expenses), 2)
+        total_maint_cost = round(sum(float(r.costo or 0) for r in maint_records), 2)
+        total_preventive_cost = round(sum(st['costo_preventivos'] for st in driver_stats_list), 2)
+        total_corrective_cost = round(sum(st['costo_correctivos'] for st in driver_stats_list), 2)
+
+        # Consolidado de gastos por vehículo (Combustible + Mantenimiento)
+        vehicle_consolidated = {}
+        for v in vehicles:
+            placa = v.placa
+            vehicle_consolidated[placa] = {'placa': placa, 'combustible': 0.0, 'mantenimiento': 0.0, 'total': 0.0}
+        
+        for item in fuel_expenses:
+            placa = item['placa']
+            if placa in vehicle_consolidated:
+                vehicle_consolidated[placa]['combustible'] += float(item['costo_total'])
+                vehicle_consolidated[placa]['total'] += float(item['costo_total'])
+            else:
+                vehicle_consolidated[placa] = {'placa': placa, 'combustible': float(item['costo_total']), 'mantenimiento': 0.0, 'total': float(item['costo_total'])}
+
+        for record in maint_records:
+            placa = record.vehicle.placa if record.vehicle else 'Desconocido'
+            cost = float(record.costo or 0)
+            if placa in vehicle_consolidated:
+                vehicle_consolidated[placa]['mantenimiento'] += cost
+                vehicle_consolidated[placa]['total'] += cost
+            else:
+                vehicle_consolidated[placa] = {'placa': placa, 'combustible': 0.0, 'mantenimiento': cost, 'total': cost}
+
+        consolidated_list = [item for item in vehicle_consolidated.values() if item['total'] > 0]
+        consolidated_list = sorted(consolidated_list, key=lambda x: x['total'], reverse=True)
+
         return Response({
             'kpis': {
                 'total': total_vehicles,
@@ -175,9 +298,16 @@ class VehicleDashboardStatsView(APIView):
                 'en_taller': en_taller,
                 'matriculas_alertas': matriculas_alertas,
                 'mantenimientos_alertas': mantenimientos_alertas,
-                'total_conductores': total_conductores
+                'total_conductores': total_conductores,
+                'total_fuel_cost': total_fuel_cost,
+                'total_maint_cost': total_maint_cost,
+                'total_preventive_cost': total_preventive_cost,
+                'total_corrective_cost': total_corrective_cost
             },
+            'odometer_data': odometer_data,
             'fuel_expenses': fuel_expenses,
+            'consolidated_expenses': consolidated_list,
+            'driver_maint_stats': driver_stats_list,
             'active_trips': active_trips_data,
             'alerts': {
                 'mantenimientos': [
@@ -190,3 +320,4 @@ class VehicleDashboardStatsView(APIView):
                 ][:10]
             }
         })
+

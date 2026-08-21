@@ -9,9 +9,10 @@ class Vehicle(models.Model):
         ('Fuera del Sindicato', 'Fuera del Sindicato'),
     ]
     COMBUSTIBLE_CHOICES = [
-        ('Gasolina', 'Gasolina'),
+        ('Gasolina Extra', 'Gasolina Extra'),
         ('Diesel', 'Diesel'),
     ]
+
 
     placa = models.CharField(max_length=20, unique=True)
     marca = models.CharField(max_length=100)
@@ -153,6 +154,13 @@ class VehicleRegistrationRecord(models.Model):
     costo = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     lugar_tramite = models.CharField(max_length=200, blank=True, null=True)
     nueva_fecha_vencimiento = models.DateField()
+    observaciones_pendientes = models.TextField(blank=True, null=True)
+    
+    # Documentos PDF (hasta 3)
+    documento_pdf_1 = models.FileField(upload_to='vehicles/matriculas/', null=True, blank=True)
+    documento_pdf_2 = models.FileField(upload_to='vehicles/matriculas/', null=True, blank=True)
+    documento_pdf_3 = models.FileField(upload_to='vehicles/matriculas/', null=True, blank=True)
+    
     notas = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -164,3 +172,69 @@ class VehicleRegistrationRecord(models.Model):
 
     def __str__(self):
         return f"Matrícula {self.año_matriculado} - {self.vehicle.placa}"
+
+class VehicleFuelLog(models.Model):
+    COMBUSTIBLE_CHOICES = [
+        ('EXTRA', 'Gasolina Extra'),
+        ('DIESEL', 'Diésel'),
+    ]
+
+
+    TRANSACCION_CHOICES = [
+        ('EFECTIVO', 'Efectivo'),
+        ('TARJETA', 'Tarjeta'),
+        ('PREPAGO', 'Prepago'),
+        ('CONSUMO INTERNO', 'Consumo Interno'),
+        ('CALIBRACION', 'Calibración'),
+        ('DECRETO', 'Decreto'),
+        ('DINERO ELECTRONICO', 'Dinero Electrónico'),
+        ('MIDENA', 'Midena'),
+    ]
+
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='fuel_logs')
+    conductor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='fuel_logs')
+    responsable = models.CharField(max_length=255, blank=True, null=True) # Responsable (ej. Francisco Sánchez)
+    supervisado_por = models.CharField(max_length=255, blank=True, null=True) # Supervisado por
+    
+    fecha_vale = models.DateField()
+    numero_vale = models.CharField(max_length=50) # ej: "0002322" o "1231955"
+    odometro_recarga = models.IntegerField() # Kilometraje actual al poner combustible (ej. 116265)
+    
+    tipo_combustible = models.CharField(max_length=20, choices=COMBUSTIBLE_CHOICES, default='EXTRA')
+    galones = models.DecimalField(max_digits=8, decimal_places=3) # ej. 6.313 galones
+    precio_por_galon = models.DecimalField(max_digits=8, decimal_places=4, default=0.0000, null=True, blank=True)
+    costo_total = models.DecimalField(max_digits=10, decimal_places=2, default=0.00) # Valor Pagado / Total Importe
+    
+    tipo_transaccion = models.CharField(max_length=50, choices=TRANSACCION_CHOICES, default='EFECTIVO', blank=True, null=True)
+    concepto = models.TextField(blank=True, null=True) # "En concepto de..." (Detalle)
+    foto_vale = models.ImageField(upload_to='vehicles/fuel_vouchers/', null=True, blank=True, verbose_name="Fotografía del Vale")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+    def save(self, *args, **kwargs):
+        is_new = not self.pk
+        super().save(*args, **kwargs)
+        
+        if is_new and self.vehicle:
+            import decimal
+            galones_sumar = decimal.Decimal(str(self.galones or 0))
+            nuevo_nivel = self.vehicle.combustible_actual_galones + galones_sumar
+            
+            # Limitar a la capacidad máxima del tanque si aplica
+            if self.vehicle.capacidad_tanque_galones and nuevo_nivel > self.vehicle.capacidad_tanque_galones:
+                nuevo_nivel = self.vehicle.capacidad_tanque_galones
+                
+            self.vehicle.combustible_actual_galones = nuevo_nivel
+            
+            # Si el odómetro ingresado es mayor al odómetro actual del vehículo, actualizarlo
+            if self.odometro_recarga and self.odometro_recarga > self.vehicle.odometro_actual:
+                self.vehicle.odometro_actual = self.odometro_recarga
+                
+            self.vehicle.save(update_fields=['combustible_actual_galones', 'odometro_actual'])
+
+    def __str__(self):
+        return f"Vale {self.numero_vale} - {self.vehicle.placa} ({self.fecha_vale})"
+
+
+

@@ -181,16 +181,13 @@ const DriverModal = ({ isOpen, onClose, onSuccess, driver }: DriverModalProps) =
       }
 
       if (driver) {
-        await api.patch(`/driver-profiles/${driver.public_id}/`, payload, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        await api.patch(`/driver-profiles/${driver.public_id}/`, payload);
         toast.success('Conductor actualizado');
       } else {
-        await api.post('/driver-profiles/', payload, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        await api.post('/driver-profiles/', payload);
         toast.success('Conductor registrado');
       }
+
       onSuccess();
       onClose();
     } catch (error: any) {

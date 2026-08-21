@@ -9,6 +9,7 @@ interface Vehicle {
   placa: string;
   marca: string;
   modelo: string;
+  odometro_actual?: number;
 }
 
 interface VehicleMaintenance {
@@ -88,7 +89,7 @@ const VehicleMaintenanceAdmin = () => {
       };
 
       if (selectedItem) {
-        await api.patch(`/vehicle-maintenances/${selectedItem.public_id}/`, payload);
+        await api.patch(`/vehicle-maintenances/${selectedItem.id}/`, payload);
         toast.success('Programa actualizado');
       } else {
         await api.post('/vehicle-maintenances/', payload);
@@ -252,7 +253,7 @@ const VehicleMaintenanceAdmin = () => {
                     setFormData({
                       ...formData,
                       vehicle: vehicleId,
-                      km_ultimo_cambio: selectedV ? selectedV.odometro_actual.toString() : formData.km_ultimo_cambio
+                      km_ultimo_cambio: selectedV && selectedV.odometro_actual ? selectedV.odometro_actual.toString() : formData.km_ultimo_cambio
                     });
                   }}
                 >

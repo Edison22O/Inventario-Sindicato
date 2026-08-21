@@ -53,21 +53,56 @@ class VehicleMaintenanceViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = super().get_queryset()
         vehicle_id = self.request.query_params.get('vehicle', None)
+        tipo = self.request.query_params.get('tipo', None)
         if vehicle_id is not None:
-            queryset = queryset.filter(vehicle__public_id=vehicle_id)
+            if str(vehicle_id).isdigit():
+                queryset = queryset.filter(vehicle_id=int(vehicle_id))
+            else:
+                queryset = queryset.filter(vehicle__public_id=vehicle_id)
+        if tipo is not None:
+            queryset = queryset.filter(tipo_mantenimiento__iexact=tipo)
         return queryset
 
 class VehicleMaintenanceRecordViewSet(viewsets.ModelViewSet):
-    queryset = VehicleMaintenanceRecord.objects.select_related('vehicle', 'maintenance_rule').all().order_by('-fecha', '-created_at')
+    queryset = VehicleMaintenanceRecord.objects.select_related('vehicle', 'maintenance_rule', 'supplier').all().order_by('-fecha', '-created_at')
     serializer_class = VehicleMaintenanceRecordSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         queryset = super().get_queryset()
         vehicle_id = self.request.query_params.get('vehicle', None)
+        supplier_id = self.request.query_params.get('supplier', None)
+        tipo = self.request.query_params.get('tipo', None)
+
         if vehicle_id is not None:
-            queryset = queryset.filter(vehicle__public_id=vehicle_id)
+            if str(vehicle_id).isdigit():
+                queryset = queryset.filter(vehicle_id=int(vehicle_id))
+            else:
+                queryset = queryset.filter(vehicle__public_id=vehicle_id)
+
+        if supplier_id is not None:
+            if str(supplier_id).isdigit():
+                queryset = queryset.filter(supplier_id=int(supplier_id))
+            else:
+                queryset = queryset.filter(supplier__public_id=supplier_id)
+
+        if tipo is not None:
+            queryset = queryset.filter(tipo_mantenimiento__iexact=tipo)
+
         return queryset
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            print("!!! VEHICLE MAINTENANCE RECORD VALIDATION ERRORS !!!:", serializer.errors)
+            from rest_framework.response import Response
+            from rest_framework import status
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        from rest_framework.response import Response
+        from rest_framework import status
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     def perform_create(self, serializer):
         # Al crear el registro, se guarda y se actualiza la regla de mantenimiento si existe
@@ -78,3 +113,5 @@ class VehicleMaintenanceRecordViewSet(viewsets.ModelViewSet):
             rule.km_ultimo_cambio = vehicle.odometro_actual
             rule.fecha_ultimo_cambio = record.fecha
             rule.save()
+
+

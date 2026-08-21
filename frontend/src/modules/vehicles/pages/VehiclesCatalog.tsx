@@ -267,7 +267,7 @@ const VehiclesCatalog = () => {
                   <div className="grid grid-cols-2 gap-2 mb-4">
                     <div className="bg-gray-50 p-2.5 rounded-2xl border border-gray-100">
                       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Odómetro</p>
-                      <p className="font-extrabold text-gray-900 text-xs">{vehicle.odometro_actual.toLocaleString()} KM</p>
+                      <p className="font-extrabold text-gray-900 text-xs">{(vehicle.odometro_actual || 0).toLocaleString()} KM</p>
                     </div>
                     <div className="bg-gray-50 p-2.5 rounded-2xl border border-gray-100">
                       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Combustible</p>

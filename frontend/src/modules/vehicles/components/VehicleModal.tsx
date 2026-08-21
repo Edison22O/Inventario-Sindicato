@@ -203,10 +203,11 @@ const VehicleModal: React.FC<VehicleModalProps> = ({ isOpen, onClose, onSave, ve
               <h3 className="col-span-full text-lg font-bold text-gray-900">Configuración de Combustible</h3>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Combustible *</label>
-                <select required name="tipo_combustible" value={formData.tipo_combustible || 'Gasolina'} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500">
-                  <option value="Gasolina">Gasolina</option>
+                <select required name="tipo_combustible" value={formData.tipo_combustible || 'Gasolina Extra'} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500">
+                  <option value="Gasolina Extra">Gasolina Extra</option>
                   <option value="Diesel">Diesel</option>
                 </select>
+
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Capacidad del Tanque (Galones) *</label>

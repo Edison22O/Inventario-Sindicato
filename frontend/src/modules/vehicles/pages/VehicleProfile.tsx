@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Truck, Calendar, Gauge, Droplet, Wrench, FileText, AlertTriangle, Plus, X, DollarSign } from 'lucide-react';
+import { ArrowLeft, Truck, Calendar, Gauge, Droplet, Wrench, FileText, AlertTriangle, Plus, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/shared/services/api';
 import type { Vehicle, VehicleTrip, VehicleMaintenance, VehicleRegistrationRecord } from '@/shared/types';
@@ -73,6 +73,7 @@ const VehicleProfile = () => {
 
   const handleAddRegistration = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!vehicle) return;
     setSubmittingRegistration(true);
     try {
       await api.post('/vehicle-registrations/', {
@@ -498,7 +499,7 @@ const VehicleProfile = () => {
                           </div>
                           <div className="flex flex-col items-end shrink-0">
                             <span className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Costo</span>
-                            <span className="text-2xl font-black text-blue-600">${parseFloat(reg.costo).toLocaleString('es-EC', { minimumFractionDigits: 2 })}</span>
+                            <span className="text-2xl font-black text-blue-600">${parseFloat(String(reg.costo || 0)).toLocaleString('es-EC', { minimumFractionDigits: 2 })}</span>
                           </div>
                         </div>
                       ))}

@@ -3,15 +3,16 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     RoleViewSet, UserViewSet, CategoryViewSet,
     MediaViewSet, ProductViewSet, DepartmentViewSet, SupplierViewSet,
+    VehicleSupplierViewSet,
     MaintenanceLogViewSet, BackupViewSet,
-    BackupViewSet,
     FurnitureCategoryViewSet, FurnitureDepartmentViewSet, FurnitureSupplierViewSet,
     FurnitureProductViewSet, FurnitureMaintenanceLogViewSet,
     VehicleViewSet, VehicleTripViewSet,
     SystemSettingsViewSet, AdminDashboardStatsViewSet, ActivityLogViewSet,
     DriverProfileViewSet, VehicleRegistrationRecordViewSet, VehicleDashboardStatsView
 )
-from api.views.maintenance import MaintenanceLogViewSet, VehicleMaintenanceViewSet, VehicleMaintenanceRecordViewSet
+from api.views.maintenance import VehicleMaintenanceViewSet, VehicleMaintenanceRecordViewSet
+from api.views.vehicles import VehicleFuelLogViewSet
 
 router = DefaultRouter()
 router.register(r'roles', RoleViewSet)
@@ -22,8 +23,6 @@ router.register(r'suppliers', SupplierViewSet)
 router.register(r'media', MediaViewSet)
 router.register(r'products', ProductViewSet)
 router.register(r'maintenances', MaintenanceLogViewSet)
-router.register(r'vehicle-maintenances', VehicleMaintenanceViewSet)
-router.register(r'vehicle-maintenance-records', VehicleMaintenanceRecordViewSet, basename='vehicle-maintenance-records')
 router.register(r'backup', BackupViewSet, basename='backup')
 router.register(r'system-settings', SystemSettingsViewSet, basename='system-settings')
 router.register(r'admin-stats', AdminDashboardStatsViewSet, basename='admin-stats')
@@ -40,8 +39,12 @@ router.register(r'furniture/maintenances', FurnitureMaintenanceLogViewSet, basen
 router.register(r'vehicles', VehicleViewSet, basename='vehicles')
 router.register(r'vehicle-trips', VehicleTripViewSet, basename='vehicle-trips')
 router.register(r'vehicle-maintenances', VehicleMaintenanceViewSet, basename='vehicle-maintenances')
+router.register(r'vehicle-maintenance-records', VehicleMaintenanceRecordViewSet, basename='vehicle-maintenance-records')
 router.register(r'driver-profiles', DriverProfileViewSet, basename='driver-profiles')
+router.register(r'vehicle-suppliers', VehicleSupplierViewSet, basename='vehicle-suppliers')
+router.register(r'vehicle-fuel-logs', VehicleFuelLogViewSet, basename='vehicle-fuel-logs')
 router.register(r'vehicle-registrations', VehicleRegistrationRecordViewSet, basename='vehicle-registrations')
+
 
 urlpatterns = [
     path('vehicle-dashboard-stats/', VehicleDashboardStatsView.as_view(), name='vehicle-dashboard-stats'),
