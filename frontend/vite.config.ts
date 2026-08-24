@@ -18,5 +18,16 @@ export default defineConfig({
     allowedHosts: true, // Allow ngrok and localtunnel hosts
     strictPort: true,
     port: 3000,
+    proxy: {
+      '/api': {
+        target: process.env.VITE_BACKEND_URL || 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+      '/ws': {
+        target: process.env.VITE_WS_BACKEND_URL || 'ws://127.0.0.1:8000',
+        ws: true,
+        changeOrigin: true,
+      },
+    },
   }
 })

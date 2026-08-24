@@ -4,6 +4,7 @@ import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Toolti
 
 import api from '@/shared/services/api';
 import toast from 'react-hot-toast';
+import { useInventoryWebSocket } from '@/modules/inventory/hooks/useInventoryWebSocket';
 
 interface Trip {
   id: number;
@@ -63,6 +64,8 @@ const VehiclesDashboard = () => {
   useEffect(() => {
     fetchStats();
   }, []);
+
+  useInventoryWebSocket(fetchStats);
 
   useEffect(() => {
     if (selectedMatricula && selectedMatricula.vencimiento) {

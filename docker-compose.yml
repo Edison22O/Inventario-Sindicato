@@ -14,6 +14,11 @@ services:
     ports:
       - "5432:5432"
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
   backend:
     build: ./backend
     command: bash -c "python manage.py migrate && daphne -b 0.0.0.0 -p 8000 inventory_api.asgi:application"
@@ -25,12 +30,15 @@ services:
       - "8000:8000"
     depends_on:
       - db
+      - redis
     environment:
       - DB_NAME=${DB_NAME:-inventario_db}
       - DB_USER=${DB_USER:-postgres}
       - DB_PASSWORD=${DB_PASSWORD:-password}
       - DB_HOST=${DB_HOST:-db}
       - DB_PORT=${DB_PORT:-5432}
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
       - SECRET_KEY=${SECRET_KEY:-default-secret-key}
       - DEBUG=${DEBUG:-True}
 

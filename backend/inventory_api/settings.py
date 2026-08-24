@@ -155,8 +155,19 @@ SIMPLE_JWT = {
 
 AUTH_USER_MODEL = 'api.User'
 
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer'
+REDIS_HOST = os.environ.get('REDIS_HOST', None)
+if REDIS_HOST:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                "hosts": [(REDIS_HOST, int(os.environ.get('REDIS_PORT', 6379)))],
+            },
+        }
     }
-}
+else:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer'
+        }
+    }

@@ -115,3 +115,61 @@ def furniture_category_changed(sender, instance, **kwargs):
 def furniture_supplier_changed(sender, instance, **kwargs):
     action = 'delete' if 'created' not in kwargs else ('create' if kwargs['created'] else 'update')
     broadcast_inventory_update('FurnitureSupplier', action)
+
+# Vehicle Signals
+try:
+    from .models.vehicles import Vehicle, VehicleTrip, VehicleRegistrationRecord, VehicleFuelLog
+    from .models.maintenance import VehicleMaintenance, VehicleMaintenanceRecord
+    from .models.core import DriverProfile
+    from .models.suppliers import VehicleSupplier
+
+    @receiver(post_save, sender=Vehicle)
+    @receiver(post_delete, sender=Vehicle)
+    def vehicle_changed(sender, instance, **kwargs):
+        action = 'delete' if 'created' not in kwargs else ('create' if kwargs['created'] else 'update')
+        broadcast_inventory_update('Vehicle', action)
+
+    @receiver(post_save, sender=VehicleTrip)
+    @receiver(post_delete, sender=VehicleTrip)
+    def vehicle_trip_changed(sender, instance, **kwargs):
+        action = 'delete' if 'created' not in kwargs else ('create' if kwargs['created'] else 'update')
+        broadcast_inventory_update('VehicleTrip', action)
+
+    @receiver(post_save, sender=VehicleRegistrationRecord)
+    @receiver(post_delete, sender=VehicleRegistrationRecord)
+    def vehicle_registration_changed(sender, instance, **kwargs):
+        action = 'delete' if 'created' not in kwargs else ('create' if kwargs['created'] else 'update')
+        broadcast_inventory_update('VehicleRegistrationRecord', action)
+
+    @receiver(post_save, sender=VehicleFuelLog)
+    @receiver(post_delete, sender=VehicleFuelLog)
+    def vehicle_fuel_log_changed(sender, instance, **kwargs):
+        action = 'delete' if 'created' not in kwargs else ('create' if kwargs['created'] else 'update')
+        broadcast_inventory_update('VehicleFuelLog', action)
+
+    @receiver(post_save, sender=VehicleMaintenance)
+    @receiver(post_delete, sender=VehicleMaintenance)
+    def vehicle_maintenance_changed(sender, instance, **kwargs):
+        action = 'delete' if 'created' not in kwargs else ('create' if kwargs['created'] else 'update')
+        broadcast_inventory_update('VehicleMaintenance', action)
+
+    @receiver(post_save, sender=VehicleMaintenanceRecord)
+    @receiver(post_delete, sender=VehicleMaintenanceRecord)
+    def vehicle_maintenance_record_changed(sender, instance, **kwargs):
+        action = 'delete' if 'created' not in kwargs else ('create' if kwargs['created'] else 'update')
+        broadcast_inventory_update('VehicleMaintenanceRecord', action)
+
+    @receiver(post_save, sender=DriverProfile)
+    @receiver(post_delete, sender=DriverProfile)
+    def driver_profile_changed(sender, instance, **kwargs):
+        action = 'delete' if 'created' not in kwargs else ('create' if kwargs['created'] else 'update')
+        broadcast_inventory_update('DriverProfile', action)
+
+    @receiver(post_save, sender=VehicleSupplier)
+    @receiver(post_delete, sender=VehicleSupplier)
+    def vehicle_supplier_changed(sender, instance, **kwargs):
+        action = 'delete' if 'created' not in kwargs else ('create' if kwargs['created'] else 'update')
+        broadcast_inventory_update('VehicleSupplier', action)
+except Exception as e:
+    pass
+

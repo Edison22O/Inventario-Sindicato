@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Fuel, Plus, Search, DollarSign, FileText, CheckCircle, X, Eye, Edit2, Upload, Image as ImageIcon, ExternalLink } from 'lucide-react';
+import { Fuel, Plus, Search, DollarSign, FileText, CheckCircle, X, Eye, Edit2, Upload, Image as ImageIcon, ExternalLink, Camera } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/shared/services/api';
 import type { Vehicle, VehicleFuelLog } from '@/shared/types';
 import { getImageUrl } from '@/shared/utils/getImageUrl';
 import { confirmDialog } from '@/shared/utils/confirmDialog';
+import { compressImage } from '@/shared/utils/imageCompressor';
+import { useInventoryWebSocket } from '@/modules/inventory/hooks/useInventoryWebSocket';
 
 const VehicleFuelControl = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -45,6 +47,7 @@ const VehicleFuelControl = () => {
   });
 
   const [fotoValeFile, setFotoValeFile] = useState<File | null>(null);
+  const [fotoValePreviewUrl, setFotoValePreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -68,6 +71,24 @@ const VehicleFuelControl = () => {
     }
   };
 
+  useInventoryWebSocket(fetchData);
+
+  const handleFotoValeChange = async (file: File | null) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Solo se permiten imágenes (JPG, PNG, WEBP)');
+      return;
+    }
+    try {
+      const compressed = await compressImage(file);
+      setFotoValeFile(compressed);
+      setFotoValePreviewUrl(URL.createObjectURL(compressed));
+    } catch (err) {
+      setFotoValeFile(file);
+      setFotoValePreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
   const handleOpenModal = () => {
     const defaultVeh = vehicles[0]?.id.toString() || '';
     const currentVehObj = vehicles[0];
@@ -86,6 +107,7 @@ const VehicleFuelControl = () => {
       concepto: ''
     });
     setFotoValeFile(null);
+    setFotoValePreviewUrl(null);
     setIsModalOpen(true);
   };
 
@@ -106,6 +128,7 @@ const VehicleFuelControl = () => {
       concepto: log.concepto || ''
     });
     setFotoValeFile(null);
+    setFotoValePreviewUrl(null);
     setIsEditModalOpen(true);
   };
 
@@ -717,27 +740,34 @@ const VehicleFuelControl = () => {
                 </div>
               </div>
 
-              {/* Subida de Fotografía del Vale */}
-              <div className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 space-y-2">
-                <label className="block text-xs font-bold text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
-                  <ImageIcon className="w-4 h-4 text-emerald-600" /> Fotografía del Vale de Combustible (JPG/PNG)
+              {/* Subida de Fotografía del Vale con Cámara */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <Camera className="w-4 h-4 text-emerald-600" /> Fotografía del Vale de Combustible (JPG/PNG)
                 </label>
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/webp"
-                  onChange={e => {
-                    const file = e.target.files ? e.target.files[0] : null;
-                    if (file && !file.type.startsWith('image/')) {
-                      toast.error('Solo se permiten imágenes (JPG, PNG, WEBP)');
-                      e.target.value = '';
-                      setFotoValeFile(null);
-                      return;
-                    }
-                    setFotoValeFile(file);
-                  }}
-                  className="w-full text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-600 file:text-white hover:file:bg-emerald-700 cursor-pointer"
-                />
-                <p className="text-[10px] text-gray-400 font-medium">Adjunta una foto clara del comprobante físico del vale</p>
+                <div className="flex flex-col gap-2">
+                  <div className="w-full h-44 rounded-2xl border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden relative group hover:border-emerald-500 transition-colors">
+                    {fotoValePreviewUrl ? (
+                      <img src={fotoValePreviewUrl} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="flex flex-col items-center text-gray-400">
+                        <Camera className="w-10 h-10 mb-2 group-hover:text-emerald-600 transition-colors" />
+                        <span className="font-semibold text-xs group-hover:text-emerald-600 transition-colors">Tocar para abrir cámara</span>
+                      </div>
+                    )}
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      capture="environment"
+                      onChange={e => {
+                        const file = e.target.files ? e.target.files[0] : null;
+                        handleFotoValeChange(file);
+                      }}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                  </div>
+                  <p className="text-[10px] text-gray-500 font-medium">Toca el recuadro para tomar una foto del comprobante físico con la cámara de tu teléfono.</p>
+                </div>
               </div>
 
               <div>
@@ -925,11 +955,11 @@ const VehicleFuelControl = () => {
                 </div>
               </div>
 
-              {/* Reemplazar Fotografía del Vale */}
-              <div className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className="block text-xs font-bold text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
-                    <ImageIcon className="w-4 h-4 text-emerald-600" /> Reemplazar Fotografía del Vale
+              {/* Reemplazar Fotografía del Vale con Cámara */}
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <Camera className="w-4 h-4 text-emerald-600" /> Fotografía del Vale de Combustible
                   </label>
                   {selectedLog.foto_vale && (
                     <button
@@ -944,21 +974,31 @@ const VehicleFuelControl = () => {
                     </button>
                   )}
                 </div>
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/webp"
-                  onChange={e => {
-                    const file = e.target.files ? e.target.files[0] : null;
-                    if (file && !file.type.startsWith('image/')) {
-                      toast.error('Solo se permiten imágenes (JPG, PNG, WEBP)');
-                      e.target.value = '';
-                      setFotoValeFile(null);
-                      return;
-                    }
-                    setFotoValeFile(file);
-                  }}
-                  className="w-full text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-600 file:text-white hover:file:bg-emerald-700 cursor-pointer"
-                />
+                <div className="flex flex-col gap-2">
+                  <div className="w-full h-44 rounded-2xl border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden relative group hover:border-emerald-500 transition-colors">
+                    {fotoValePreviewUrl ? (
+                      <img src={fotoValePreviewUrl} alt="Preview" className="w-full h-full object-cover" />
+                    ) : selectedLog.foto_vale ? (
+                      <img src={getImageUrl(selectedLog.foto_vale)} alt="Actual" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="flex flex-col items-center text-gray-400">
+                        <Camera className="w-10 h-10 mb-2 group-hover:text-emerald-600 transition-colors" />
+                        <span className="font-semibold text-xs group-hover:text-emerald-600 transition-colors">Tocar para abrir cámara</span>
+                      </div>
+                    )}
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      capture="environment"
+                      onChange={e => {
+                        const file = e.target.files ? e.target.files[0] : null;
+                        handleFotoValeChange(file);
+                      }}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                  </div>
+                  <p className="text-[10px] text-gray-500 font-medium">Toca el recuadro para actualizar la foto usando la cámara de tu teléfono.</p>
+                </div>
               </div>
 
               <div>

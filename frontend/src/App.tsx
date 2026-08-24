@@ -46,7 +46,12 @@ import VehicleSupplierProfile from '@/modules/vehicles/pages/VehicleSupplierProf
 function App() {
   return (
     <BrowserRouter>
-      <Toaster position="top-right" />
+      <Toaster 
+        position="top-right" 
+        toastOptions={{ 
+          duration: 3000,
+        }} 
+      />
       <Routes>
         <Route path="/login" element={<Login />} />
         

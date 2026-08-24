@@ -1,11 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Wrench, Search, FileText, PenTool, X, Calendar, DollarSign, AlertTriangle, CheckCircle2, ShieldAlert, LayoutGrid, Table, Plus, Trash2, Store } from 'lucide-react';
+import { Wrench, Search, FileText, PenTool, X, Calendar, DollarSign, AlertTriangle, CheckCircle2, ShieldAlert, LayoutGrid, Table, Plus, Trash2, Store, Camera } from 'lucide-react';
 
 import toast from 'react-hot-toast';
 import api from '@/shared/services/api';
 import type { Vehicle, VehicleMaintenance, VehicleMaintenanceRecord, Supplier } from '@/shared/types';
 import { confirmDialog } from '@/shared/utils/confirmDialog';
 import { getImageUrl } from '@/shared/utils/getImageUrl';
+import { compressImage } from '@/shared/utils/imageCompressor';
+import { useInventoryWebSocket } from '@/modules/inventory/hooks/useInventoryWebSocket';
 
 const VehicleMaintenances = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -16,8 +18,6 @@ const VehicleMaintenances = () => {
   const [statusFilter, setStatusFilter] = useState<string>('todos');
   const [tipoFilter, setTipoFilter] = useState<'todos' | 'Preventivo' | 'Correctivo'>('todos');
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
-
-
 
   // Modal para Registrar Servicio
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
@@ -37,6 +37,7 @@ const VehicleMaintenances = () => {
     notas: ''
   });
   const [facturaFile, setFacturaFile] = useState<File | null>(null);
+  const [facturaPreviewUrl, setFacturaPreviewUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   // Modal para Crear Programa
@@ -81,6 +82,23 @@ const VehicleMaintenances = () => {
     }
   };
 
+  useInventoryWebSocket(fetchData);
+
+  const handleFacturaFileChange = async (file: File | null) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Solo se permiten fotografías/imágenes (JPG, PNG, WEBP)');
+      return;
+    }
+    try {
+      const compressed = await compressImage(file);
+      setFacturaFile(compressed);
+      setFacturaPreviewUrl(URL.createObjectURL(compressed));
+    } catch (err) {
+      setFacturaFile(file);
+      setFacturaPreviewUrl(URL.createObjectURL(file));
+    }
+  };
 
   const handleOpenCreateModal = () => {
     setCreateData({
@@ -143,6 +161,7 @@ const VehicleMaintenances = () => {
       notas: ''
     });
     setFacturaFile(null);
+    setFacturaPreviewUrl(null);
     setIsRecordModalOpen(true);
   };
 
@@ -961,38 +980,46 @@ const VehicleMaintenances = () => {
                 </div>
               </div>
 
-              {/* Número de Factura y Foto */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">N.º Factura</label>
-                  <input
-                    type="text"
-                    placeholder="Ej. FAC-00123"
-                    value={recordForm.numero_factura}
-                    onChange={e => setRecordForm({...recordForm, numero_factura: e.target.value})}
-                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Fotografía de Factura * (JPG/PNG)</label>
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/jpg,image/webp"
-                    onChange={e => {
-                      const file = e.target.files ? e.target.files[0] : null;
-                      if (file && !file.type.startsWith('image/')) {
-                        toast.error('Solo se permiten fotografías/imágenes (JPG, PNG, WEBP)');
-                        e.target.value = '';
-                        setFacturaFile(null);
-                        return;
-                      }
-                      setFacturaFile(file);
-                    }}
-                    className="w-full text-xs text-gray-500 file:mr-2 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
-                  />
-                  <p className="text-[10px] text-gray-400 font-medium mt-1">Únicamente imágenes/fotografías (sin PDF)</p>
-                </div>
+              {/* Número de Factura */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">N.º Factura</label>
+                <input
+                  type="text"
+                  placeholder="Ej. FAC-00123"
+                  value={recordForm.numero_factura}
+                  onChange={e => setRecordForm({...recordForm, numero_factura: e.target.value})}
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-medium"
+                />
+              </div>
 
+              {/* Fotografía de Factura con Cámara */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <Camera className="w-4 h-4 text-emerald-600" /> Fotografía de Factura * (JPG/PNG)
+                </label>
+                <div className="flex flex-col gap-2">
+                  <div className="w-full h-44 rounded-2xl border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden relative group hover:border-emerald-500 transition-colors">
+                    {facturaPreviewUrl ? (
+                      <img src={facturaPreviewUrl} alt="Preview Factura" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="flex flex-col items-center text-gray-400">
+                        <Camera className="w-10 h-10 mb-2 group-hover:text-emerald-600 transition-colors" />
+                        <span className="font-semibold text-xs group-hover:text-emerald-600 transition-colors">Tocar para abrir cámara</span>
+                      </div>
+                    )}
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      capture="environment"
+                      onChange={e => {
+                        const file = e.target.files ? e.target.files[0] : null;
+                        handleFacturaFileChange(file);
+                      }}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                  </div>
+                  <p className="text-[10px] text-gray-500 font-medium">Toca el recuadro para tomar una foto de la factura del servicio con la cámara de tu teléfono.</p>
+                </div>
               </div>
 
               {/* Si es Correctivo: Qué falló y Solución */}

@@ -35,7 +35,7 @@ class Vehicle(models.Model):
     fecha_vencimiento_matricula = models.DateField(blank=True, null=True)
     
     # Parámetros de Combustible y Rendimiento
-    tipo_combustible = models.CharField(max_length=20, choices=COMBUSTIBLE_CHOICES, default='Gasolina')
+    tipo_combustible = models.CharField(max_length=20, choices=COMBUSTIBLE_CHOICES, default='Gasolina Extra')
     capacidad_tanque_galones = models.DecimalField(max_digits=6, decimal_places=2, default=10.00)
     rendimiento_km_por_galon = models.DecimalField(max_digits=6, decimal_places=2, default=40.00)
     
@@ -214,12 +214,11 @@ class VehicleFuelLog(models.Model):
 
     def save(self, *args, **kwargs):
         is_new = not self.pk
-        super().save(*args, **kwargs)
-        
         if is_new and self.vehicle:
             import decimal
             galones_sumar = decimal.Decimal(str(self.galones or 0))
-            nuevo_nivel = self.vehicle.combustible_actual_galones + galones_sumar
+            current_fuel = self.vehicle.combustible_actual_galones or decimal.Decimal('0')
+            nuevo_nivel = current_fuel + galones_sumar
             
             # Limitar a la capacidad máxima del tanque si aplica
             if self.vehicle.capacidad_tanque_galones and nuevo_nivel > self.vehicle.capacidad_tanque_galones:
@@ -228,10 +227,12 @@ class VehicleFuelLog(models.Model):
             self.vehicle.combustible_actual_galones = nuevo_nivel
             
             # Si el odómetro ingresado es mayor al odómetro actual del vehículo, actualizarlo
-            if self.odometro_recarga and self.odometro_recarga > self.vehicle.odometro_actual:
+            if self.odometro_recarga and self.odometro_recarga > (self.vehicle.odometro_actual or 0):
                 self.vehicle.odometro_actual = self.odometro_recarga
                 
             self.vehicle.save(update_fields=['combustible_actual_galones', 'odometro_actual'])
+
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Vale {self.numero_vale} - {self.vehicle.placa} ({self.fecha_vale})"

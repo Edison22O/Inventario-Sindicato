@@ -7,6 +7,7 @@ import type { DriverProfile, User } from '@/shared/types';
 import { confirmDialog } from '@/shared/utils/confirmDialog';
 import { getImageUrl } from '@/shared/utils/getImageUrl';
 import DriverModal from '../components/DriverModal';
+import { useInventoryWebSocket } from '@/modules/inventory/hooks/useInventoryWebSocket';
 
 const DriversCatalog = () => {
   const [drivers, setDrivers] = useState<DriverProfile[]>([]);
@@ -35,6 +36,8 @@ const DriversCatalog = () => {
       setLoading(false);
     }
   };
+
+  useInventoryWebSocket(fetchData);
 
   const handleDelete = async (driver: DriverProfile) => {
     if (await confirmDialog('¿Estás seguro de que deseas eliminar el perfil de este conductor?')) {

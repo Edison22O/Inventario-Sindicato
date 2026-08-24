@@ -17,7 +17,7 @@ export const useInventoryWebSocket = (onUpdate: () => void) => {
         const connect = () => {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const host = window.location.host;
-            const wsUrl = `${protocol}//${host}/ws/inventory/`;
+            const wsUrl = `${protocol}//${host}/ws/inventory/?ngrok-skip-browser-warning=true`;
 
             ws.current = new WebSocket(wsUrl);
 
@@ -26,19 +26,46 @@ export const useInventoryWebSocket = (onUpdate: () => void) => {
             };
 
             ws.current.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                if (data.type === 'inventory_update') {
-                    const actionText = data.message.action === 'create' ? 'creado' : (data.message.action === 'update' ? 'actualizado' : 'eliminado');
-                    const modelText = data.message.model;
-                    
-                    toast.success(`${modelText} ${actionText}. Refrescando datos...`, {
-                        id: 'ws-update', 
-                        duration: 2000,
-                    });
-                    
-                    if (savedOnUpdate.current) {
-                        savedOnUpdate.current();
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'inventory_update') {
+                        const actionText = data.message.action === 'create' ? 'creado' : (data.message.action === 'update' ? 'actualizado' : 'eliminado');
+                        const rawModel = data.message.model || 'Registro';
+
+                        const modelTranslations: { [key: string]: string } = {
+                            'Vehicle': 'Vehículo',
+                            'VehicleTrip': 'Viaje',
+                            'VehicleFuelLog': 'Vale de combustible',
+                            'VehicleRegistrationRecord': 'Matrícula',
+                            'VehicleMaintenance': 'Mantenimiento',
+                            'VehicleMaintenanceRecord': 'Registro de mantenimiento',
+                            'DriverProfile': 'Conductor',
+                            'VehicleSupplier': 'Proveedor',
+                            'Product': 'Producto',
+                            'Department': 'Departamento',
+                            'Category': 'Categoría',
+                            'Supplier': 'Proveedor',
+                            'FurnitureProduct': 'Mueble',
+                            'FurnitureDepartment': 'Departamento',
+                            'FurnitureCategory': 'Categoría',
+                            'FurnitureSupplier': 'Proveedor'
+                        };
+
+                        const modelText = modelTranslations[rawModel] || rawModel;
+                        
+                        // Clear any existing WebSocket toast to prevent stuck/hanging alerts
+                        toast.dismiss('ws-update');
+                        toast.success(`${modelText} ${actionText}. Refrescando datos...`, {
+                            id: 'ws-update', 
+                            duration: 2500,
+                        });
+                        
+                        if (savedOnUpdate.current) {
+                            savedOnUpdate.current();
+                        }
                     }
+                } catch (e) {
+                    console.error('Error processing WebSocket message:', e);
                 }
             };
 
