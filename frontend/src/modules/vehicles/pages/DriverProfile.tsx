@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, User, Phone, Droplet, PhoneCall, IdCard, Calendar, Truck, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, User, Phone, Droplet, PhoneCall, IdCard, Calendar, Truck, AlertTriangle, FileText, Plus, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/shared/services/api';
 import type { DriverProfile, User as UserType, VehicleTrip } from '@/shared/types';
@@ -17,6 +17,19 @@ const DriverProfilePage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
+  const [handovers, setHandovers] = useState<import('@/shared/types').DriverVehicleHandover[]>([]);
+  const [vehicles, setVehicles] = useState<import('@/shared/types').Vehicle[]>([]);
+  const [isHandoverModalOpen, setIsHandoverModalOpen] = useState(false);
+  const [handoverForm, setHandoverForm] = useState({
+    vehicle: '',
+    tipo_acta: 'Entrega' as 'Entrega' | 'Recepción',
+    fecha: new Date().toISOString().split('T')[0],
+    kilometraje: '0',
+    observaciones: ''
+  });
+  const [actaFile, setActaFile] = useState<File | null>(null);
+  const [submittingHandover, setSubmittingHandover] = useState(false);
+
   useEffect(() => {
     fetchDriverData();
   }, [id]);
@@ -27,14 +40,18 @@ const DriverProfilePage = () => {
       const driverData: DriverProfile = driverRes.data;
       setDriver(driverData);
 
-      const [userRes, tripsRes] = await Promise.all([
+      const [userRes, tripsRes, handoversRes, vehRes] = await Promise.all([
         api.get(`/users/${driverData.user}/`),
-        api.get(`/vehicle-trips/?conductor=${driverData.user}`)
+        api.get(`/vehicle-trips/?conductor=${driverData.user}`),
+        api.get(`/driver-handovers/?driver=${driverData.user}`),
+        api.get('/vehicles/')
       ]);
       
       setUser(userRes.data);
-      // Sort trips to show most recent first
-      const sortedTrips = tripsRes.data.sort((a: any, b: any) => {
+      setHandovers(handoversRes.data || []);
+      setVehicles(vehRes.data || []);
+
+      const sortedTrips = (tripsRes.data || []).sort((a: any, b: any) => {
         return new Date(b.fecha_hora_salida).getTime() - new Date(a.fecha_hora_salida).getTime();
       });
       setTrips(sortedTrips);
@@ -42,6 +59,33 @@ const DriverProfilePage = () => {
       toast.error('Error al cargar el perfil del conductor');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateHandover = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !handoverForm.vehicle) return;
+
+    setSubmittingHandover(true);
+    try {
+      const formData = new FormData();
+      formData.append('driver', user.id.toString());
+      formData.append('vehicle', handoverForm.vehicle);
+      formData.append('tipo_acta', handoverForm.tipo_acta);
+      formData.append('fecha', handoverForm.fecha);
+      formData.append('kilometraje', handoverForm.kilometraje || '0');
+      if (handoverForm.observaciones) formData.append('observaciones', handoverForm.observaciones);
+      if (actaFile) formData.append('documento_acta_firmada', actaFile);
+
+      await api.post('/driver-handovers/', formData);
+      toast.success(`Acta de ${handoverForm.tipo_acta} registrada exitosamente`);
+      setIsHandoverModalOpen(false);
+      setActaFile(null);
+      fetchDriverData();
+    } catch (e) {
+      toast.error('Error al guardar el acta de entrega/recepción');
+    } finally {
+      setSubmittingHandover(false);
     }
   };
 
@@ -319,9 +363,186 @@ const DriverProfilePage = () => {
                 )}
               </div>
             )}
+            {/* Actas de Entrega y Recepción */}
+            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 mt-8">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <FileText className="w-6 h-6 text-emerald-600" />
+                    Actas de Entrega y Recepción de Vehículos
+                  </h2>
+                  <p className="text-xs text-gray-500 mt-1 font-medium">
+                    Historial de actas físicas firmadas de recepción y devolución de unidades vehiculares.
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setHandoverForm({
+                      vehicle: vehicles[0]?.id.toString() || '',
+                      tipo_acta: 'Entrega',
+                      fecha: new Date().toISOString().split('T')[0],
+                      kilometraje: (vehicles[0]?.odometro_actual || 0).toString(),
+                      observaciones: ''
+                    });
+                    setActaFile(null);
+                    setIsHandoverModalOpen(true);
+                  }}
+                  className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold text-xs hover:bg-emerald-700 transition-all shadow-md shadow-emerald-600/20 flex items-center gap-1.5 shrink-0"
+                >
+                  <Plus className="w-4 h-4" /> Registrar Acta Firmada
+                </button>
+              </div>
+
+              {handovers.length === 0 ? (
+                <div className="text-center py-10 bg-gray-50 rounded-2xl border border-gray-100 text-gray-500 text-xs font-semibold">
+                  No hay actas de entrega ni recepción registradas para este conductor.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {handovers.map((h: any) => (
+                    <div key={h.id} className="p-4 bg-white rounded-2xl border border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:shadow-sm transition-all">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-3 py-1 rounded-full text-xs font-black uppercase ${
+                            h.tipo_acta === 'Entrega' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                          }`}>
+                            Acta de {h.tipo_acta}
+                          </span>
+                          <h4 className="font-extrabold text-gray-900 text-sm">
+                            {h.vehicle_placa} ({h.vehicle_marca} {h.vehicle_modelo})
+                          </h4>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          <b>Fecha:</b> {h.fecha} | <b>Odómetro:</b> {h.kilometraje} km
+                        </p>
+                        {h.observaciones && <p className="text-xs text-gray-600 mt-1 italic">"{h.observaciones}"</p>}
+                      </div>
+
+                      {h.documento_acta_firmada && (
+                        <a
+                          href={getImageUrl(h.documento_acta_firmada)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-2 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold hover:bg-emerald-100 transition-colors flex items-center gap-1.5 shrink-0"
+                        >
+                          <FileText className="w-4 h-4 text-emerald-600" /> Ver Documento Firmado
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Modal Registrar Acta Firmada */}
+      {isHandoverModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-emerald-800 to-teal-800 text-white">
+              <h2 className="text-xl font-extrabold flex items-center gap-2">
+                <FileText className="w-6 h-6" /> Registrar Acta de Entrega / Recepción
+              </h2>
+              <button onClick={() => setIsHandoverModalOpen(false)} className="p-1 hover:bg-white/20 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleCreateHandover} className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Tipo de Acta *</label>
+                  <select
+                    value={handoverForm.tipo_acta}
+                    onChange={e => setHandoverForm({ ...handoverForm, tipo_acta: e.target.value as any })}
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900"
+                  >
+                    <option value="Entrega">Entrega de Vehículo</option>
+                    <option value="Recepción">Recepción de Vehículo</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Vehículo *</label>
+                  <select
+                    value={handoverForm.vehicle}
+                    onChange={e => {
+                      const vehId = e.target.value;
+                      const selectedV = vehicles.find(v => v.id.toString() === vehId);
+                      setHandoverForm({
+                        ...handoverForm,
+                        vehicle: vehId,
+                        kilometraje: (selectedV?.odometro_actual || 0).toString()
+                      });
+                    }}
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900"
+                  >
+                    {vehicles.map(v => (
+                      <option key={v.id} value={v.id.toString()}>{v.placa} - {v.marca} {v.modelo}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Fecha del Acta *</label>
+                  <input
+                    type="date"
+                    required
+                    value={handoverForm.fecha}
+                    onChange={e => setHandoverForm({ ...handoverForm, fecha: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Kilometraje *</label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    value={handoverForm.kilometraje}
+                    onChange={e => setHandoverForm({ ...handoverForm, kilometraje: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Observaciones</label>
+                <textarea
+                  rows={2}
+                  placeholder="Detalles del estado de la unidad, herramientas, llaves entregadas..."
+                  value={handoverForm.observaciones}
+                  onChange={e => setHandoverForm({ ...handoverForm, observaciones: e.target.value })}
+                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-2">Documento / Fotografía del Acta Firmada Físicamente *</label>
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  required
+                  onChange={e => {
+                    if (e.target.files && e.target.files[0]) {
+                      setActaFile(e.target.files[0]);
+                    }
+                  }}
+                  className="w-full text-xs text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
+                />
+              </div>
+
+              <div className="pt-3 flex justify-end gap-3 border-t border-gray-100">
+                <button type="button" onClick={() => setIsHandoverModalOpen(false)} className="px-5 py-2.5 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl">Cancelar</button>
+                <button type="submit" disabled={submittingHandover} className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 disabled:opacity-50">{submittingHandover ? 'Guardando...' : 'Guardar Acta Firmada'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

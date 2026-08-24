@@ -18,10 +18,6 @@ const DriversCatalog = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState<DriverProfile | null>(null);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const fetchData = async () => {
     try {
       const [driversRes, usersRes] = await Promise.all([
@@ -36,6 +32,10 @@ const DriversCatalog = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   useInventoryWebSocket(fetchData);
 

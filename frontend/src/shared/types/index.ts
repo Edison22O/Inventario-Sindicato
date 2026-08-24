@@ -125,6 +125,8 @@ export interface VehicleTrip {
   conductor_name?: string;
   estado_viaje: string;
   
+  tipo_motivo?: 'Prácticas' | 'Comisión' | 'Guincha' | 'Otro' | string;
+  ruta_practica?: string;
   descripcion_salida: string;
   fecha_hora_salida?: string;
   kilometraje_salida: number;
@@ -155,6 +157,11 @@ export interface VehicleMaintenance {
   fecha_proximo_cambio?: string | null;
   km_ultimo_cambio: number;
   frecuencia_km?: number | null;
+  kilometraje_falla?: number | null;
+  subtipo_correctivo?: 'Urgente' | 'Programado';
+  estado_correctivo?: 'Pendiente' | 'Ejecutado';
+  numero_factura?: string;
+  factura_foto?: string | null;
   fallo_observado?: string;
   solucion_aplicada?: string;
   km_proximo_cambio: number;
@@ -233,8 +240,30 @@ export interface VehicleFuelLog {
   created_at?: string;
 }
 
+export interface FuelBudget {
+  id: number;
+  saldo_total: string | number;
+  saldo_gasolina: string | number;
+  saldo_diesel: string | number;
+  limite_alerta: string | number;
+  updated_at?: string;
+}
 
-
+export interface DriverVehicleHandover {
+  id: number;
+  driver: number;
+  driver_name?: string;
+  vehicle: number;
+  vehicle_placa?: string;
+  vehicle_marca?: string;
+  vehicle_modelo?: string;
+  tipo_acta: 'Entrega' | 'Recepción';
+  fecha: string;
+  kilometraje: number;
+  observaciones?: string;
+  documento_acta_firmada?: string | null;
+  created_at?: string;
+}
 
 export interface DriverProfile {
   id: number;
@@ -252,5 +281,4 @@ export interface DriverProfile {
   contacto_emergencia?: string;
 }
 
-// Trick to force Vite to treat this as a module with at least one export
 export const __vite_types_fix = true;

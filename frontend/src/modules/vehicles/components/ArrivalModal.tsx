@@ -12,6 +12,8 @@ interface ArrivalModalProps {
   trip: VehicleTrip | null;
 }
 
+import api from '@/shared/services/api';
+
 const ArrivalModal: React.FC<ArrivalModalProps> = ({ isOpen, onClose, onSave, trip }) => {
   const [formData, setFormData] = useState({
     novedades_observaciones: '',
@@ -23,6 +25,28 @@ const ArrivalModal: React.FC<ArrivalModalProps> = ({ isOpen, onClose, onSave, tr
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompressing, setIsCompressing] = useState(false);
+
+  React.useEffect(() => {
+    if (isOpen && trip) {
+      // Intentar jalar el odómetro del último vale de combustible creado durante el viaje
+      api.get(`/vehicle-fuel-logs/?vehicle=${trip.vehicle}`)
+        .then(res => {
+          const logs = res.data || [];
+          if (logs.length > 0) {
+            const latestFuelLog = logs[0];
+            if (latestFuelLog.odometro_recarga && latestFuelLog.odometro_recarga >= trip.kilometraje_salida) {
+              setFormData(prev => ({
+                ...prev,
+                kilometraje_llegada: latestFuelLog.odometro_recarga.toString(),
+                galones_recargados: (latestFuelLog.galones || '0').toString()
+              }));
+              toast.success(`Se jaló automáticamente el kilometraje (${latestFuelLog.odometro_recarga} km) registrado en el vale N.º ${latestFuelLog.numero_vale}`);
+            }
+          }
+        })
+        .catch(e => console.warn('Could not auto-fetch fuel log:', e));
+    }
+  }, [isOpen, trip]);
 
   if (!isOpen || !trip) return null;
 
@@ -109,15 +133,9 @@ const ArrivalModal: React.FC<ArrivalModalProps> = ({ isOpen, onClose, onSave, tr
               <textarea name="novedades_observaciones" rows={2} value={formData.novedades_observaciones} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500" placeholder="Ej: Todo normal / Rayón en puerta derecha..." />
             </div>
 
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Kilometraje de Llegada *</label>
-                <input required type="number" min={trip.kilometraje_salida} name="kilometraje_llegada" value={formData.kilometraje_llegada} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500" placeholder="Ej: 154150" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Galones Recargados (Opcional)</label>
-                <input type="number" step="0.01" min="0" name="galones_recargados" value={formData.galones_recargados} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500" placeholder="Ej: 5.50" />
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Kilometraje de Llegada *</label>
+              <input required type="number" min={trip.kilometraje_salida} name="kilometraje_llegada" value={formData.kilometraje_llegada} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500" placeholder="Ej: 154150" />
             </div>
 
             <div>

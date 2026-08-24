@@ -5,9 +5,9 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 from django.db.models import Sum, Count
-from api.models.vehicles import Vehicle, VehicleTrip, VehicleRegistrationRecord, VehicleFuelLog
+from api.models.vehicles import Vehicle, VehicleTrip, VehicleRegistrationRecord, VehicleFuelLog, FuelBudget, DriverVehicleHandover
 from api.models.maintenance import VehicleMaintenance, VehicleMaintenanceRecord
-from api.serializers.vehicles import VehicleSerializer, VehicleTripSerializer, VehicleRegistrationRecordSerializer, VehicleFuelLogSerializer
+from api.serializers.vehicles import VehicleSerializer, VehicleTripSerializer, VehicleRegistrationRecordSerializer, VehicleFuelLogSerializer, FuelBudgetSerializer, DriverVehicleHandoverSerializer
 from api.mixins import AuditLogMixin
 from api.signals import broadcast_inventory_update
 from api.models.core import DriverProfile
@@ -320,4 +320,93 @@ class VehicleDashboardStatsView(APIView):
                 ][:10]
             }
         })
+
+class FuelBudgetViewSet(viewsets.ModelViewSet):
+    queryset = FuelBudget.objects.all()
+    serializer_class = FuelBudgetSerializer
+    permission_classes = [IsAuthenticated]
+
+    def list(self, request, *args, **kwargs):
+        budget = FuelBudget.load()
+        serializer = self.get_serializer(budget)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['post'], url_path='set-initial')
+    def set_initial(self, request):
+        budget = FuelBudget.load()
+        saldo_gasolina = request.data.get('saldo_gasolina')
+        saldo_diesel = request.data.get('saldo_diesel')
+        
+        import decimal
+        if saldo_gasolina is not None:
+            budget.base_gasolina = decimal.Decimal(str(saldo_gasolina))
+        if saldo_diesel is not None:
+            budget.base_diesel = decimal.Decimal(str(saldo_diesel))
+            
+        budget.recalculate()
+        broadcast_inventory_update('FuelBudget', 'update')
+        return Response(FuelBudgetSerializer(budget).data)
+
+    @action(detail=False, methods=['post'], url_path='add-funds')
+    def add_funds(self, request):
+        budget = FuelBudget.load()
+        monto_gasolina = request.data.get('monto_gasolina', 0)
+        monto_diesel = request.data.get('monto_diesel', 0)
+        
+        import decimal
+        if monto_gasolina:
+            budget.base_gasolina += decimal.Decimal(str(monto_gasolina))
+        if monto_diesel:
+            budget.base_diesel += decimal.Decimal(str(monto_diesel))
+            
+        budget.recalculate()
+        broadcast_inventory_update('FuelBudget', 'update')
+        return Response(FuelBudgetSerializer(budget).data)
+
+    @action(detail=False, methods=['post'], url_path='transfer')
+    def transfer(self, request):
+        budget = FuelBudget.load()
+        origen = request.data.get('origen') # 'GASOLINA' o 'DIESEL'
+        monto = request.data.get('monto', 0)
+        
+        import decimal
+        val = decimal.Decimal(str(monto or 0))
+        if val <= 0:
+            return Response({'error': 'El monto a transferir debe ser mayor a 0.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        if origen == 'GASOLINA':
+            if budget.saldo_gasolina < val and budget.base_gasolina < val:
+                return Response({'error': 'Saldo insuficiente en Gasolina.'}, status=status.HTTP_400_BAD_REQUEST)
+            budget.base_gasolina -= val
+            budget.base_diesel += val
+        elif origen == 'DIESEL':
+            if budget.saldo_diesel < val and budget.base_diesel < val:
+                return Response({'error': 'Saldo insuficiente en Diésel.'}, status=status.HTTP_400_BAD_REQUEST)
+            budget.base_diesel -= val
+            budget.base_gasolina += val
+        else:
+            return Response({'error': 'Origen no válido.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        budget.recalculate()
+        broadcast_inventory_update('FuelBudget', 'update')
+        return Response(FuelBudgetSerializer(budget).data)
+
+class DriverVehicleHandoverViewSet(AuditLogMixin, viewsets.ModelViewSet):
+    queryset = DriverVehicleHandover.objects.select_related('driver', 'vehicle').all().order_by('-fecha', '-created_at')
+    serializer_class = DriverVehicleHandoverSerializer
+    permission_classes = [IsAuthenticated]
+    audit_module_name = 'Actas de Entrega y Recepción'
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        driver_id = self.request.query_params.get('driver', None)
+        vehicle_id = self.request.query_params.get('vehicle', None)
+        if driver_id:
+            queryset = queryset.filter(driver_id=driver_id)
+        if vehicle_id:
+            if str(vehicle_id).isdigit():
+                queryset = queryset.filter(vehicle_id=int(vehicle_id))
+            else:
+                queryset = queryset.filter(vehicle__public_id=vehicle_id)
+        return queryset
 

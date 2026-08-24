@@ -70,11 +70,20 @@ class VehicleTrip(models.Model):
         ('Finalizado', 'Finalizado'),
     ]
 
+    MOTIVO_CHOICES = [
+        ('Prácticas', 'Prácticas'),
+        ('Comisión', 'Comisión'),
+        ('Guincha', 'Guincha'),
+        ('Otro', 'Otro'),
+    ]
+
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='trips')
     conductor = models.ForeignKey(User, on_delete=models.PROTECT, related_name='vehicle_trips')
     estado_viaje = models.CharField(max_length=20, choices=ESTADO_VIAJE_CHOICES, default='En Curso')
 
     # Datos de Salida
+    tipo_motivo = models.CharField(max_length=50, choices=MOTIVO_CHOICES, default='Prácticas')
+    ruta_practica = models.CharField(max_length=100, blank=True, null=True) # Ej: Ruta 1, Ruta 2, Ruta 3
     descripcion_salida = models.TextField(blank=True, null=True)
     fecha_hora_salida = models.DateTimeField(auto_now_add=True)
     kilometraje_salida = models.IntegerField() # Calculado automáticamente al salir
@@ -173,12 +182,54 @@ class VehicleRegistrationRecord(models.Model):
     def __str__(self):
         return f"Matrícula {self.año_matriculado} - {self.vehicle.placa}"
 
+class FuelBudget(models.Model):
+    base_gasolina = models.DecimalField(max_digits=12, decimal_places=2, default=300.00)
+    base_diesel = models.DecimalField(max_digits=12, decimal_places=2, default=1200.00)
+    saldo_total = models.DecimalField(max_digits=12, decimal_places=2, default=1500.00)
+    saldo_gasolina = models.DecimalField(max_digits=12, decimal_places=2, default=300.00)
+    saldo_diesel = models.DecimalField(max_digits=12, decimal_places=2, default=1200.00)
+    limite_alerta = models.DecimalField(max_digits=12, decimal_places=2, default=40.00)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def recalculate(self):
+        import decimal
+        from django.db.models import Sum
+        from api.models.vehicles import VehicleFuelLog
+        extra_spent = VehicleFuelLog.objects.filter(tipo_combustible='EXTRA').aggregate(total=Sum('costo_total'))['total'] or decimal.Decimal('0.00')
+        diesel_spent = VehicleFuelLog.objects.filter(tipo_combustible='DIESEL').aggregate(total=Sum('costo_total'))['total'] or decimal.Decimal('0.00')
+
+        self.saldo_gasolina = (self.base_gasolina or decimal.Decimal('0.00')) - decimal.Decimal(str(extra_spent))
+        self.saldo_diesel = (self.base_diesel or decimal.Decimal('0.00')) - decimal.Decimal(str(diesel_spent))
+        self.saldo_total = self.saldo_gasolina + self.saldo_diesel
+        super().save()
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def load(cls):
+        obj, created = cls.objects.get_or_create(
+            pk=1,
+            defaults={
+                'base_gasolina': 300.00,
+                'base_diesel': 1200.00,
+                'saldo_total': 1500.00,
+                'saldo_gasolina': 300.00,
+                'saldo_diesel': 1200.00,
+                'limite_alerta': 40.00
+            }
+        )
+        return obj
+
+    def __str__(self):
+        return f"Presupuesto Vales - Total: ${self.saldo_total} (Gasolina: ${self.saldo_gasolina}, Diésel: ${self.saldo_diesel})"
+
 class VehicleFuelLog(models.Model):
     COMBUSTIBLE_CHOICES = [
         ('EXTRA', 'Gasolina Extra'),
         ('DIESEL', 'Diésel'),
     ]
-
 
     TRANSACCION_CHOICES = [
         ('EFECTIVO', 'Efectivo'),
@@ -193,24 +244,23 @@ class VehicleFuelLog(models.Model):
 
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='fuel_logs')
     conductor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='fuel_logs')
-    responsable = models.CharField(max_length=255, blank=True, null=True) # Responsable (ej. Francisco Sánchez)
-    supervisado_por = models.CharField(max_length=255, blank=True, null=True) # Supervisado por
+    responsable = models.CharField(max_length=255, blank=True, null=True)
+    supervisado_por = models.CharField(max_length=255, blank=True, null=True)
     
     fecha_vale = models.DateField()
-    numero_vale = models.CharField(max_length=50) # ej: "0002322" o "1231955"
-    odometro_recarga = models.IntegerField() # Kilometraje actual al poner combustible (ej. 116265)
+    numero_vale = models.CharField(max_length=50)
+    odometro_recarga = models.IntegerField()
     
     tipo_combustible = models.CharField(max_length=20, choices=COMBUSTIBLE_CHOICES, default='EXTRA')
-    galones = models.DecimalField(max_digits=8, decimal_places=3) # ej. 6.313 galones
+    galones = models.DecimalField(max_digits=8, decimal_places=3)
     precio_por_galon = models.DecimalField(max_digits=8, decimal_places=4, default=0.0000, null=True, blank=True)
-    costo_total = models.DecimalField(max_digits=10, decimal_places=2, default=0.00) # Valor Pagado / Total Importe
+    costo_total = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     
     tipo_transaccion = models.CharField(max_length=50, choices=TRANSACCION_CHOICES, default='EFECTIVO', blank=True, null=True)
-    concepto = models.TextField(blank=True, null=True) # "En concepto de..." (Detalle)
+    concepto = models.TextField(blank=True, null=True)
     foto_vale = models.ImageField(upload_to='vehicles/fuel_vouchers/', null=True, blank=True, verbose_name="Fotografía del Vale")
     
     created_at = models.DateTimeField(auto_now_add=True)
-
 
     def save(self, *args, **kwargs):
         is_new = not self.pk
@@ -220,22 +270,53 @@ class VehicleFuelLog(models.Model):
             current_fuel = self.vehicle.combustible_actual_galones or decimal.Decimal('0')
             nuevo_nivel = current_fuel + galones_sumar
             
-            # Limitar a la capacidad máxima del tanque si aplica
             if self.vehicle.capacidad_tanque_galones and nuevo_nivel > self.vehicle.capacidad_tanque_galones:
                 nuevo_nivel = self.vehicle.capacidad_tanque_galones
                 
             self.vehicle.combustible_actual_galones = nuevo_nivel
             
-            # Si el odómetro ingresado es mayor al odómetro actual del vehículo, actualizarlo
             if self.odometro_recarga and self.odometro_recarga > (self.vehicle.odometro_actual or 0):
                 self.vehicle.odometro_actual = self.odometro_recarga
                 
             self.vehicle.save(update_fields=['combustible_actual_galones', 'odometro_actual'])
 
         super().save(*args, **kwargs)
+        
+        try:
+            budget = FuelBudget.load()
+            budget.recalculate()
+        except Exception:
+            pass
+
+    def delete(self, *args, **kwargs):
+        res = super().delete(*args, **kwargs)
+        try:
+            budget = FuelBudget.load()
+            budget.recalculate()
+        except Exception:
+            pass
+        return res
 
     def __str__(self):
         return f"Vale {self.numero_vale} - {self.vehicle.placa} ({self.fecha_vale})"
+
+class DriverVehicleHandover(models.Model):
+    TIPO_ACTA_CHOICES = [
+        ('Entrega', 'Entrega'),
+        ('Recepción', 'Recepción'),
+    ]
+
+    driver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='handover_records')
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='handover_records')
+    tipo_acta = models.CharField(max_length=20, choices=TIPO_ACTA_CHOICES, default='Entrega')
+    fecha = models.DateField()
+    kilometraje = models.IntegerField(default=0)
+    observaciones = models.TextField(blank=True, null=True)
+    documento_acta_firmada = models.FileField(upload_to='vehicles/handovers/', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Acta {self.tipo_acta} - {self.vehicle.placa} - {self.driver.username} ({self.fecha})"
 
 
 

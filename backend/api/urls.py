@@ -12,7 +12,7 @@ from .views import (
     DriverProfileViewSet, VehicleRegistrationRecordViewSet, VehicleDashboardStatsView
 )
 from api.views.maintenance import VehicleMaintenanceViewSet, VehicleMaintenanceRecordViewSet
-from api.views.vehicles import VehicleFuelLogViewSet
+from api.views.vehicles import VehicleFuelLogViewSet, FuelBudgetViewSet, DriverVehicleHandoverViewSet
 
 router = DefaultRouter()
 router.register(r'roles', RoleViewSet)
@@ -44,6 +44,8 @@ router.register(r'driver-profiles', DriverProfileViewSet, basename='driver-profi
 router.register(r'vehicle-suppliers', VehicleSupplierViewSet, basename='vehicle-suppliers')
 router.register(r'vehicle-fuel-logs', VehicleFuelLogViewSet, basename='vehicle-fuel-logs')
 router.register(r'vehicle-registrations', VehicleRegistrationRecordViewSet, basename='vehicle-registrations')
+router.register(r'fuel-budgets', FuelBudgetViewSet, basename='fuel-budgets')
+router.register(r'driver-handovers', DriverVehicleHandoverViewSet, basename='driver-handovers')
 
 
 urlpatterns = [

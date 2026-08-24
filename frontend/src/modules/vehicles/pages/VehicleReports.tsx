@@ -10,9 +10,14 @@ interface Trip {
   id: number;
   vehicle_placa: string;
   conductor_name: string;
+  tipo_motivo?: string;
+  motivo_salida?: string;
+  ruta_practica?: string;
+  novedades_observaciones?: string;
   fecha_hora_llegada: string;
   km_recorridos: number;
-  galones_recargados: string;
+  galones_consumidos?: string | number;
+  galones_recargados?: string;
   costo_combustible_viaje: string;
   estado_viaje: string;
 }
@@ -58,6 +63,8 @@ const VehicleReports = () => {
   const [endDate, setEndDate] = useState('');
   const [selectedConductor, setSelectedConductor] = useState('');
   const [selectedVehicle, setSelectedVehicle] = useState('');
+  const [selectedMotivo, setSelectedMotivo] = useState('');
+  const [selectedTaller, setSelectedTaller] = useState('');
   const [selectedActividad, setSelectedActividad] = useState('');
   const [selectedTipoMantenimiento, setSelectedTipoMantenimiento] = useState<'todos' | 'Preventivo' | 'Correctivo'>('todos');
 
@@ -90,6 +97,10 @@ const VehicleReports = () => {
       ...maintenanceRecords.map(m => m.vehicle_placa)
     ])
   ).filter(Boolean).sort();
+
+  const uniqueTalleres = Array.from(
+    new Set(maintenanceRecords.map(m => m.taller).filter(Boolean))
+  ).sort();
 
   const uniqueActividades = Array.from(
     new Set(maintenanceRecords.map(m => m.actividad_nombre))
@@ -132,12 +143,18 @@ const VehicleReports = () => {
       
       if (selectedConductor && trip.conductor_name !== selectedConductor) return false;
       if (selectedVehicle && trip.vehicle_placa !== selectedVehicle) return false;
+      if (selectedMotivo) {
+        const motLower = selectedMotivo.toLowerCase();
+        const tripMotivo = (trip.tipo_motivo || '').toLowerCase();
+        const tripSalida = (trip.motivo_salida || '').toLowerCase();
+        if (!tripMotivo.includes(motLower) && !tripSalida.includes(motLower)) return false;
+      }
       if (dateRange.start && tripDateStr < dateRange.start) return false;
       if (dateRange.end && tripDateStr > dateRange.end) return false;
       
       return true;
     });
-  }, [trips, dateRange, selectedConductor, selectedVehicle]);
+  }, [trips, dateRange, selectedConductor, selectedVehicle, selectedMotivo]);
 
   // Datos filtrados de vales de combustible
   const filteredFuelLogs = useMemo(() => {
@@ -158,6 +175,7 @@ const VehicleReports = () => {
       const dateStr = record.fecha;
       
       if (selectedVehicle && record.vehicle_placa !== selectedVehicle) return false;
+      if (selectedTaller && record.taller !== selectedTaller) return false;
       if (selectedActividad && record.actividad_nombre !== selectedActividad) return false;
       if (selectedTipoMantenimiento !== 'todos') {
         const type = record.tipo_mantenimiento || (record.actividad_nombre?.toLowerCase().includes('correctivo') ? 'Correctivo' : 'Preventivo');
@@ -168,13 +186,25 @@ const VehicleReports = () => {
       
       return true;
     });
-  }, [maintenanceRecords, dateRange, selectedVehicle, selectedActividad, selectedTipoMantenimiento]);
+  }, [maintenanceRecords, dateRange, selectedVehicle, selectedTaller, selectedActividad, selectedTipoMantenimiento]);
+
+  const getGalonesConsumidos = (t: Trip) => {
+    if (t.galones_consumidos !== undefined && t.galones_consumidos !== null) {
+      const val = parseFloat(t.galones_consumidos.toString());
+      if (!isNaN(val) && val > 0) return val.toFixed(3);
+    }
+    const km = t.km_recorridos || 0;
+    if (km <= 0) return '0.000';
+    const rend = t.rendimiento_km_por_galon || 25;
+    return (km / rend).toFixed(3);
+  };
 
   // Totales de Combustible (Viajes + Vales)
   const totalCostoCombustibleTrips = filteredTrips.reduce((acc, t) => acc + parseFloat(t.costo_combustible_viaje || '0'), 0);
   const totalCostoFuelLogs = filteredFuelLogs.reduce((acc, l) => acc + parseFloat(l.costo_total?.toString() || '0'), 0);
   const totalCostoCombustible = totalCostoCombustibleTrips + totalCostoFuelLogs;
   const totalKm = filteredTrips.reduce((acc, t) => acc + (t.km_recorridos || 0), 0);
+  const totalGalonesConsumidos = filteredTrips.reduce((acc, t) => acc + parseFloat(getGalonesConsumidos(t)), 0);
 
   const totalCostoMantenimiento = filteredMaintenances.reduce((acc, m) => acc + parseFloat(m.costo || '0'), 0);
   const totalCostoGeneral = totalCostoCombustible + totalCostoMantenimiento;
@@ -316,7 +346,7 @@ const VehicleReports = () => {
                    : timeFilter === 'custom' ? `Desde ${startDate} hasta ${endDate}`
                    : 'Todo el Histórico';
     
-    return `Período: ${timeText} | Vehículo: ${selectedVehicle || 'Todos'} | Conductor: ${selectedConductor || 'Todos'} | Tipo: ${selectedTipoMantenimiento === 'todos' ? 'Todos' : selectedTipoMantenimiento} | Actividad: ${selectedActividad || 'Todas'}`;
+    return `Período: ${timeText} | Vehículo: ${selectedVehicle || 'Todos'} | Conductor: ${selectedConductor || 'Todos'} | Motivo Viaje: ${selectedMotivo || 'Todos'} | Tipo Mantenimiento: ${selectedTipoMantenimiento === 'todos' ? 'Todos' : selectedTipoMantenimiento} | Actividad: ${selectedActividad || 'Todas'}`;
   };
 
   // Exportar PDF limpio (Tablas de datos puras sin gráficas en el PDF)
@@ -350,25 +380,27 @@ const VehicleReports = () => {
         t.fecha_hora_llegada ? t.fecha_hora_llegada.substring(0, 10) : '-',
         t.vehicle_placa,
         t.conductor_name,
+        t.tipo_motivo || t.motivo_salida || 'General',
+        t.ruta_practica ? `Ruta: ${t.ruta_practica}` : (t.novedades_observaciones || 'Sin novedades'),
         `${t.km_recorridos} km`,
-        `${parseFloat(t.galones_recargados || '0').toFixed(2)} gal`,
+        `${getGalonesConsumidos(t)} gal`,
         `$${parseFloat(t.costo_combustible_viaje || '0').toLocaleString('es-EC', { minimumFractionDigits: 2 })}`
       ]);
 
       fuelTableBody.push([
-        { content: 'SUBTOTAL COMBUSTIBLE', colSpan: 3, styles: { fillColor: [240, 253, 244], textColor: [6, 78, 59], fontStyle: 'bold', halign: 'right' } },
+        { content: 'SUBTOTAL COMBUSTIBLE', colSpan: 5, styles: { fillColor: [240, 253, 244], textColor: [6, 78, 59], fontStyle: 'bold', halign: 'right' } },
         { content: `${totalKm} km`, styles: { fillColor: [240, 253, 244], textColor: [6, 78, 59], fontStyle: 'bold' } },
-        { content: '-', styles: { fillColor: [240, 253, 244], textColor: [6, 78, 59], fontStyle: 'bold' } },
+        { content: `${totalGalonesConsumidos.toFixed(3)} gal`, styles: { fillColor: [240, 253, 244], textColor: [6, 78, 59], fontStyle: 'bold' } },
         { content: `$${totalCostoCombustible.toLocaleString('es-EC', { minimumFractionDigits: 2 })}`, styles: { fillColor: [240, 253, 244], textColor: [6, 78, 59], fontStyle: 'bold' } }
       ]);
 
       applyAutoTable(doc, {
         startY: currentY,
-        head: [['Fecha', 'Placa', 'Conductor', 'KM Recorridos', 'Recarga', 'Costo Combustible']],
+        head: [['Fecha', 'Placa', 'Conductor', 'Motivo de Salida', 'Detalles', 'KM Recorridos', 'Combustible Consumido', 'Costo Combustible']],
         body: fuelTableBody,
         theme: 'grid',
         headStyles: { fillColor: [5, 150, 105] },
-        styles: { fontSize: 9 }
+        styles: { fontSize: 8 }
       });
 
       currentY = (doc as any).lastAutoTable.finalY + 12;
@@ -513,11 +545,11 @@ const VehicleReports = () => {
           Filtros de Búsqueda
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          {/* Vehículo */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Vehículo (Siempre visible) */}
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
-              <Truck className="w-4 h-4" /> Vehículo
+              <Truck className="w-4 h-4 text-emerald-600" /> Vehículo
             </label>
             <select
               value={selectedVehicle}
@@ -531,60 +563,105 @@ const VehicleReports = () => {
             </select>
           </div>
 
-          {/* Conductor (para Combustible) */}
-          <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
-              <User className="w-4 h-4" /> Conductor
-            </label>
-            <select
-              value={selectedConductor}
-              onChange={e => setSelectedConductor(e.target.value)}
-              className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm font-medium"
-            >
-              <option value="">Todos los conductores</option>
-              {uniqueConductors.map(c => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-          </div>
+          {/* Conductor (Solo Combustible y Consolidado) */}
+          {(reportCategory === 'todos' || reportCategory === 'combustible') && (
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                <User className="w-4 h-4 text-emerald-600" /> Conductor
+              </label>
+              <select
+                value={selectedConductor}
+                onChange={e => setSelectedConductor(e.target.value)}
+                className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm font-medium"
+              >
+                <option value="">Todos los conductores</option>
+                {uniqueConductors.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
-          {/* Tipo de Mantenimiento */}
-          <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
-              <Wrench className="w-4 h-4 text-emerald-600" /> Tipo Mantenimiento
-            </label>
-            <select
-              value={selectedTipoMantenimiento}
-              onChange={e => setSelectedTipoMantenimiento(e.target.value as 'todos' | 'Preventivo' | 'Correctivo')}
-              className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm font-medium"
-            >
-              <option value="todos">Todos los tipos</option>
-              <option value="Preventivo">Preventivo</option>
-              <option value="Correctivo">Correctivo</option>
-            </select>
-          </div>
+          {/* Motivo / Actividad de Viaje (Solo Combustible y Consolidado) */}
+          {(reportCategory === 'todos' || reportCategory === 'combustible') && (
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                <Layers className="w-4 h-4 text-emerald-600" /> Motivo / Actividad Viaje
+              </label>
+              <select
+                value={selectedMotivo}
+                onChange={e => setSelectedMotivo(e.target.value)}
+                className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm font-bold text-emerald-800"
+              >
+                <option value="">Todas las actividades / motivos</option>
+                <option value="Prácticas">Prácticas</option>
+                <option value="Comisión">Comisión</option>
+                <option value="Guincha">Guincha</option>
+                <option value="Otro">Otro / Actividades Generales</option>
+              </select>
+            </div>
+          )}
 
-          {/* Actividad de Mantenimiento */}
-          <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
-              <Wrench className="w-4 h-4 text-amber-600" /> Actividad Mantenimiento
-            </label>
-            <select
-              value={selectedActividad}
-              onChange={e => setSelectedActividad(e.target.value)}
-              className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 text-sm font-medium"
-            >
-              <option value="">Todas las actividades</option>
-              {uniqueActividades.map(act => (
-                <option key={act} value={act}>{act}</option>
-              ))}
-            </select>
-          </div>
+          {/* Proveedor / Taller (Solo Mantenimientos y Consolidado) */}
+          {(reportCategory === 'todos' || reportCategory === 'mantenimiento') && (
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                <Wrench className="w-4 h-4 text-amber-600" /> Proveedor / Taller
+              </label>
+              <select
+                value={selectedTaller}
+                onChange={e => setSelectedTaller(e.target.value)}
+                className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 text-sm font-medium"
+              >
+                <option value="">Todos los proveedores/talleres</option>
+                {uniqueTalleres.map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
-          {/* Filtro Rápido de Tiempo */}
+          {/* Tipo de Mantenimiento (Solo Mantenimientos y Consolidado) */}
+          {(reportCategory === 'todos' || reportCategory === 'mantenimiento') && (
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                <Wrench className="w-4 h-4 text-amber-600" /> Tipo Mantenimiento
+              </label>
+              <select
+                value={selectedTipoMantenimiento}
+                onChange={e => setSelectedTipoMantenimiento(e.target.value as 'todos' | 'Preventivo' | 'Correctivo')}
+                className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 text-sm font-medium"
+              >
+                <option value="todos">Todos los tipos</option>
+                <option value="Preventivo">Preventivo</option>
+                <option value="Correctivo">Correctivo</option>
+              </select>
+            </div>
+          )}
+
+          {/* Actividad de Mantenimiento (Solo Mantenimientos y Consolidado) */}
+          {(reportCategory === 'todos' || reportCategory === 'mantenimiento') && (
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                <Wrench className="w-4 h-4 text-amber-600" /> Actividad Mantenimiento
+              </label>
+              <select
+                value={selectedActividad}
+                onChange={e => setSelectedActividad(e.target.value)}
+                className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 text-sm font-medium"
+              >
+                <option value="">Todas las actividades</option>
+                {uniqueActividades.map(act => (
+                  <option key={act} value={act}>{act}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Filtro Rápido de Tiempo (Siempre visible) */}
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
-              <Calendar className="w-4 h-4" /> Período
+              <Calendar className="w-4 h-4 text-blue-600" /> Período
             </label>
             <select
               value={timeFilter}
@@ -868,23 +945,33 @@ const VehicleReports = () => {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-white border-b border-gray-100 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                    <th className="py-3 px-6">Fecha</th>
-                    <th className="py-3 px-6">Placa</th>
-                    <th className="py-3 px-6">Conductor</th>
-                    <th className="py-3 px-6 text-right">KM Recorridos</th>
-                    <th className="py-3 px-6 text-right">Recarga</th>
-                    <th className="py-3 px-6 text-right">Costo Combustible</th>
+                    <th className="py-3 px-4">Fecha</th>
+                    <th className="py-3 px-4">Placa</th>
+                    <th className="py-3 px-4">Conductor</th>
+                    <th className="py-3 px-4">Motivo de Salida</th>
+                    <th className="py-3 px-4">Detalles</th>
+                    <th className="py-3 px-4 text-right">KM Recorridos</th>
+                    <th className="py-3 px-4 text-right">Combustible Consumido</th>
+                    <th className="py-3 px-4 text-right">Costo Combustible</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 text-sm">
                   {filteredTrips.map(trip => (
                     <tr key={trip.id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="py-3 px-6 text-gray-600">{trip.fecha_hora_llegada ? trip.fecha_hora_llegada.substring(0, 10) : '-'}</td>
-                      <td className="py-3 px-6 font-bold text-gray-900">{trip.vehicle_placa}</td>
-                      <td className="py-3 px-6 text-gray-700">{trip.conductor_name}</td>
-                      <td className="py-3 px-6 text-right font-medium text-gray-700">{trip.km_recorridos} km</td>
-                      <td className="py-3 px-6 text-right font-medium text-gray-700">{parseFloat(trip.galones_recargados || '0').toFixed(2)} gal</td>
-                      <td className="py-3 px-6 text-right font-bold text-emerald-600">${parseFloat(trip.costo_combustible_viaje || '0').toLocaleString('es-EC', { minimumFractionDigits: 2 })}</td>
+                      <td className="py-3 px-4 text-gray-600">{trip.fecha_hora_llegada ? trip.fecha_hora_llegada.substring(0, 10) : '-'}</td>
+                      <td className="py-3 px-4 font-bold text-gray-900">{trip.vehicle_placa}</td>
+                      <td className="py-3 px-4 text-gray-700">{trip.conductor_name}</td>
+                      <td className="py-3 px-4 font-semibold text-emerald-800">{trip.tipo_motivo || trip.motivo_salida || 'General'}</td>
+                      <td className="py-3 px-4 text-xs text-gray-500 italic">
+                        {trip.ruta_practica ? `Ruta: ${trip.ruta_practica}` : (trip.novedades_observaciones || 'Sin observaciones')}
+                      </td>
+                      <td className="py-3 px-4 text-right font-medium text-gray-700">{trip.km_recorridos} km</td>
+                      <td className="py-3 px-4 text-right font-medium text-gray-700 font-bold text-emerald-800">
+                        {getGalonesConsumidos(trip)} gal
+                      </td>
+                      <td className="py-3 px-4 text-right font-bold text-emerald-600">
+                        ${parseFloat(trip.costo_combustible_viaje || '0').toLocaleString('es-EC', { minimumFractionDigits: 2 })}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

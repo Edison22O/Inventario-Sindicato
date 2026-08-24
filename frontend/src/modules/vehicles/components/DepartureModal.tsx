@@ -14,6 +14,9 @@ interface DepartureModalProps {
 
 const DepartureModal: React.FC<DepartureModalProps> = ({ isOpen, onClose, onSave, vehicle }) => {
   const [formData, setFormData] = useState({
+    tipo_motivo: 'Prácticas' as 'Prácticas' | 'Comisión' | 'Guincha' | 'Otro',
+    ruta_practica: 'Ruta 1',
+    custom_ruta: '',
     descripcion_salida: '',
   });
   
@@ -38,7 +41,6 @@ const DepartureModal: React.FC<DepartureModalProps> = ({ isOpen, onClose, onSave
         setImageFile(compressed);
         setPreviewUrl(URL.createObjectURL(compressed));
       } catch (error) {
-        // Fallback
         setImageFile(file);
         setPreviewUrl(URL.createObjectURL(file));
       } finally {
@@ -56,17 +58,26 @@ const DepartureModal: React.FC<DepartureModalProps> = ({ isOpen, onClose, onSave
 
     setIsSubmitting(true);
     
+    const finalRoute = formData.tipo_motivo === 'Prácticas' 
+      ? (formData.ruta_practica === 'Otro' ? formData.custom_ruta : formData.ruta_practica)
+      : '';
+      
+    const finalDesc = formData.tipo_motivo === 'Prácticas' 
+      ? `Prácticas en ${finalRoute}. ${formData.descripcion_salida}`.trim()
+      : (formData.descripcion_salida || formData.tipo_motivo);
+
     const data = new FormData();
     data.append('vehicle', String(vehicle.id));
-    data.append('descripcion_salida', formData.descripcion_salida);
+    data.append('tipo_motivo', formData.tipo_motivo);
+    if (finalRoute) data.append('ruta_practica', finalRoute);
+    data.append('descripcion_salida', finalDesc);
     data.append('foto_evidencia_salida', imageFile);
 
     try {
       await onSave(data);
       toast.success('Salida registrada con éxito');
       
-      // Limpiar
-      setFormData({ descripcion_salida: '' });
+      setFormData({ tipo_motivo: 'Prácticas', ruta_practica: 'Ruta 1', custom_ruta: '', descripcion_salida: '' });
       setImageFile(null);
       setPreviewUrl(null);
       
@@ -95,8 +106,62 @@ const DepartureModal: React.FC<DepartureModalProps> = ({ isOpen, onClose, onSave
           <form id="departureForm" onSubmit={handleSubmit} className="space-y-6">
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Destino / Motivo de Salida *</label>
-              <textarea required name="descripcion_salida" rows={2} value={formData.descripcion_salida} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500" placeholder="Ej: Viaje a Quito por reunión directiva..." />
+              <label className="block text-sm font-bold text-gray-700 mb-1">Motivo de Salida *</label>
+              <select
+                name="tipo_motivo"
+                value={formData.tipo_motivo}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl font-bold text-gray-900 focus:ring-emerald-500"
+              >
+                <option value="Prácticas">Prácticas de Conducción</option>
+                <option value="Comisión">Comisión</option>
+                <option value="Guincha">Guincha / Remolque</option>
+                <option value="Otro">Otro Motivo</option>
+              </select>
+            </div>
+
+            {formData.tipo_motivo === 'Prácticas' && (
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Ruta de Prácticas *</label>
+                <select
+                  name="ruta_practica"
+                  value={formData.ruta_practica}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl font-bold text-gray-900 focus:ring-emerald-500"
+                >
+                  <option value="Ruta 1">Ruta 1</option>
+                  <option value="Ruta 2">Ruta 2</option>
+                  <option value="Ruta 3">Ruta 3</option>
+                  <option value="Otro">Agregar nueva ruta (Personalizada)...</option>
+                </select>
+
+                {formData.ruta_practica === 'Otro' && (
+                  <input
+                    type="text"
+                    required
+                    name="custom_ruta"
+                    placeholder="Escribe el nombre de la nueva ruta..."
+                    value={formData.custom_ruta}
+                    onChange={handleChange}
+                    className="w-full mt-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium"
+                  />
+                )}
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">
+                {formData.tipo_motivo === 'Comisión' ? 'Detalle de la Comisión *' : 'Observaciones / Detalle Adicional'}
+              </label>
+              <textarea
+                required={formData.tipo_motivo === 'Comisión'}
+                name="descripcion_salida"
+                rows={2}
+                value={formData.descripcion_salida}
+                onChange={handleChange}
+                className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500"
+                placeholder={formData.tipo_motivo === 'Comisión' ? 'Ingresa los detalles de la comisión...' : 'Detalles de la salida...'}
+              />
             </div>
 
             <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 text-sm text-blue-800">

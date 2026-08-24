@@ -1,4 +1,6 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from api.models.maintenance import MaintenanceLog, VehicleMaintenance, VehicleMaintenanceRecord
 from api.serializers.maintenance import MaintenanceLogSerializer, VehicleMaintenanceSerializer, VehicleMaintenanceRecordSerializer
@@ -62,6 +64,26 @@ class VehicleMaintenanceViewSet(viewsets.ModelViewSet):
         if tipo is not None:
             queryset = queryset.filter(tipo_mantenimiento__iexact=tipo)
         return queryset
+
+    @action(detail=True, methods=['post'], url_path='ejecutar')
+    def ejecutar(self, request, public_id=None):
+        instance = self.get_object()
+        numero_factura = request.data.get('numero_factura', '')
+        factura_foto = request.FILES.get('factura_foto', None)
+        
+        if not factura_foto and not instance.factura_foto:
+            return Response({'error': 'Es obligatorio subir la fotografía o documento de la factura para cambiar a estado Ejecutado.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if factura_foto:
+            instance.factura_foto = factura_foto
+        if numero_factura:
+            instance.numero_factura = numero_factura
+            
+        instance.estado_correctivo = 'Ejecutado'
+        instance.save()
+        
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
 
 class VehicleMaintenanceRecordViewSet(viewsets.ModelViewSet):
     queryset = VehicleMaintenanceRecord.objects.select_related('vehicle', 'maintenance_rule', 'supplier').all().order_by('-fecha', '-created_at')

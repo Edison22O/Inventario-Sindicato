@@ -118,7 +118,7 @@ def furniture_supplier_changed(sender, instance, **kwargs):
 
 # Vehicle Signals
 try:
-    from .models.vehicles import Vehicle, VehicleTrip, VehicleRegistrationRecord, VehicleFuelLog
+    from .models.vehicles import Vehicle, VehicleTrip, VehicleRegistrationRecord, VehicleFuelLog, FuelBudget, DriverVehicleHandover
     from .models.maintenance import VehicleMaintenance, VehicleMaintenanceRecord
     from .models.core import DriverProfile
     from .models.suppliers import VehicleSupplier
@@ -170,6 +170,18 @@ try:
     def vehicle_supplier_changed(sender, instance, **kwargs):
         action = 'delete' if 'created' not in kwargs else ('create' if kwargs['created'] else 'update')
         broadcast_inventory_update('VehicleSupplier', action)
+
+    @receiver(post_save, sender=FuelBudget)
+    @receiver(post_delete, sender=FuelBudget)
+    def fuel_budget_changed(sender, instance, **kwargs):
+        action = 'delete' if 'created' not in kwargs else ('create' if kwargs['created'] else 'update')
+        broadcast_inventory_update('FuelBudget', action)
+
+    @receiver(post_save, sender=DriverVehicleHandover)
+    @receiver(post_delete, sender=DriverVehicleHandover)
+    def driver_handover_changed(sender, instance, **kwargs):
+        action = 'delete' if 'created' not in kwargs else ('create' if kwargs['created'] else 'update')
+        broadcast_inventory_update('DriverVehicleHandover', action)
 except Exception as e:
     pass
 

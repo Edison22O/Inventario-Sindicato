@@ -30,10 +30,6 @@ const Suppliers = () => {
     setSelectedSupplier(null);
   };
 
-  useEffect(() => {
-    fetchSuppliers();
-  }, []);
-
   const fetchSuppliers = async () => {
     setLoading(true);
     try {
@@ -45,6 +41,10 @@ const Suppliers = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchSuppliers();
+  }, []);
 
   useInventoryWebSocket(fetchSuppliers);
 

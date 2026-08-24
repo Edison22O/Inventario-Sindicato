@@ -61,25 +61,6 @@ const VehiclesDashboard = () => {
   });
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    fetchStats();
-  }, []);
-
-  useInventoryWebSocket(fetchStats);
-
-  useEffect(() => {
-    if (selectedMatricula && selectedMatricula.vencimiento) {
-      try {
-        const currentDate = new Date(selectedMatricula.vencimiento);
-        currentDate.setFullYear(currentDate.getFullYear() + 1);
-        const nextYear = currentDate.toISOString().split('T')[0];
-        setMatriculaForm(prev => ({ ...prev, nueva_fecha_vencimiento: nextYear, año_matriculado: new Date().getFullYear().toString(), costo: '', notas: '', lugar_tramite: '' }));
-      } catch (e) {
-        // Fallback
-      }
-    }
-  }, [selectedMatricula]);
-
   const fetchStats = async () => {
     try {
       const [statsRes, tripsRes, fuelRes, maintRes] = await Promise.all([
@@ -98,6 +79,25 @@ const VehiclesDashboard = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  useInventoryWebSocket(fetchStats);
+
+  useEffect(() => {
+    if (selectedMatricula && selectedMatricula.vencimiento) {
+      try {
+        const currentDate = new Date(selectedMatricula.vencimiento);
+        currentDate.setFullYear(currentDate.getFullYear() + 1);
+        const nextYear = currentDate.toISOString().split('T')[0];
+        setMatriculaForm(prev => ({ ...prev, nueva_fecha_vencimiento: nextYear, año_matriculado: new Date().getFullYear().toString(), costo: '', notas: '', lugar_tramite: '' }));
+      } catch (e) {
+        // Fallback
+      }
+    }
+  }, [selectedMatricula]);
 
   const handleUpdateMatricula = async (e: React.FormEvent) => {
     e.preventDefault();

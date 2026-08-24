@@ -20,6 +20,14 @@ class VehicleMaintenance(models.Model):
         ('Preventivo', 'Preventivo'),
         ('Correctivo', 'Correctivo'),
     ]
+    SUBTIPO_CORRECTIVO_CHOICES = [
+        ('Urgente', 'Urgente'),
+        ('Programado', 'Programado'),
+    ]
+    ESTADO_CORRECTIVO_CHOICES = [
+        ('Pendiente', 'Pendiente'),
+        ('Ejecutado', 'Ejecutado'),
+    ]
 
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='maintenances')
     tipo_mantenimiento = models.CharField(max_length=20, choices=TIPO_CHOICES, default='Preventivo')
@@ -30,8 +38,13 @@ class VehicleMaintenance(models.Model):
     frecuencia_km = models.IntegerField(null=True, blank=True) # Opcional si es Correctivo
     
     # Detalle en mantenimientos correctivos
+    kilometraje_falla = models.IntegerField(null=True, blank=True) # Odómetro al ocurrir la falla
+    subtipo_correctivo = models.CharField(max_length=20, choices=SUBTIPO_CORRECTIVO_CHOICES, default='Programado', blank=True, null=True)
+    estado_correctivo = models.CharField(max_length=20, choices=ESTADO_CORRECTIVO_CHOICES, default='Pendiente', blank=True, null=True)
     fallo_observado = models.TextField(blank=True, null=True) # ¿Qué falló?
     solucion_aplicada = models.TextField(blank=True, null=True) # ¿Qué se hizo para solucionarlo?
+    numero_factura = models.CharField(max_length=100, blank=True, null=True)
+    factura_foto = models.ImageField(upload_to='vehicles/maintenances/facturas/', null=True, blank=True)
 
     # Historico o notas
     notas = models.TextField(blank=True, null=True)
@@ -72,15 +85,22 @@ class VehicleMaintenance(models.Model):
     @property
     def estado_alerta(self):
         if self.tipo_mantenimiento == 'Correctivo':
-            return "CORRECTIVO"
+            if self.estado_correctivo == 'Ejecutado':
+                return "EJECUTADO"
+            elif self.subtipo_correctivo == 'Urgente':
+                return "PENDIENTE URGENTE"
+            else:
+                return "PENDIENTE PROGRAMADO"
             
         dias = self.dias_restantes
         km_restantes = self.km_restantes_para_proximo_cambio
         
-        if km_restantes < 0 or (dias is not None and dias < 0):
+        if km_restantes <= -100 or (dias is not None and dias < 0):
             return "CAMBIO URGENTE"
+        elif km_restantes <= 0:
+            return "CAMBIO REQUERIDO"
         elif km_restantes <= 500 or (dias is not None and dias <= 15):
-            return "PRÓXIMO"
+            return "REQUERIMIENTO"
         else:
             return "VIGENTE"
 

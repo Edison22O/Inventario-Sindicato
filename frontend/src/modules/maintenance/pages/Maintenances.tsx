@@ -24,10 +24,6 @@ const Maintenances = () => {
   const [deletingLog, setDeletingLog] = useState<MaintenanceLog | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  useEffect(() => {
-    fetchLogs();
-  }, []);
-
   const fetchLogs = async () => {
     try {
       const res = await api.get('/maintenances/');
@@ -38,6 +34,10 @@ const Maintenances = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchLogs();
+  }, []);
 
   useInventoryWebSocket(fetchLogs);
 

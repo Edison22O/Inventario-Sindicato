@@ -49,10 +49,6 @@ const VehicleFuelControl = () => {
   const [fotoValeFile, setFotoValeFile] = useState<File | null>(null);
   const [fotoValePreviewUrl, setFotoValePreviewUrl] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const fetchData = async () => {
     try {
       const [vehRes, logsRes] = await Promise.all([
@@ -70,6 +66,10 @@ const VehicleFuelControl = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   useInventoryWebSocket(fetchData);
 
@@ -298,6 +298,111 @@ const VehicleFuelControl = () => {
     }
   };
 
+  // Estado para Presupuesto de Vales de Combustible
+  const [fuelBudget, setFuelBudget] = useState<import('@/shared/types').FuelBudget | null>(null);
+  const [isBudgetInitialModalOpen, setIsBudgetInitialModalOpen] = useState(false);
+  const [isAddFundsModalOpen, setIsAddFundsModalOpen] = useState(false);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+
+  const [initialGasolina, setInitialGasolina] = useState('300');
+  const [initialDiesel, setInitialDiesel] = useState('1200');
+  const [addGasolina, setAddGasolina] = useState('0');
+  const [addDiesel, setAddDiesel] = useState('0');
+  const [transferOrigen, setTransferOrigen] = useState<'GASOLINA' | 'DIESEL'>('DIESEL');
+  const [transferMonto, setTransferMonto] = useState('');
+
+  const fetchBudget = async () => {
+    try {
+      const res = await api.get('/fuel-budgets/');
+      setFuelBudget(res.data);
+    } catch (e) {
+      console.warn('Error fetching fuel budget:', e);
+    }
+  };
+
+  const fetchAllFuelData = async () => {
+    try {
+      const [vehRes, logsRes, budgetRes] = await Promise.all([
+        api.get('/vehicles/'),
+        api.get('/vehicle-fuel-logs/'),
+        api.get('/fuel-budgets/').catch(() => ({ data: null }))
+      ]);
+      setVehicles(vehRes.data || []);
+      setFuelLogs(logsRes.data || []);
+      setFuelBudget(budgetRes.data || null);
+      if (vehRes.data && vehRes.data.length > 0 && !formData.vehicle) {
+        setFormData(prev => ({ ...prev, vehicle: vehRes.data[0].id.toString() }));
+      }
+    } catch (error) {
+      toast.error('Error al cargar vales de despacho de combustible');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllFuelData();
+  }, []);
+
+  useInventoryWebSocket(fetchAllFuelData);
+
+  const handleSetInitialBudget = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await api.post('/fuel-budgets/set-initial/', {
+        saldo_gasolina: parseFloat(initialGasolina || '0'),
+        saldo_diesel: parseFloat(initialDiesel || '0')
+      });
+      toast.success('Presupuesto inicial asignado exitosamente');
+      setIsBudgetInitialModalOpen(false);
+      fetchBudget();
+    } catch (e) {
+      toast.error('Error al asignar presupuesto inicial');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleAddFunds = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await api.post('/fuel-budgets/add-funds/', {
+        monto_gasolina: parseFloat(addGasolina || '0'),
+        monto_diesel: parseFloat(addDiesel || '0')
+      });
+      toast.success('Saldo agregado exitosamente');
+      setIsAddFundsModalOpen(false);
+      setAddGasolina('0');
+      setAddDiesel('0');
+      fetchBudget();
+    } catch (e) {
+      toast.error('Error al agregar saldo');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleTransferFunds = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await api.post('/fuel-budgets/transfer/', {
+        origen: transferOrigen,
+        monto: parseFloat(transferMonto || '0')
+      });
+      toast.success('Traspaso de saldo realizado exitosamente');
+      setIsTransferModalOpen(false);
+      setTransferMonto('');
+      fetchBudget();
+    } catch (e: any) {
+      toast.error(e.response?.data?.error || 'Error al realizar el traspaso de saldo');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const filteredLogs = useMemo(() => {
     return fuelLogs.filter(log => {
       const searchLower = searchTerm.toLowerCase();
@@ -320,6 +425,11 @@ const VehicleFuelControl = () => {
   const totalVales = filteredLogs.length;
   const totalGalones = filteredLogs.reduce((acc, l) => acc + parseFloat(l.galones?.toString() || '0'), 0);
   const totalCosto = filteredLogs.reduce((acc, l) => acc + parseFloat(l.costo_total?.toString() || '0'), 0);
+
+  const saldoTotalNum = parseFloat(fuelBudget?.saldo_total?.toString() || '0');
+  const saldoGasolinaNum = parseFloat(fuelBudget?.saldo_gasolina?.toString() || '0');
+  const saldoDieselNum = parseFloat(fuelBudget?.saldo_diesel?.toString() || '0');
+  const isLowBalance = saldoTotalNum <= 40 || saldoGasolinaNum <= 40 || saldoDieselNum <= 40;
 
   if (loading) {
     return (
@@ -344,17 +454,160 @@ const VehicleFuelControl = () => {
             Vales de Despacho de Combustible
           </h1>
           <p className="text-gray-500 mt-1.5 text-base font-medium">
-            Registro de vales con N.º secuencial, fotografía del comprobante, responsable, galones, producto (Extra/Diésel) y detalle del concepto.
+            Control de presupuestos (Gasolina/Diésel), traspasos de saldo, alerta a los $40 y registro de vales con fotografía.
           </p>
         </div>
 
-        <button
-          onClick={handleOpenModal}
-          className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-emerald-700 transition-all shadow-md shadow-emerald-600/20"
-        >
-          <Plus className="w-5 h-5" />
-          Nuevo Vale de Despacho
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => setIsAddFundsModalOpen(true)}
+            className="flex items-center gap-2 px-5 py-3 bg-amber-600 text-white rounded-2xl font-bold hover:bg-amber-700 transition-all shadow-md shadow-amber-600/20 text-sm"
+          >
+            <Plus className="w-4 h-4" />
+            Agregar Saldo
+          </button>
+          <button
+            onClick={() => setIsTransferModalOpen(true)}
+            className="flex items-center gap-2 px-5 py-3 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-md shadow-blue-600/20 text-sm"
+          >
+            Traspasar Saldo
+          </button>
+          <button
+            onClick={handleOpenModal}
+            className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-emerald-700 transition-all shadow-md shadow-emerald-600/20 text-sm"
+          >
+            <Plus className="w-5 h-5" />
+            Nuevo Vale de Despacho
+          </button>
+        </div>
+      </div>
+
+      {/* Banner de Alerta de Saldo Bajo ($40 o menos o Déficit Negativo) */}
+      {(isLowBalance || saldoGasolinaNum < 0 || saldoDieselNum < 0) && (
+        <div className={`relative z-10 mb-8 p-5 rounded-3xl shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4 ${
+          saldoGasolinaNum < 0 || saldoDieselNum < 0 ? 'bg-red-700 text-white animate-bounce' : 'bg-amber-600 text-white animate-pulse'
+        }`}>
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-white/20 rounded-2xl">
+              <Fuel className="w-7 h-7 text-white" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-lg flex items-center gap-2">
+                {saldoGasolinaNum < 0 || saldoDieselNum < 0 ? '🚨 ALERTA DE DÉFICIT EN PRESUPUESTO' : '⚠️ ALERTA DE REABASTECIMIENTO DE SALDO'}
+              </h3>
+              <p className="text-xs font-semibold text-red-100 mt-0.5">
+                {saldoGasolinaNum < 0 
+                  ? `Existe un déficit de -$${Math.abs(saldoGasolinaNum).toFixed(2)} en Gasolina Extra. Puedes traspasar saldo desde Diésel para cubrirlo.`
+                  : saldoDieselNum < 0
+                  ? `Existe un déficit de -$${Math.abs(saldoDieselNum).toFixed(2)} en Diésel. Puedes traspasar saldo desde Gasolina para cubrirlo.`
+                  : `El saldo disponible es de $40.00 o menos (Total: $${saldoTotalNum.toFixed(2)} | Gasolina: $${saldoGasolinaNum.toFixed(2)} | Diésel: $${saldoDieselNum.toFixed(2)}).`
+                }
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            {(saldoGasolinaNum < 0 || saldoDieselNum < 0) && (
+              <button
+                onClick={() => {
+                  setTransferOrigen(saldoGasolinaNum < 0 ? 'DIESEL' : 'GASOLINA');
+                  setTransferMonto(Math.abs(saldoGasolinaNum < 0 ? saldoGasolinaNum : saldoDieselNum).toFixed(2));
+                  setIsTransferModalOpen(true);
+                }}
+                className="px-5 py-3 bg-white text-red-800 rounded-2xl font-black hover:bg-red-50 transition-all shadow-md text-xs flex items-center gap-1.5"
+              >
+                ⇄ Traspasar Saldo Ahora
+              </button>
+            )}
+            <button
+              onClick={() => setIsAddFundsModalOpen(true)}
+              className="px-5 py-3 bg-red-900/80 text-white border border-white/30 rounded-2xl font-bold hover:bg-red-900 transition-all shadow-md text-xs"
+            >
+              + Agregar Saldo
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Control de Presupuesto / Saldos */}
+      <div className="relative z-10 grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+        <div className={`rounded-3xl p-6 shadow-md relative overflow-hidden flex justify-between items-center text-white ${
+          saldoTotalNum < 0 ? 'bg-gradient-to-br from-red-800 to-rose-900' : 'bg-gradient-to-br from-emerald-800 to-teal-900'
+        }`}>
+          <div>
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-200">Saldo Total Disponible</span>
+            <p className={`text-3xl font-black mt-1 ${saldoTotalNum < 0 ? 'text-rose-200' : ''}`}>
+              {saldoTotalNum < 0 ? `-$${Math.abs(saldoTotalNum).toLocaleString('es-EC', { minimumFractionDigits: 2 })}` : `$${saldoTotalNum.toLocaleString('es-EC', { minimumFractionDigits: 2 })}`}
+            </p>
+            <p className="text-[10px] font-semibold text-emerald-200 mt-1">Presupuesto Global de Vales</p>
+          </div>
+          <button
+            onClick={() => setIsBudgetInitialModalOpen(true)}
+            className="p-2.5 bg-white/20 hover:bg-white/30 rounded-xl transition-colors text-xs font-bold"
+            title="Ajustar Presupuesto Inicial"
+          >
+            <Edit2 className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className={`rounded-3xl p-6 shadow-sm border flex items-center justify-between transition-all ${
+          saldoGasolinaNum < 0 ? 'bg-red-50 border-red-300 ring-2 ring-red-400' : 'bg-white border-emerald-100'
+        }`}>
+          <div>
+            <span className={`text-xs font-bold uppercase tracking-wider ${saldoGasolinaNum < 0 ? 'text-red-900' : 'text-emerald-800'}`}>Saldo Gasolina Extra</span>
+            <p className={`text-3xl font-black mt-1 ${saldoGasolinaNum < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+              {saldoGasolinaNum < 0 ? `-$${Math.abs(saldoGasolinaNum).toLocaleString('es-EC', { minimumFractionDigits: 2 })}` : `$${saldoGasolinaNum.toLocaleString('es-EC', { minimumFractionDigits: 2 })}`}
+            </p>
+            {saldoGasolinaNum < 0 ? (
+              <button
+                onClick={() => {
+                  setTransferOrigen('DIESEL');
+                  setTransferMonto(Math.abs(saldoGasolinaNum).toFixed(2));
+                  setIsTransferModalOpen(true);
+                }}
+                className="mt-1 text-[11px] font-extrabold text-red-700 hover:underline flex items-center gap-1"
+              >
+                ⇄ Traspasar desde Diésel para cubrir déficit
+              </button>
+            ) : (
+              <p className="text-[10px] text-gray-400 font-semibold mt-1">Para vehículos a gasolina</p>
+            )}
+          </div>
+          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold ${
+            saldoGasolinaNum < 0 ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'
+          }`}>
+            <Fuel className="w-6 h-6" />
+          </div>
+        </div>
+
+        <div className={`rounded-3xl p-6 shadow-sm border flex items-center justify-between transition-all ${
+          saldoDieselNum < 0 ? 'bg-red-50 border-red-300 ring-2 ring-red-400' : 'bg-white border-amber-100'
+        }`}>
+          <div>
+            <span className={`text-xs font-bold uppercase tracking-wider ${saldoDieselNum < 0 ? 'text-red-900' : 'text-amber-800'}`}>Saldo Diésel</span>
+            <p className={`text-3xl font-black mt-1 ${saldoDieselNum < 0 ? 'text-red-600' : 'text-amber-600'}`}>
+              {saldoDieselNum < 0 ? `-$${Math.abs(saldoDieselNum).toLocaleString('es-EC', { minimumFractionDigits: 2 })}` : `$${saldoDieselNum.toLocaleString('es-EC', { minimumFractionDigits: 2 })}`}
+            </p>
+            {saldoDieselNum < 0 ? (
+              <button
+                onClick={() => {
+                  setTransferOrigen('GASOLINA');
+                  setTransferMonto(Math.abs(saldoDieselNum).toFixed(2));
+                  setIsTransferModalOpen(true);
+                }}
+                className="mt-1 text-[11px] font-extrabold text-red-700 hover:underline flex items-center gap-1"
+              >
+                ⇄ Traspasar desde Gasolina para cubrir déficit
+              </button>
+            ) : (
+              <p className="text-[10px] text-gray-400 font-semibold mt-1">Para vehículos a diésel</p>
+            )}
+          </div>
+          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold ${
+            saldoDieselNum < 0 ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
+          }`}>
+            <Fuel className="w-6 h-6" />
+          </div>
+        </div>
       </div>
 
       {/* KPI Cards */}
@@ -1180,19 +1433,161 @@ const VehicleFuelControl = () => {
                   setIsObserveModalOpen(false);
                   handleOpenEditModal(selectedLog);
                 }}
-                className="px-4 py-2 bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors"
+                className="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all"
               >
-                <Edit2 className="w-4 h-4 text-emerald-600" /> Editar Vale y Foto
+                <Edit2 className="w-3.5 h-3.5" /> Editar Datos
               </button>
-
               <button
                 type="button"
                 onClick={() => setIsObserveModalOpen(false)}
-                className="px-5 py-2 bg-gray-900 text-white hover:bg-gray-800 rounded-xl text-xs font-bold transition-colors"
+                className="px-5 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-xl font-bold text-xs shadow-md shadow-emerald-600/20 transition-all"
               >
                 Cerrar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Presupuesto Inicial */}
+      {isBudgetInitialModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-emerald-800 to-teal-800 text-white">
+              <h2 className="text-lg font-extrabold flex items-center gap-2">
+                <DollarSign className="w-5 h-5" /> Configurar Presupuesto Inicial
+              </h2>
+              <button onClick={() => setIsBudgetInitialModalOpen(false)} className="p-1 hover:bg-white/20 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleSetInitialBudget} className="p-6 space-y-4">
+              <p className="text-xs font-medium text-gray-500">Define los saldos iniciales disponibles para despacho de combustible:</p>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Saldo Inicial Gasolina Extra ($)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  required
+                  value={initialGasolina}
+                  onChange={e => setInitialGasolina(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 font-bold text-gray-900"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Saldo Inicial Diésel ($)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  required
+                  value={initialDiesel}
+                  onChange={e => setInitialDiesel(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 font-bold text-gray-900"
+                />
+              </div>
+              <div className="pt-2 flex justify-between items-center text-xs font-black text-emerald-700">
+                <span>TOTAL PRESUPUESTO:</span>
+                <span className="text-base">${((parseFloat(initialGasolina || '0')) + (parseFloat(initialDiesel || '0'))).toFixed(2)}</span>
+              </div>
+              <div className="pt-3 flex justify-end gap-3 border-t border-gray-100">
+                <button type="button" onClick={() => setIsBudgetInitialModalOpen(false)} className="px-4 py-2 text-xs font-bold text-gray-600">Cancelar</button>
+                <button type="submit" disabled={submitting} className="px-5 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20">{submitting ? 'Guardando...' : 'Establecer Presupuesto'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Agregar Saldo (Acumulativo) */}
+      {isAddFundsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-amber-600 to-orange-600 text-white">
+              <h2 className="text-lg font-extrabold flex items-center gap-2">
+                <Plus className="w-5 h-5" /> Agregar Saldo Acumulativo
+              </h2>
+              <button onClick={() => setIsAddFundsModalOpen(false)} className="p-1 hover:bg-white/20 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleAddFunds} className="p-6 space-y-4">
+              <p className="text-xs font-medium text-gray-500">Ingresa los montos que deseas reabastecer al fondo existente:</p>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Monto a agregar a Gasolina ($)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={addGasolina}
+                  onChange={e => setAddGasolina(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500 font-bold text-gray-900"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Monto a agregar a Diésel ($)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={addDiesel}
+                  onChange={e => setAddDiesel(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500 font-bold text-gray-900"
+                />
+              </div>
+              <div className="pt-3 flex justify-end gap-3 border-t border-gray-100">
+                <button type="button" onClick={() => setIsAddFundsModalOpen(false)} className="px-4 py-2 text-xs font-bold text-gray-600">Cancelar</button>
+                <button type="submit" disabled={submitting} className="px-5 py-2 bg-amber-600 text-white rounded-xl text-xs font-bold shadow-md shadow-amber-600/20">{submitting ? 'Guardando...' : 'Reabastecer Saldo'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Traspasar Saldo (Gasolina <-> Diésel) */}
+      {isTransferModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-blue-700 to-indigo-800 text-white">
+              <h2 className="text-lg font-extrabold flex items-center gap-2">
+                ⇄ Traspaso de Saldo entre Combustibles
+              </h2>
+              <button onClick={() => setIsTransferModalOpen(false)} className="p-1 hover:bg-white/20 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleTransferFunds} className="p-6 space-y-4">
+              <p className="text-xs font-medium text-gray-500">Transfiere dinero sobrante de un fondo de combustible a otro cuando este se agote:</p>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Origen (Fondo del que sale la plata)</label>
+                <select
+                  value={transferOrigen}
+                  onChange={e => setTransferOrigen(e.target.value as 'GASOLINA' | 'DIESEL')}
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 font-bold text-gray-900"
+                >
+                  <option value="DIESEL">Traspasar DESDE Diésel HACIA Gasolina</option>
+                  <option value="GASOLINA">Traspasar DESDE Gasolina HACIA Diésel</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Monto a Traspasar ($)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  required
+                  placeholder="Ej. 100.00"
+                  value={transferMonto}
+                  onChange={e => setTransferMonto(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 font-bold text-gray-900"
+                />
+              </div>
+              <div className="pt-3 flex justify-end gap-3 border-t border-gray-100">
+                <button type="button" onClick={() => setIsTransferModalOpen(false)} className="px-4 py-2 text-xs font-bold text-gray-600">Cancelar</button>
+                <button type="submit" disabled={submitting} className="px-5 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-600/20">{submitting ? 'Transfiriendo...' : 'Confirmar Traspaso'}</button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from api.models.vehicles import Vehicle, VehicleTrip, VehicleRegistrationRecord, VehicleFuelLog
+from api.models.vehicles import Vehicle, VehicleTrip, VehicleRegistrationRecord, VehicleFuelLog, FuelBudget, DriverVehicleHandover
 
 class VehicleSerializer(serializers.ModelSerializer):
     dias_para_vencimiento_matricula = serializers.ReadOnlyField()
@@ -15,11 +15,11 @@ class VehicleSerializer(serializers.ModelSerializer):
         if not maintenances:
             return "Sin mantenimientos registrados"
         
-        urgentes = [m for m in maintenances if m.estado_alerta == 'CAMBIO URGENTE']
+        urgentes = [m for m in maintenances if m.estado_alerta in ['CAMBIO URGENTE', 'PENDIENTE URGENTE']]
         if urgentes:
             return f"Urgente: {urgentes[0].actividad}"
         
-        proximos = [m for m in maintenances if m.estado_alerta == 'PRÓXIMO']
+        proximos = [m for m in maintenances if m.estado_alerta in ['REQUERIMIENTO', 'CAMBIO REQUERIDO', 'PENDIENTE PROGRAMADO']]
         if proximos:
             return f"Próximo: {proximos[0].actividad} a los {proximos[0].km_proximo_cambio} KM"
             
@@ -34,6 +34,8 @@ class VehicleTripSerializer(serializers.ModelSerializer):
     vehicle_placa = serializers.CharField(source='vehicle.placa', read_only=True)
     vehicle_marca = serializers.CharField(source='vehicle.marca', read_only=True)
     vehicle_modelo = serializers.CharField(source='vehicle.modelo', read_only=True)
+    rendimiento_km_por_galon = serializers.FloatField(source='vehicle.rendimiento_km_por_galon', read_only=True)
+    galones_consumidos = serializers.SerializerMethodField()
 
     class Meta:
         model = VehicleTrip
@@ -45,6 +47,14 @@ class VehicleTripSerializer(serializers.ModelSerializer):
             return 'Desconocido'
         full = f"{obj.conductor.first_name or ''} {obj.conductor.last_name or ''}".strip()
         return full if full else obj.conductor.username
+
+    def get_galones_consumidos(self, obj):
+        if not obj.km_recorridos or not obj.vehicle:
+            return 0.0
+        rendimiento = float(obj.vehicle.rendimiento_km_por_galon or 25)
+        if rendimiento <= 0:
+            rendimiento = 25.0
+        return round(float(obj.km_recorridos) / rendimiento, 3)
 
 class VehicleRegistrationRecordSerializer(serializers.ModelSerializer):
     vehicle_placa = serializers.CharField(source='vehicle.placa', read_only=True)
@@ -100,5 +110,26 @@ class VehicleFuelLogSerializer(serializers.ModelSerializer):
             if v:
                 data['vehicle'] = v.pk
         return super().to_internal_value(data)
+
+class FuelBudgetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FuelBudget
+        fields = '__all__'
+
+class DriverVehicleHandoverSerializer(serializers.ModelSerializer):
+    driver_name = serializers.SerializerMethodField()
+    vehicle_placa = serializers.CharField(source='vehicle.placa', read_only=True)
+    vehicle_marca = serializers.CharField(source='vehicle.marca', read_only=True)
+    vehicle_modelo = serializers.CharField(source='vehicle.modelo', read_only=True)
+
+    class Meta:
+        model = DriverVehicleHandover
+        fields = '__all__'
+
+    def get_driver_name(self, obj):
+        if not obj.driver:
+            return 'Desconocido'
+        full = f"{obj.driver.first_name or ''} {obj.driver.last_name or ''}".strip()
+        return full if full else obj.driver.username
 
 
