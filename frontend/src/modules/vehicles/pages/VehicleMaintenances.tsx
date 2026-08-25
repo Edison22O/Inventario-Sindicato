@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Wrench, Search, FileText, PenTool, X, Calendar, DollarSign, AlertTriangle, CheckCircle, CheckCircle2, ShieldAlert, LayoutGrid, Table, Plus, Trash2, Store, Camera } from 'lucide-react';
+import { Wrench, Search, FileText, PenTool, X, Calendar, DollarSign, AlertTriangle, CheckCircle2, ShieldAlert, LayoutGrid, Table, Plus, Trash2, Store, Camera } from 'lucide-react';
 
 import toast from 'react-hot-toast';
 import api from '@/shared/services/api';
@@ -369,9 +369,15 @@ const VehicleMaintenances = () => {
       if (vehicleFilter !== 'todos' && m.vehicle.toString() !== vehicleFilter) return false;
       if (tipoFilter !== 'todos' && m.tipo_mantenimiento !== tipoFilter) return false;
 
-      if (statusFilter === 'urgente') return m.estado_alerta === 'CAMBIO URGENTE';
-      if (statusFilter === 'proximo') return m.estado_alerta === 'PRÓXIMO';
-      if (statusFilter === 'aldia') return m.estado_alerta === 'AL DÍA' || m.estado_alerta === 'VIGENTE';
+      if (statusFilter === 'urgente') {
+        return m.estado_alerta === 'CAMBIO URGENTE' || 
+               m.estado_alerta === 'CAMBIO REQUERIDO' || 
+               m.estado_alerta === 'REQUERIMIENTO' || 
+               m.estado_alerta === 'PENDIENTE URGENTE' || 
+               m.estado_alerta === 'PENDIENTE PROGRAMADO';
+      }
+      if (statusFilter === 'proximo') return m.estado_alerta === 'REQUERIMIENTO' || m.estado_alerta === 'PENDIENTE PROGRAMADO';
+      if (statusFilter === 'aldia') return m.estado_alerta === 'AL DÍA' || m.estado_alerta === 'VIGENTE' || m.estado_alerta === 'EJECUTADO';
 
       return true;
     });
@@ -381,7 +387,13 @@ const VehicleMaintenances = () => {
   const totalRules = maintenances.length;
   const countPreventivos = maintenances.filter(m => m.tipo_mantenimiento === 'Preventivo').length;
   const countCorrectivos = maintenances.filter(m => m.tipo_mantenimiento === 'Correctivo').length;
-  const countUrgentes = maintenances.filter(m => m.estado_alerta === 'CAMBIO URGENTE').length;
+  const countUrgentes = maintenances.filter(m => 
+    m.estado_alerta === 'CAMBIO URGENTE' || 
+    m.estado_alerta === 'CAMBIO REQUERIDO' || 
+    m.estado_alerta === 'REQUERIMIENTO' || 
+    m.estado_alerta === 'PENDIENTE URGENTE' || 
+    m.estado_alerta === 'PENDIENTE PROGRAMADO'
+  ).length;
 
   if (loading) {
     return (
@@ -456,7 +468,7 @@ const VehicleMaintenances = () => {
             <ShieldAlert className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-bold text-amber-700 uppercase tracking-wider">Cambios Urgentes</p>
+            <p className="text-xs font-bold text-amber-700 uppercase tracking-wider">Alertas / Cambios Urgentes</p>
             <p className="text-2xl font-black text-amber-600">{countUrgentes}</p>
           </div>
         </div>
@@ -523,7 +535,7 @@ const VehicleMaintenances = () => {
                 statusFilter === 'urgente' ? 'bg-amber-600 text-white shadow-sm' : 'bg-amber-50 text-amber-800 hover:bg-amber-100'
               }`}
             >
-              Urgentes ({countUrgentes})
+              Alertas / Urgentes ({countUrgentes})
             </button>
 
           </div>

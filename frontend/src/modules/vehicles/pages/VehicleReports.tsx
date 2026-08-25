@@ -20,6 +20,7 @@ interface Trip {
   galones_recargados?: string;
   costo_combustible_viaje: string;
   estado_viaje: string;
+  rendimiento_km_por_galon?: number;
 }
 
 interface FuelLog {
@@ -43,6 +44,7 @@ interface MaintenanceRecord {
   taller: string;
   costo: string;
   notas: string;
+  supplier?: any;
 }
 
 type TimeFilter = 'hoy' | 'semana' | 'mes' | 'año' | 'todo' | 'custom';

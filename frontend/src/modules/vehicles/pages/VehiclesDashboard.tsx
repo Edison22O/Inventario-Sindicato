@@ -13,12 +13,9 @@ import {
   DollarSign,
   Gauge,
   Users,
-  Plus,
   RefreshCw,
   ShieldAlert,
   CheckCircle,
-  TrendingUp,
-  Clock,
   ChevronRight,
   ExternalLink,
   Activity,
@@ -28,8 +25,7 @@ import {
   PenTool,
   Store,
   Camera,
-  Edit3,
-  Settings
+  Edit3
 } from 'lucide-react';
 import { compressImage } from '@/shared/utils/imageCompressor';
 import {
@@ -80,6 +76,7 @@ interface MaintenanceRecord {
   taller: string;
   costo: string;
   notas: string;
+  supplier?: any;
 }
 
 interface SupplierMaintStat {
@@ -767,7 +764,7 @@ const VehiclesDashboard = () => {
         <div className="bg-white rounded-3xl p-6 shadow-xs border border-gray-100 flex flex-col justify-between hover:shadow-md transition-shadow group">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-extrabold text-amber-800 uppercase tracking-wider">Mantenimientos Urgentes</p>
+              <p className="text-xs font-extrabold text-amber-800 uppercase tracking-wider">Alertas de Mantenimiento</p>
               <p className="text-3xl font-black text-gray-900 mt-1">{kpis.mantenimientos_alertas || 0}</p>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
@@ -1076,8 +1073,8 @@ const VehiclesDashboard = () => {
                         </div>
 
                         <button
-                          onClick={() => setSelectedMaint(maint)}
-                          className="px-3 py-2 bg-amber-600 text-white text-xs font-bold rounded-xl hover:bg-amber-700 transition-colors shadow-xs"
+                          onClick={() => handleOpenRecordModal(maint)}
+                          className="px-3 py-2 bg-amber-600 text-white text-xs font-bold rounded-xl hover:bg-amber-700 transition-colors shadow-xs cursor-pointer"
                         >
                           Registrar Servicio
                         </button>

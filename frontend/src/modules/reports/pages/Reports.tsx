@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import api from '@/shared/services/api';
 import { useInventoryWebSocket } from '@/modules/inventory/hooks/useInventoryWebSocket';
 import type { Product, Department, Category } from '@/shared/types';
-import { exportToExcel, exportTableToPDF } from '@/shared/utils/exportHelpers';
+import { exportToExcel } from '@/shared/utils/exportHelpers';
 
 const Reports = () => {
   const [products, setProducts] = useState<Product[]>([]);

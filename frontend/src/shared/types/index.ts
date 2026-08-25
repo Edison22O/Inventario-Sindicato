@@ -142,6 +142,7 @@ export interface VehicleTrip {
   galones_recargados?: string | number;
   km_recorridos?: number;
   costo_combustible_viaje?: string | number;
+  rendimiento_km_por_galon?: number;
 }
 
 export interface VehicleMaintenance {
@@ -171,6 +172,7 @@ export interface VehicleMaintenance {
   km_restantes_para_proximo_cambio: number;
   estado_alerta: string;
   notas?: string;
+  supplier?: any;
 }
 
 export interface VehicleMaintenanceRecord {
@@ -180,7 +182,7 @@ export interface VehicleMaintenanceRecord {
   vehicle_marca?: string;
   vehicle_modelo?: string;
   maintenance_rule?: number | null;
-  supplier?: number | null;
+  supplier?: any;
   supplier_name?: string | null;
   tipo_mantenimiento?: 'Preventivo' | 'Correctivo';
   fecha: string;

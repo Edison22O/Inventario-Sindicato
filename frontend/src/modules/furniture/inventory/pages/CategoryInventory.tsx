@@ -88,7 +88,7 @@ const CategoryInventory = () => {
       toast.success('Producto actualizado');
     } else {
       if (!formData.get('category')) {
-        formData.set('category', String(category?.id || targetCatId || id));
+        formData.set('category', String(category?.id || id));
       }
       await api.post('/furniture/products/', formData);
       toast.success('Producto creado con éxito');

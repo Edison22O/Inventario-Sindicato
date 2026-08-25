@@ -87,7 +87,7 @@ const DepartmentInventory = () => {
       await api.patch(`/furniture/products/${selectedProduct.public_id}/`, formData);
     } else {
       if (!formData.get('department')) {
-        formData.set('department', String(department?.id || targetDeptId || id));
+        formData.set('department', String(department?.id || id));
       }
       await api.post('/furniture/products/', formData);
     }
