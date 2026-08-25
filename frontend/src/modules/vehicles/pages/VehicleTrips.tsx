@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Layers, ArrowUpRight, ArrowDownLeft, Clock, CheckCircle2, Truck, User } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Layers, ArrowUpRight, ArrowDownLeft, Clock, CheckCircle2, Truck, User, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/shared/services/api';
 import type { Vehicle, VehicleTrip } from '@/shared/types';
@@ -77,17 +78,27 @@ const VehicleTrips = () => {
       {/* Background Texture */}
       <div className="absolute inset-0 z-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 pointer-events-none rounded-3xl mix-blend-multiply" />
 
-      {/* Header */}
-      <div className="relative z-10 mb-8">
-        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
-          <div className="p-2.5 bg-emerald-100 text-emerald-600 rounded-2xl shadow-sm">
-            <Layers className="w-7 h-7" />
-          </div>
-          Control de Entradas y Salidas
-        </h1>
-        <p className="text-gray-500 mt-1.5 text-base font-medium">
-          Monitoreo en tiempo real y registro inmediato de movimientos vehiculares del Sindicato.
-        </p>
+      {/* Header con botón de Actas de Entrega */}
+      <div className="relative z-10 mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
+            <div className="p-2.5 bg-emerald-100 text-emerald-600 rounded-2xl shadow-sm">
+              <Layers className="w-7 h-7" />
+            </div>
+            Control de Entradas y Salidas
+          </h1>
+          <p className="text-gray-500 mt-1.5 text-base font-medium">
+            Monitoreo en tiempo real y registro inmediato de movimientos vehiculares del Sindicato.
+          </p>
+        </div>
+
+        <Link
+          to="/vehicles/handovers"
+          className="px-5 py-3 bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs rounded-2xl transition-all shadow-md flex items-center gap-2 shrink-0 cursor-pointer"
+        >
+          <FileText className="w-4 h-4 text-emerald-300" />
+          Ver Actas de Entrega / Recepción
+        </Link>
       </div>
 
       {/* KPI Cards */}

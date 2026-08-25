@@ -213,12 +213,33 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 class SystemSettingsViewSet(viewsets.ModelViewSet):
     queryset = SystemSettings.objects.all()
     serializer_class = SystemSettingsSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsAuthenticated]
 
     def list(self, request, *args, **kwargs):
         settings = SystemSettings.load()
         serializer = self.get_serializer(settings)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['get', 'patch', 'post'])
+    def fuel_prices(self, request):
+        settings = SystemSettings.load()
+        if request.method in ['PATCH', 'POST', 'PUT']:
+            precio_gasolina = request.data.get('precio_gasolina')
+            precio_diesel = request.data.get('precio_diesel')
+            if precio_gasolina is not None:
+                settings.precio_gasolina = float(precio_gasolina)
+            if precio_diesel is not None:
+                settings.precio_diesel = float(precio_diesel)
+            settings.save()
+            return Response({
+                'message': 'Precios de combustible actualizados exitosamente',
+                'precio_gasolina': float(settings.precio_gasolina),
+                'precio_diesel': float(settings.precio_diesel)
+            })
+        return Response({
+            'precio_gasolina': float(settings.precio_gasolina),
+            'precio_diesel': float(settings.precio_diesel)
+        })
 
 class AdminDashboardStatsViewSet(viewsets.ViewSet):
     permission_classes = [IsAdminRole]

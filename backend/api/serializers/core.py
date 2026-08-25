@@ -4,6 +4,11 @@ from django.contrib.auth import get_user_model
 from api.models.core import Role, User, Media, DriverProfile
 
 class DriverProfileSerializer(serializers.ModelSerializer):
+    user_name = serializers.CharField(source='user.get_full_name', read_only=True)
+    username = serializers.CharField(source='user.username', read_only=True)
+    first_name = serializers.CharField(source='user.first_name', read_only=True)
+    last_name = serializers.CharField(source='user.last_name', read_only=True)
+
     class Meta:
         model = DriverProfile
         fields = '__all__'

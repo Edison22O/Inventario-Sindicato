@@ -11,6 +11,7 @@ from api.serializers.vehicles import VehicleSerializer, VehicleTripSerializer, V
 from api.mixins import AuditLogMixin
 from api.signals import broadcast_inventory_update
 from api.models.core import DriverProfile
+from api.models.suppliers import VehicleSupplier
 
 class VehicleViewSet(AuditLogMixin, viewsets.ModelViewSet):
     queryset = Vehicle.objects.all().order_by('-id')
@@ -176,9 +177,44 @@ class VehicleDashboardStatsView(APIView):
 
         # Alertas Mantenimientos
         mantenimientos = VehicleMaintenance.objects.all()
-        mantenimientos_vencidos = [m for m in mantenimientos if m.estado_alerta == 'CAMBIO URGENTE']
-        mantenimientos_proximos = [m for m in mantenimientos if m.estado_alerta == 'PRÓXIMO']
+        mantenimientos_vencidos = [m for m in mantenimientos if m.estado_alerta in ['CAMBIO URGENTE', 'CAMBIO REQUERIDO', 'PENDIENTE URGENTE']]
+        mantenimientos_proximos = [m for m in mantenimientos if m.estado_alerta in ['REQUERIMIENTO', 'PENDIENTE PROGRAMADO']]
         mantenimientos_alertas = len(mantenimientos_vencidos) + len(mantenimientos_proximos)
+
+        # Alertas de Licencias de Conductor
+        from datetime import date
+        today = date.today()
+        licencias_alertas_data = []
+        drivers = DriverProfile.objects.select_related('user').all()
+        for d in drivers:
+            driver_name = d.user.get_full_name() or d.user.username
+            if d.fecha_vencimiento_licencia:
+                delta = (d.fecha_vencimiento_licencia - today).days
+                if delta < 0:
+                    licencias_alertas_data.append({
+                        'id': d.id,
+                        'conductor': driver_name,
+                        'tipo': d.tipo_licencia or 'Licencia',
+                        'vencimiento': d.fecha_vencimiento_licencia.isoformat(),
+                        'estado': 'LICENCIA VENCIDA',
+                        'dias': delta
+                    })
+                elif delta <= 30:
+                    licencias_alertas_data.append({
+                        'id': d.id,
+                        'conductor': driver_name,
+                        'tipo': d.tipo_licencia or 'Licencia',
+                        'vencimiento': d.fecha_vencimiento_licencia.isoformat(),
+                        'estado': 'PRÓXIMA A VENCER',
+                        'dias': delta
+                    })
+
+        disponibilidad_pct = round((en_sindicato / total_vehicles * 100), 1) if total_vehicles > 0 else 0.0
+
+        # Suma de Galones de Combustible
+        trips_gal = VehicleTrip.objects.aggregate(total=Sum('galones_recargados'))['total'] or 0
+        logs_gal = VehicleFuelLog.objects.aggregate(total=Sum('galones'))['total'] or 0
+        total_galones = round(float(trips_gal) + float(logs_gal), 2)
 
         # Datasets para Gráficas Dinámicas
         
@@ -209,42 +245,80 @@ class VehicleDashboardStatsView(APIView):
                 })
         fuel_expenses = sorted(fuel_expenses, key=lambda x: x['costo_total'], reverse=True)
 
-        # 3. Desglose Mantenimientos Correctivos vs Preventivos por Conductor y Año (Ej: "En el año X, Edison tuvo X correctivos y Y preventivos")
-        maint_records = VehicleMaintenanceRecord.objects.select_related('vehicle', 'maintenance_rule').all()
+        # 3. Desglose Mantenimientos Correctivos vs Preventivos por Proveedor / Taller y Año
+        suppliers_in_db = list(VehicleSupplier.objects.all())
+        maint_records = VehicleMaintenanceRecord.objects.select_related('vehicle', 'maintenance_rule', 'supplier').all()
+        current_year = timezone.now().year
         
-        # Agrupar mantenimientos por Año y Conductor (asociado a viajes o vehículo)
-        driver_maint_stats = {}
+        supplier_maint_stats = {}
+
+        # Pre-poblar ÚNICAMENTE los proveedores registrados de la base de datos
+        for s in suppliers_in_db:
+            key = (current_year, s.name.strip())
+            supplier_maint_stats[key] = {
+                'year': current_year,
+                'anio': current_year,
+                'año': current_year,
+                'proveedor': s.name.strip(),
+                'supplier_id': s.id,
+                'supplier_public_id': str(s.public_id),
+                'es_registrado': True,
+                'correctivos': 0,
+                'preventivos': 0,
+                'costo_correctivos': 0.0,
+                'costo_preventivos': 0.0,
+                'costo_total': 0.0,
+                'total_servicios': 0,
+            }
+
+        # Asociar registros únicamente si corresponden a un proveedor registrado
         for record in maint_records:
-            year = record.fecha.year if record.fecha else timezone.now().year
-            # Obtener conductor principal asociado al vehículo o viaje reciente
-            recent_trip = VehicleTrip.objects.filter(vehicle=record.vehicle).order_by('-fecha_hora_salida').first()
-            driver_name = "Sin Conductor Asignado"
-            if recent_trip and recent_trip.conductor:
-                full = f"{recent_trip.conductor.first_name or ''} {recent_trip.conductor.last_name or ''}".strip()
-                driver_name = full if full else recent_trip.conductor.username
+            year = record.fecha.year if record.fecha else current_year
+            sup_obj = record.supplier
+            taller_text = record.taller.strip() if record.taller else ""
 
-            key = (year, driver_name)
-            if key not in driver_maint_stats:
-                driver_maint_stats[key] = {
-                    'año': year,
-                    'conductor': driver_name,
-                    'correctivos': 0,
-                    'preventivos': 0,
-                    'costo_correctivos': 0.0,
-                    'costo_preventivos': 0.0,
-                }
-            
-            is_corrective = record.tipo_mantenimiento == 'Correctivo' or (record.maintenance_rule and record.maintenance_rule.tipo_mantenimiento == 'Correctivo')
-            cost = float(record.costo or 0)
-            if is_corrective:
-                driver_maint_stats[key]['correctivos'] += 1
-                driver_maint_stats[key]['costo_correctivos'] += cost
-            else:
-                driver_maint_stats[key]['preventivos'] += 1
-                driver_maint_stats[key]['costo_preventivos'] += cost
+            matched_supplier = None
 
-        driver_stats_list = list(driver_maint_stats.values())
-        driver_stats_list = sorted(driver_stats_list, key=lambda x: (x['año'], x['conductor']), reverse=True)
+            if sup_obj:
+                matched_supplier = sup_obj
+            elif taller_text:
+                for s in suppliers_in_db:
+                    if s.name.lower() in taller_text.lower() or taller_text.lower() in s.name.lower():
+                        matched_supplier = s
+                        break
+
+            if matched_supplier:
+                key = (year, matched_supplier.name.strip())
+                if key not in supplier_maint_stats:
+                    supplier_maint_stats[key] = {
+                        'year': year,
+                        'anio': year,
+                        'año': year,
+                        'proveedor': matched_supplier.name.strip(),
+                        'supplier_id': matched_supplier.id,
+                        'supplier_public_id': str(matched_supplier.public_id),
+                        'es_registrado': True,
+                        'correctivos': 0,
+                        'preventivos': 0,
+                        'costo_correctivos': 0.0,
+                        'costo_preventivos': 0.0,
+                        'costo_total': 0.0,
+                        'total_servicios': 0,
+                    }
+                
+                is_corrective = record.tipo_mantenimiento == 'Correctivo' or (record.maintenance_rule and record.maintenance_rule.tipo_mantenimiento == 'Correctivo')
+                cost = float(record.costo or 0)
+                supplier_maint_stats[key]['total_servicios'] += 1
+                supplier_maint_stats[key]['costo_total'] += cost
+                if is_corrective:
+                    supplier_maint_stats[key]['correctivos'] += 1
+                    supplier_maint_stats[key]['costo_correctivos'] += cost
+                else:
+                    supplier_maint_stats[key]['preventivos'] += 1
+                    supplier_maint_stats[key]['costo_preventivos'] += cost
+
+        supplier_stats_list = list(supplier_maint_stats.values())
+        supplier_stats_list = sorted(supplier_stats_list, key=lambda x: x['costo_total'], reverse=True)
 
         # Viajes Activos
         active_trips = VehicleTrip.objects.filter(estado_viaje='En Curso').select_related('vehicle', 'conductor')
@@ -261,8 +335,11 @@ class VehicleDashboardStatsView(APIView):
         # Totales financieros para gráficas del Dashboard
         total_fuel_cost = round(sum(item['costo_total'] for item in fuel_expenses), 2)
         total_maint_cost = round(sum(float(r.costo or 0) for r in maint_records), 2)
-        total_preventive_cost = round(sum(st['costo_preventivos'] for st in driver_stats_list), 2)
-        total_corrective_cost = round(sum(st['costo_correctivos'] for st in driver_stats_list), 2)
+        total_preventive_cost = round(sum(st['costo_preventivos'] for st in supplier_stats_list), 2)
+        total_corrective_cost = round(sum(st['costo_correctivos'] for st in supplier_stats_list), 2)
+        total_km_recorridos = sum(v.odometro_actual for v in vehicles)
+        total_grand_cost = round(total_fuel_cost + total_maint_cost, 2)
+        costo_promedio_km = round(total_grand_cost / total_km_recorridos, 2) if total_km_recorridos > 0 else 0.0
 
         # Consolidado de gastos por vehículo (Combustible + Mantenimiento)
         vehicle_consolidated = {}
@@ -290,24 +367,41 @@ class VehicleDashboardStatsView(APIView):
         consolidated_list = [item for item in vehicle_consolidated.values() if item['total'] > 0]
         consolidated_list = sorted(consolidated_list, key=lambda x: x['total'], reverse=True)
 
+        total_alertas_unificadas = matriculas_alertas + mantenimientos_alertas + len(licencias_alertas_data)
+
+        from api.models.core import SystemSettings
+        sys_settings = SystemSettings.load()
+
         return Response({
             'kpis': {
                 'total': total_vehicles,
                 'en_sindicato': en_sindicato,
                 'en_ruta': en_ruta,
                 'en_taller': en_taller,
+                'disponibilidad_pct': disponibilidad_pct,
                 'matriculas_alertas': matriculas_alertas,
                 'mantenimientos_alertas': mantenimientos_alertas,
+                'licencias_alertas': len(licencias_alertas_data),
+                'total_alertas_unificadas': total_alertas_unificadas,
                 'total_conductores': total_conductores,
                 'total_fuel_cost': total_fuel_cost,
                 'total_maint_cost': total_maint_cost,
                 'total_preventive_cost': total_preventive_cost,
-                'total_corrective_cost': total_corrective_cost
+                'total_corrective_cost': total_corrective_cost,
+                'total_grand_cost': total_grand_cost,
+                'total_galones': total_galones,
+                'total_km_recorridos': total_km_recorridos,
+                'costo_promedio_km': costo_promedio_km
+            },
+            'fuel_prices': {
+                'precio_gasolina': float(sys_settings.precio_gasolina),
+                'precio_diesel': float(sys_settings.precio_diesel)
             },
             'odometer_data': odometer_data,
             'fuel_expenses': fuel_expenses,
             'consolidated_expenses': consolidated_list,
-            'driver_maint_stats': driver_stats_list,
+            'supplier_maint_stats': supplier_stats_list,
+            'driver_maint_stats': supplier_stats_list,
             'active_trips': active_trips_data,
             'alerts': {
                 'mantenimientos': [
@@ -317,7 +411,8 @@ class VehicleDashboardStatsView(APIView):
                 'matriculas': [
                     {'vehicle_id': v.id, 'vehiculo': v.placa, 'vencimiento': v.fecha_vencimiento_matricula, 'estado': v.alerta_matricula, 'dias': v.dias_para_vencimiento_matricula}
                     for v in matriculas_vencidas + matriculas_proximas
-                ][:10]
+                ][:10],
+                'licencias': licencias_alertas_data[:10]
             }
         })
 

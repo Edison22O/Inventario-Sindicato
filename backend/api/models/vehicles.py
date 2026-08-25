@@ -264,6 +264,20 @@ class VehicleFuelLog(models.Model):
 
     def save(self, *args, **kwargs):
         is_new = not self.pk
+        if is_new:
+            from .core import SystemSettings
+            settings = SystemSettings.load()
+            if not self.precio_por_galon or float(self.precio_por_galon or 0) == 0:
+                tipo = (self.tipo_combustible or '').upper()
+                if tipo in ['EXTRA', 'SUPER', 'GASOLINA']:
+                    self.precio_por_galon = settings.precio_gasolina
+                else:
+                    self.precio_por_galon = settings.precio_diesel
+            
+            if (not self.costo_total or float(self.costo_total or 0) == 0) and self.galones and self.precio_por_galon:
+                import decimal
+                self.costo_total = round(decimal.Decimal(str(self.galones)) * decimal.Decimal(str(self.precio_por_galon)), 2)
+
         if is_new and self.vehicle:
             import decimal
             galones_sumar = decimal.Decimal(str(self.galones or 0))
@@ -314,6 +328,13 @@ class DriverVehicleHandover(models.Model):
     observaciones = models.TextField(blank=True, null=True)
     documento_acta_firmada = models.FileField(upload_to='vehicles/handovers/', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if self.tipo_acta and 'recep' in str(self.tipo_acta).lower():
+            self.tipo_acta = 'Recepción'
+        elif self.tipo_acta and 'entreg' in str(self.tipo_acta).lower():
+            self.tipo_acta = 'Entrega'
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Acta {self.tipo_acta} - {self.vehicle.placa} - {self.driver.username} ({self.fecha})"

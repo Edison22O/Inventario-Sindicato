@@ -27,21 +27,46 @@ const VehicleSupplierProfile = () => {
 
   const fetchSupplierData = async () => {
     try {
-      const [suppRes, recordsRes, vehRes] = await Promise.all([
-        api.get(`/vehicle-suppliers/${id}/`),
+      const [recordsRes, vehRes] = await Promise.all([
         api.get('/vehicle-maintenance-records/'),
         api.get('/vehicles/')
       ]);
-      setSupplier(suppRes.data);
       setVehicles(vehRes.data || []);
 
-      
+      let supplierData = null;
+      try {
+        const suppRes = await api.get(`/vehicle-suppliers/${id}/`);
+        supplierData = suppRes.data;
+      } catch (err) {
+        // Respaldo resiliente: buscar por id o public_id en el listado general
+        const listRes = await api.get('/vehicle-suppliers/');
+        const suppliersList = Array.isArray(listRes.data) ? listRes.data : (listRes.data?.results || []);
+        supplierData = suppliersList.find((s: any) => s.id?.toString() === id || s.public_id === id);
+      }
+
+      if (!supplierData) {
+        setSupplier(null);
+        return;
+      }
+
+      setSupplier(supplierData);
+
       // Filtrar registros que pertenecen a este proveedor
       const allRecs: VehicleMaintenanceRecord[] = recordsRes.data || [];
-      const filteredRecs = allRecs.filter(r => 
-        r.supplier === suppRes.data.id || 
-        (r.taller && r.taller.toLowerCase().includes(suppRes.data.name.toLowerCase()))
-      );
+      const supplierId = supplierData.id;
+      const supplierName = (supplierData.name || '').toLowerCase();
+      const filteredRecs = allRecs.filter(r => {
+        if (!r) return false;
+        let rSupId: any = null;
+        if (typeof r.supplier === 'object' && r.supplier !== null) {
+          rSupId = (r.supplier as any).id;
+        } else {
+          rSupId = r.supplier;
+        }
+        const matchesId = rSupId && (rSupId === supplierId || rSupId.toString() === supplierId.toString());
+        const matchesTaller = r.taller && supplierName && r.taller.toLowerCase().includes(supplierName);
+        return matchesId || matchesTaller;
+      });
       setRecords(filteredRecs);
     } catch (error) {
       toast.error('Error al cargar perfil del proveedor');

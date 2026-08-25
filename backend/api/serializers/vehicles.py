@@ -132,4 +132,16 @@ class DriverVehicleHandoverSerializer(serializers.ModelSerializer):
         full = f"{obj.driver.first_name or ''} {obj.driver.last_name or ''}".strip()
         return full if full else obj.driver.username
 
+    def to_internal_value(self, data):
+        data = data.copy() if hasattr(data, 'copy') else dict(data)
+        tipo = data.get('tipo_acta')
+        if tipo:
+            if isinstance(tipo, list):
+                tipo = tipo[0]
+            if 'recep' in str(tipo).lower():
+                data['tipo_acta'] = 'Recepción'
+            elif 'entreg' in str(tipo).lower():
+                data['tipo_acta'] = 'Entrega'
+        return super().to_internal_value(data)
+
 

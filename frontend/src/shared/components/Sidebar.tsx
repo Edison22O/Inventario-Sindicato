@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, Tags, Layers, LogOut, X, Truck, Wrench, FileBarChart, ChevronDown, Monitor, Armchair, Home as HomeIcon, Settings, Users, Store, Fuel } from 'lucide-react';
+import { LayoutDashboard, Package, Tags, Layers, LogOut, X, Truck, Wrench, FileBarChart, ChevronDown, Monitor, Armchair, Home as HomeIcon, Settings, Users, Store, Fuel, FileText } from 'lucide-react';
 import { authService } from '@/services/authService';
 import api from '@/shared/services/api';
 
@@ -69,6 +69,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     { to: '/vehicles/suppliers', icon: Store, label: 'Proveedores' },
     { to: '/vehicles/fuel-control', icon: Fuel, label: 'Vales de Combustible' },
     { to: '/vehicles/matriculas', icon: FileBarChart, label: 'Matrícula Vehicular' },
+    { to: '/vehicles/handovers', icon: FileText, label: 'Actas de Entrega' },
     { to: '/vehicles/trips', icon: Layers, label: 'Control de Salidas' },
     { to: '/vehicles/maintenances', icon: Wrench, label: 'Mantenimiento Vehicular' },
     { to: '/vehicles/history', icon: FileBarChart, label: 'Historial de Viajes' },
@@ -78,7 +79,10 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
   const vehiclesLinks = (isGlobalAdmin || isVehicleAdmin)
     ? allVehiclesLinks
-    : allVehiclesLinks.filter(link => link.to === '/vehicles/trips');
+    : [
+        { to: '/vehicles/trips', icon: Layers, label: 'Control de Salidas' },
+        { to: '/vehicles/handovers', icon: FileText, label: 'Actas de Entrega / Recepción' }
+      ];
 
   return (
     <>

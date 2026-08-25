@@ -42,6 +42,7 @@ import VehicleMatriculas from '@/modules/vehicles/pages/VehicleMatriculas';
 import VehicleFuelControl from '@/modules/vehicles/pages/VehicleFuelControl';
 import VehicleSuppliersCatalog from '@/modules/vehicles/pages/VehicleSuppliersCatalog';
 import VehicleSupplierProfile from '@/modules/vehicles/pages/VehicleSupplierProfile';
+import VehicleHandovers from '@/modules/vehicles/pages/VehicleHandovers';
 
 function App() {
   return (
@@ -103,9 +104,10 @@ function App() {
             <Route path="/vehicles/:id" element={<VehicleProfile />} />
           </Route>
 
-          {/* Vehicles Operative Routes (Control de Salidas para Conductores) */}
+          {/* Vehicles Operative Routes (Control de Salidas y Actas de Entrega para Conductores) */}
           <Route element={<RoleGuard allowedRoles={['Conductores', 'Conductor', 'vehiculo_admin', 'Administrador']} />}>
             <Route path="/vehicles/trips" element={<VehicleTrips />} />
+            <Route path="/vehicles/handovers" element={<VehicleHandovers />} />
           </Route>
 
 
