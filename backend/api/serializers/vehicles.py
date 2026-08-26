@@ -51,9 +51,9 @@ class VehicleTripSerializer(serializers.ModelSerializer):
     def get_galones_consumidos(self, obj):
         if not obj.km_recorridos or not obj.vehicle:
             return 0.0
-        rendimiento = float(obj.vehicle.rendimiento_km_por_galon or 25)
+        rendimiento = float(obj.vehicle.rendimiento_km_por_galon or 40.0)
         if rendimiento <= 0:
-            rendimiento = 25.0
+            rendimiento = 40.0
         return round(float(obj.km_recorridos) / rendimiento, 3)
 
 class VehicleRegistrationRecordSerializer(serializers.ModelSerializer):

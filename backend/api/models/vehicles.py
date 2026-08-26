@@ -124,15 +124,20 @@ class VehicleTrip(models.Model):
             
         # 2. Al actualizar (Llegada), calcular los deltas
         if self.pk and self.estado_viaje == 'Finalizado' and self.kilometraje_llegada is not None:
+            if self.vehicle:
+                self.vehicle.refresh_from_db()
+
             # Calcular KM
             self.km_recorridos = self.kilometraje_llegada - self.kilometraje_salida
             
-            # Obtener parametros del vehiculo
-            rendimiento = self.vehicle.rendimiento_km_por_galon or 1 # Evitar division por cero
-            
+            # Obtener parametros del vehiculo (por defecto 40 km/gal)
+            rendimiento = float(self.vehicle.rendimiento_km_por_galon or 40.0)
+            if rendimiento <= 0:
+                rendimiento = 40.0
+
             # Calcular consumo
             import decimal
-            consumo_galones = decimal.Decimal(self.km_recorridos) / rendimiento
+            consumo_galones = decimal.Decimal(str(self.km_recorridos)) / decimal.Decimal(str(rendimiento))
             
             # Obtener precio global
             settings = SystemSettings.load()
