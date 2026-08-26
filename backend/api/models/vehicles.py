@@ -61,6 +61,15 @@ class Vehicle(models.Model):
         if dias <= 30: return "PRÓXIMA A VENCER"
         return "VIGENTE"
 
+    def save(self, *args, **kwargs):
+        if self.tipo_combustible:
+            tc_upper = str(self.tipo_combustible).upper()
+            if 'DIESEL' in tc_upper or 'DIÉSEL' in tc_upper:
+                self.tipo_combustible = 'Diesel'
+            else:
+                self.tipo_combustible = 'Gasolina Extra'
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.placa} - {self.marca} {self.modelo}"
 
@@ -134,7 +143,7 @@ class VehicleTrip(models.Model):
                 precio_galon = settings.precio_gasolina
             
             # Calcular costo del viaje
-            self.costo_combustible_viaje = consumo_galones * precio_galon
+            self.costo_combustible_viaje = round(consumo_galones * precio_galon, 2)
             
             # Actualizar el Vehículo (Odómetro y Combustible actual)
             # Combustible actual = lo que tenía - lo que consumió + lo que recargó (si reporta recarga)
