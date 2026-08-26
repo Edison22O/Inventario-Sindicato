@@ -220,7 +220,7 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(settings)
         return Response(serializer.data)
 
-    @action(detail=False, methods=['get', 'patch', 'post'])
+    @action(detail=False, methods=['get', 'patch', 'post', 'put'])
     def fuel_prices(self, request):
         settings = SystemSettings.load()
         if request.method in ['PATCH', 'POST', 'PUT']:
@@ -231,6 +231,11 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
             if precio_diesel is not None:
                 settings.precio_diesel = float(precio_diesel)
             settings.save()
+            try:
+                from api.signals import broadcast_inventory_update
+                broadcast_inventory_update('SystemSettings', 'update')
+            except Exception:
+                pass
             return Response({
                 'message': 'Precios de combustible actualizados exitosamente',
                 'precio_gasolina': float(settings.precio_gasolina),

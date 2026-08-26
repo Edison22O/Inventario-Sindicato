@@ -127,7 +127,11 @@ class VehicleTrip(models.Model):
             
             # Obtener precio global
             settings = SystemSettings.load()
-            precio_galon = settings.precio_gasolina if self.vehicle.tipo_combustible == 'Gasolina' else settings.precio_diesel
+            tipo_upper = (self.vehicle.tipo_combustible or '').upper()
+            if 'DIESEL' in tipo_upper or 'DIÉSEL' in tipo_upper:
+                precio_galon = settings.precio_diesel
+            else:
+                precio_galon = settings.precio_gasolina
             
             # Calcular costo del viaje
             self.costo_combustible_viaje = consumo_galones * precio_galon
@@ -268,11 +272,11 @@ class VehicleFuelLog(models.Model):
             from .core import SystemSettings
             settings = SystemSettings.load()
             if not self.precio_por_galon or float(self.precio_por_galon or 0) == 0:
-                tipo = (self.tipo_combustible or '').upper()
-                if tipo in ['EXTRA', 'SUPER', 'GASOLINA']:
-                    self.precio_por_galon = settings.precio_gasolina
-                else:
+                tipo = (self.tipo_combustible or (self.vehicle.tipo_combustible if self.vehicle else '') or '').upper()
+                if 'DIESEL' in tipo or 'DIÉSEL' in tipo:
                     self.precio_por_galon = settings.precio_diesel
+                else:
+                    self.precio_por_galon = settings.precio_gasolina
             
             if (not self.costo_total or float(self.costo_total or 0) == 0) and self.galones and self.precio_por_galon:
                 import decimal
