@@ -252,72 +252,207 @@ export const generateTablePDF = async (products: Product[], filename: string, ti
   const toastId = toast.loading('Generando PDF en formato tabla...');
   try {
     const doc = new jsPDF('landscape', 'mm', 'a4');
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
 
-    // Title
-    doc.setFontSize(22);
-    doc.setTextColor(5, 150, 105);
-    doc.text(title, doc.internal.pageSize.getWidth() / 2, 20, { align: 'center' });
+    // Título Principal y Cabecera Institucional
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(5, 150, 105); // emerald-600
+    doc.text(title, pageWidth / 2, 16, { align: 'center' });
     
     doc.setFontSize(10);
-    doc.setTextColor(100, 116, 139);
-    doc.text('Sindicato de Choferes Profesionales del Cantón Espejo', doc.internal.pageSize.getWidth() / 2, 28, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139); // slate-500
+    doc.text(`Sindicato de Choferes Profesionales del Cantón Espejo — Fecha de emisión: ${new Date().toLocaleDateString('es-EC')}`, pageWidth / 2, 23, { align: 'center' });
     
     doc.setDrawColor(226, 232, 240);
-    doc.line(14, 35, doc.internal.pageSize.getWidth() - 14, 35);
+    doc.line(14, 28, pageWidth - 14, 28);
 
-    // Prepare data
-    const tableData = [];
-    const images: Record<number, string> = {};
-
-    for (let i = 0; i < products.length; i++) {
-      const p = products[i];
+    // Pre-cargar imágenes base64 para los productos
+    const imagesByProductId: Record<number, string> = {};
+    for (const p of products) {
       if (p.image) {
         const b64 = await loadImageBase64(getImageUrl(p.image));
-        if (b64) images[i] = b64;
+        if (b64) imagesByProductId[p.id] = b64;
       }
-      
-      tableData.push([
-        '', // Image placeholder
-        p.codigo,
-        `${p.nombre}\n${p.color || ''}`,
-        `${p.marca || '-'}\n${p.material || '-'}`,
-        p.department_name || String(p.department),
-        p.category_name || String(p.category) || '-',
-        p.estado || '-',
-        p.cantidad
-      ]);
     }
 
-    applyAutoTable(doc, {
-      startY: 45,
-      head: [['Imagen', 'Código', 'Producto', 'Marca/Mod', 'Ubicación', 'Categoría', 'Estado', 'Cant.']],
-      body: tableData,
-      theme: 'grid',
-      headStyles: { fillColor: [5, 150, 105], textColor: 255, fontStyle: 'bold' },
-      styles: { cellPadding: 3, fontSize: 9, minCellHeight: 20, valign: 'middle' },
-      columnStyles: {
-        0: { cellWidth: 25, halign: 'center' },
-        1: { cellWidth: 30 },
-        2: { cellWidth: 'auto' },
-        3: { cellWidth: 40 },
-        4: { cellWidth: 35 },
-        5: { cellWidth: 35 },
-        6: { cellWidth: 25 },
-        7: { cellWidth: 15, halign: 'right' }
-      },
-      didDrawCell: (data: any) => {
-        if (data.column.index === 0 && data.cell.section === 'body') {
-          const rowIndex = data.row.index;
-          if (images[rowIndex]) {
-            let format = 'JPEG';
-            if (images[rowIndex].startsWith('data:image/png')) format = 'PNG';
-            else if (images[rowIndex].startsWith('data:image/webp')) format = 'WEBP';
-            
-            const dim = 16;
-            const x = data.cell.x + (data.cell.width - dim) / 2;
-            const y = data.cell.y + (data.cell.height - dim) / 2;
-            doc.addImage(images[rowIndex], format, x, y, dim, dim);
+    // Agrupar muebles por departamento
+    const departmentGroups: Record<string, Product[]> = {};
+    products.forEach((p) => {
+      const deptName = p.department_name || (typeof p.department === 'string' ? p.department : 'Sin Ubicación');
+      if (!departmentGroups[deptName]) {
+        departmentGroups[deptName] = [];
+      }
+      departmentGroups[deptName].push(p);
+    });
+
+    const sortedDeptNames = Object.keys(departmentGroups).sort((a, b) => a.localeCompare(b));
+
+    let currentY = 34;
+
+    // Resumen de departamento para la sección final
+    const deptSummaries: { name: string; equipos: number; costo: number }[] = [];
+
+    for (let dIdx = 0; dIdx < sortedDeptNames.length; dIdx++) {
+      const deptName = sortedDeptNames[dIdx];
+      const deptProducts = departmentGroups[deptName];
+
+      const deptEquipos = deptProducts.reduce((sum, p) => sum + (p.cantidad || 0), 0);
+      const deptCosto = deptProducts.reduce((sum, p) => sum + (Number(p.costo || 0) * (p.cantidad || 0)), 0);
+
+      deptSummaries.push({ name: deptName, equipos: deptEquipos, costo: deptCosto });
+
+      // Verificar si hay espacio para el encabezado del departamento + tabla
+      if (currentY > pageHeight - 50) {
+        doc.addPage();
+        currentY = 20;
+      }
+
+      // Título de Sección del Departamento
+      doc.setFillColor(240, 253, 244); // emerald-50
+      doc.setDrawColor(167, 243, 208); // emerald-200
+      doc.roundedRect(14, currentY, pageWidth - 28, 9, 2, 2, 'FD');
+
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(4, 120, 87); // emerald-800
+      doc.text(`UBICACIÓN / DEPARTAMENTO: ${deptName.toUpperCase()}`, 18, currentY + 6);
+      currentY += 12;
+
+      // Armar filas de muebles para este departamento
+      const tableBody: any[] = [];
+      const imageIndexMap: Record<number, string> = {};
+
+      deptProducts.forEach((p, pIdx) => {
+        if (imagesByProductId[p.id]) {
+          imageIndexMap[pIdx] = imagesByProductId[p.id];
+        }
+
+        const unitCost = Number(p.costo || 0);
+        const totalCost = unitCost * (p.cantidad || 0);
+
+        tableBody.push([
+          '', // Espacio para imagen
+          p.codigo,
+          p.color ? `${p.nombre}\nColor: ${p.color}` : p.nombre,
+          `${p.marca || '-'}${p.material ? ' / ' + p.material : ''}`,
+          p.category_name || '-',
+          p.estado || '-',
+          p.cantidad,
+          `$${unitCost.toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          `$${totalCost.toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        ]);
+      });
+
+      // Agregar fila de subtotal del departamento
+      tableBody.push([
+        '',
+        '',
+        `SUBTOTAL DEPARTAMENTO (${deptName.toUpperCase()})`,
+        '',
+        '',
+        '',
+        deptEquipos,
+        '',
+        `$${deptCosto.toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      ]);
+
+      const subtotalRowIndex = tableBody.length - 1;
+
+      applyAutoTable(doc, {
+        startY: currentY,
+        head: [['Foto', 'Código', 'Mueble', 'Marca / Material', 'Categoría', 'Estado', 'Cant.', 'Precio Unit.', 'Precio Total']],
+        body: tableBody,
+        theme: 'grid',
+        headStyles: { fillColor: [5, 150, 105], textColor: 255, fontStyle: 'bold', fontSize: 8.5, halign: 'center' },
+        styles: { cellPadding: 2, fontSize: 8, minCellHeight: 14, valign: 'middle' },
+        columnStyles: {
+          0: { cellWidth: 18, halign: 'center' },
+          1: { cellWidth: 28 },
+          2: { cellWidth: 'auto' },
+          3: { cellWidth: 38 },
+          4: { cellWidth: 30 },
+          5: { cellWidth: 22 },
+          6: { cellWidth: 15, halign: 'right' },
+          7: { cellWidth: 26, halign: 'right' },
+          8: { cellWidth: 30, halign: 'right' }
+        },
+        didParseCell: (data: any) => {
+          if (data.section === 'body' && data.row.index === subtotalRowIndex) {
+            data.cell.styles.fontStyle = 'bold';
+            data.cell.styles.fillColor = [236, 253, 245]; // emerald-50
+            data.cell.styles.textColor = [4, 120, 87];   // emerald-800
           }
+        },
+        didDrawCell: (data: any) => {
+          if (data.column.index === 0 && data.cell.section === 'body' && data.row.index !== subtotalRowIndex) {
+            const rIdx = data.row.index;
+            if (imageIndexMap[rIdx]) {
+              let format = 'JPEG';
+              if (imageIndexMap[rIdx].startsWith('data:image/png')) format = 'PNG';
+              else if (imageIndexMap[rIdx].startsWith('data:image/webp')) format = 'WEBP';
+              
+              const dim = 12;
+              const x = data.cell.x + (data.cell.width - dim) / 2;
+              const y = data.cell.y + (data.cell.height - dim) / 2;
+              doc.addImage(imageIndexMap[rIdx], format, x, y, dim, dim);
+            }
+          }
+        }
+      });
+
+      currentY = (doc as any).lastAutoTable.finalY + 12;
+    }
+
+    // --- SECCIÓN FINAL: RESUMEN Y TOTAL GENERAL DE TODOS LOS DEPARTAMENTOS ---
+    if (currentY > pageHeight - 65) {
+      doc.addPage();
+      currentY = 20;
+    }
+
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42); // slate-900
+    doc.text('RESUMEN DE MUEBLES Y TOTAL GENERAL', 14, currentY);
+    currentY += 6;
+
+    const summaryTableBody = deptSummaries.map((ds) => [
+      ds.name,
+      ds.equipos.toString(),
+      `$${ds.costo.toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    ]);
+
+    const grandTotalEquipos = deptSummaries.reduce((sum, ds) => sum + ds.equipos, 0);
+    const grandTotalCosto = deptSummaries.reduce((sum, ds) => sum + ds.costo, 0);
+
+    summaryTableBody.push([
+      'TOTAL GENERAL (TODOS LOS DEPARTAMENTOS)',
+      grandTotalEquipos.toString(),
+      `$${grandTotalCosto.toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    ]);
+
+    const grandTotalRowIndex = summaryTableBody.length - 1;
+
+    applyAutoTable(doc, {
+      startY: currentY,
+      head: [['Departamento / Ubicación', 'Cantidad de Muebles', 'Valor Total Invertido ($)']],
+      body: summaryTableBody,
+      theme: 'grid',
+      headStyles: { fillColor: [15, 23, 42], textColor: 255, fontStyle: 'bold', fontSize: 9 },
+      styles: { cellPadding: 3, fontSize: 8.5, valign: 'middle' },
+      columnStyles: {
+        0: { cellWidth: 'auto' },
+        1: { cellWidth: 45, halign: 'center' },
+        2: { cellWidth: 60, halign: 'right' }
+      },
+      didParseCell: (data: any) => {
+        if (data.section === 'body' && data.row.index === grandTotalRowIndex) {
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.fillColor = [5, 150, 105]; // emerald-600
+          data.cell.styles.textColor = [255, 255, 255]; // blanco
+          data.cell.styles.fontSize = 9.5;
         }
       }
     });
