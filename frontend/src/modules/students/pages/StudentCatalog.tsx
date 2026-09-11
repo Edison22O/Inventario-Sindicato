@@ -2,11 +2,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import api from '@/shared/services/api';
 import { toast } from 'react-hot-toast';
 import { 
-  Users, UserPlus, Search, Shield, Filter, CheckCircle2, AlertTriangle, 
-  Award, Phone, Mail, Edit, Trash2, Layers, Tag, IdCard
+  Users, UserPlus, Search, Phone, Mail, Edit, Tag, IdCard
 } from 'lucide-react';
 
+
+import { useWebSocket } from '@/shared/context/WebSocketContext';
+
 interface Student {
+
   id: number;
   cedula: string;
   nombres: string;
@@ -55,6 +58,9 @@ export const StudentCatalog: React.FC = () => {
   useEffect(() => {
     fetchStudents();
   }, []);
+
+  useWebSocket(fetchStudents);
+
 
   const handleOpenModal = (student?: Student) => {
     if (student) {

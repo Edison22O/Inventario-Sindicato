@@ -49,16 +49,19 @@ import AdminScheduleCalendar from '@/modules/schedules/pages/AdminScheduleCalend
 import InstructorScheduleView from '@/modules/schedules/pages/InstructorScheduleView';
 import InstructorWeeklyReportView from '@/modules/reports/pages/InstructorWeeklyReportView';
 import StudentCatalog from '@/modules/students/pages/StudentCatalog';
+import { WebSocketProvider } from '@/shared/context/WebSocketContext';
 
 function App() {
   return (
-    <BrowserRouter>
-      <Toaster 
-        position="top-right" 
-        toastOptions={{ 
-          duration: 3000,
-        }} 
-      />
+    <WebSocketProvider>
+      <BrowserRouter>
+        <Toaster 
+          position="top-right" 
+          toastOptions={{ 
+            duration: 3000,
+          }} 
+        />
+
       <Routes>
         <Route path="/login" element={<Login />} />
         
@@ -134,6 +137,7 @@ function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
+  </WebSocketProvider>
   );
 }
 

@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import api from '@/shared/services/api';
 import { 
-  Calendar as CalendarIcon, Clock, Truck, User, Plus, CheckCircle, 
-  AlertTriangle, Shield, ArrowRight, Layers, Trash2, Edit
+  Calendar as CalendarIcon, Clock, Truck, User, Plus, 
+  AlertTriangle, Shield, Trash2
 } from 'lucide-react';
+
 import type { InstructorSchedule, Vehicle } from '@/shared/types';
+import { useWebSocket } from '@/shared/context/WebSocketContext';
+
 
 interface UserItem {
   id: number;
@@ -22,13 +25,16 @@ interface StudentItem {
   tipo_licencia: string;
 }
 
+import { formatDateToLocalYYYYMMDD } from '@/shared/utils/dateUtils';
+
 export const AdminScheduleCalendar: React.FC = () => {
   const [schedules, setSchedules] = useState<InstructorSchedule[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [instructors, setInstructors] = useState<UserItem[]>([]);
   const [students, setStudents] = useState<StudentItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState<string>(formatDateToLocalYYYYMMDD(new Date()));
+
 
   // Modal State for new schedule
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -94,6 +100,9 @@ export const AdminScheduleCalendar: React.FC = () => {
   useEffect(() => {
     fetchSchedulesAndData();
   }, [selectedDate]);
+
+  useWebSocket(fetchSchedulesAndData);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

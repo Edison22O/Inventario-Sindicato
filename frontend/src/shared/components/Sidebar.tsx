@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Package, Tags, Layers, LogOut, X, Truck, Wrench, FileBarChart, ChevronDown, Monitor, Armchair, Home as HomeIcon, Settings, Users, Store, Fuel, FileText, Award, Calendar, BookOpen, Clock } from 'lucide-react';
 import { authService } from '@/services/authService';
 import api from '@/shared/services/api';
+import { useWebSocket } from '@/shared/context/WebSocketContext';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -10,7 +11,9 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
+  const wsState = useWebSocket();
   const location = useLocation();
+
   const [isInventoryExpanded, setIsInventoryExpanded] = useState(false);
   const [isFurnitureExpanded, setIsFurnitureExpanded] = useState(false);
   const [isDrivingSchoolExpanded, setIsDrivingSchoolExpanded] = useState(true);
@@ -311,15 +314,22 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           </div>
         </nav>
 
-        <div className="p-4 border-t border-emerald-800/50 mt-2 relative z-10">
+        <div className="p-4 border-t border-emerald-800/50 mt-2 relative z-10 space-y-2">
+          <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-emerald-950/40 border border-emerald-800/40 text-[11px] font-medium text-emerald-200/80">
+            <span className="flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${wsState.isConnected ? 'bg-emerald-400 animate-pulse' : wsState.isConnecting ? 'bg-amber-400 animate-ping' : 'bg-red-400'}`} />
+              {wsState.isConnected ? 'En Vivo (WebSocket)' : wsState.isConnecting ? 'Conectando WebSocket...' : 'WebSocket Desconectado'}
+            </span>
+          </div>
+
           <button
             onClick={() => {
               authService.logout();
               window.location.href = '/login';
             }}
-            className="flex items-center gap-3 px-4 py-3 w-full rounded-2xl text-red-300 hover:text-red-200 hover:bg-red-500/10 transition-colors font-semibold"
+            className="flex items-center gap-3 px-4 py-2.5 w-full rounded-2xl text-red-300 hover:text-red-200 hover:bg-red-500/10 transition-colors font-semibold text-sm"
           >
-            <LogOut className="w-5 h-5 opacity-80" />
+            <LogOut className="w-4 h-4 opacity-80" />
             Cerrar Sesión
           </button>
         </div>

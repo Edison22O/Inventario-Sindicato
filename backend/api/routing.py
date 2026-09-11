@@ -3,4 +3,6 @@ from . import consumers
 
 websocket_urlpatterns = [
     path('ws/inventory/', consumers.InventoryConsumer.as_asgi()),
+    path('ws/system/', consumers.InventoryConsumer.as_asgi()),
 ]
+

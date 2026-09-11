@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Layers, ArrowUpRight, ArrowDownLeft, Clock, CheckCircle2, Truck, User, FileText } from 'lucide-react';
-import toast from 'react-hot-toast';
 import api from '@/shared/services/api';
 import type { Vehicle, VehicleTrip } from '@/shared/types';
 import DepartureModal from '@/modules/vehicles/components/DepartureModal';
@@ -25,8 +24,8 @@ const VehicleTrips = () => {
     fetchData();
   }, []);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const [vehiclesRes, tripsRes] = await Promise.all([
         api.get('/vehicles/'),
@@ -35,13 +34,13 @@ const VehicleTrips = () => {
       setVehicles(vehiclesRes.data || []);
       setActiveTrips((tripsRes.data || []).filter((t: VehicleTrip) => t.estado_viaje === 'En Curso'));
     } catch (error) {
-      toast.error('Error al cargar los datos');
+      console.error('Error al cargar los datos:', error);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
-  useInventoryWebSocket(fetchData);
+  useInventoryWebSocket(() => fetchData(false));
 
   const handleOpenDeparture = (vehicle: Vehicle) => {
     setSelectedVehicleForDeparture(vehicle);
@@ -55,12 +54,12 @@ const VehicleTrips = () => {
 
   const handleSaveDeparture = async (formData: FormData) => {
     await api.post('/vehicle-trips/', formData);
-    fetchData();
+    fetchData(false);
   };
 
   const handleSaveArrival = async (tripId: number, formData: FormData) => {
     await api.patch(`/vehicle-trips/${tripId}/register_arrival/`, formData);
-    fetchData();
+    fetchData(false);
   };
 
   const vehiclesInUnion = vehicles.filter(v => v.estado_actual === 'En Sindicato');

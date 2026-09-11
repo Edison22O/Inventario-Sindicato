@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { X, Upload, Camera } from 'lucide-react';
+import { X, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { Vehicle } from '@/shared/types';
-
-import { compressImage } from '@/shared/utils/imageCompressor';
+import { CameraInput } from '@/shared/components/CameraInput';
 
 interface DepartureModalProps {
   isOpen: boolean;
@@ -23,30 +22,12 @@ const DepartureModal: React.FC<DepartureModalProps> = ({ isOpen, onClose, onSave
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isCompressing, setIsCompressing] = useState(false);
 
   if (!isOpen || !vehicle) return null;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setIsCompressing(true);
-      try {
-        const compressed = await compressImage(file);
-        setImageFile(compressed);
-        setPreviewUrl(URL.createObjectURL(compressed));
-      } catch (error) {
-        setImageFile(file);
-        setPreviewUrl(URL.createObjectURL(file));
-      } finally {
-        setIsCompressing(false);
-      }
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -168,31 +149,14 @@ const DepartureModal: React.FC<DepartureModalProps> = ({ isOpen, onClose, onSave
               <span className="font-semibold">Información Actual:</span> El vehículo tiene {vehicle.odometro_actual} KM y {vehicle.combustible_actual_galones} galones de combustible.
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Foto Evidencia del Tablero *</label>
-              <div className="flex flex-col gap-4">
-                <div className="w-full h-48 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden relative group">
-                  {previewUrl ? (
-                    <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="flex flex-col items-center text-gray-400">
-                      <Camera className="w-10 h-10 mb-2 group-hover:text-blue-500 transition-colors" />
-                      <span className="font-medium group-hover:text-blue-500 transition-colors">Tocar para abrir cámara</span>
-                    </div>
-                  )}
-                  {/* El atributo capture="environment" obliga a abrir la cámara trasera para evitar subir fotos viejas de la galería */}
-                  <input 
-                    type="file" 
-                    accept="image/*"
-                    capture="environment"
-                    required
-                    onChange={handleImageChange}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  />
-                </div>
-                <p className="text-xs text-gray-500">Toma una foto clara del tablero mostrando el kilometraje y el nivel de gasolina.</p>
-              </div>
-            </div>
+            <CameraInput
+              label="Foto Evidencia del Tablero *"
+              required
+              colorTheme="blue"
+              previewUrl={previewUrl}
+              setPreviewUrl={setPreviewUrl}
+              onImageCaptured={(file) => setImageFile(file)}
+            />
 
           </form>
         </div>
@@ -201,8 +165,8 @@ const DepartureModal: React.FC<DepartureModalProps> = ({ isOpen, onClose, onSave
           <button type="button" onClick={onClose} className="px-6 py-2.5 rounded-xl font-medium text-gray-700 hover:bg-gray-100 transition-colors">
             Cancelar
           </button>
-          <button type="submit" form="departureForm" disabled={isSubmitting || isCompressing} className="px-6 py-2.5 rounded-xl font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2">
-            {isSubmitting || isCompressing ? (
+          <button type="submit" form="departureForm" disabled={isSubmitting} className="px-6 py-2.5 rounded-xl font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2">
+            {isSubmitting ? (
               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             ) : (
               <Upload className="w-5 h-5" />

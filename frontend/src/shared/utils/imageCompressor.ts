@@ -1,5 +1,11 @@
 export const compressImage = async (file: File, maxWidth = 1024, quality = 0.7): Promise<File> => {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
+    // Si la imagen ya pesa menos de 500KB, se retorna tal cual sin procesar
+    if (file.size <= 500 * 1024) {
+      resolve(file);
+      return;
+    }
+
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = (event) => {
@@ -17,10 +23,10 @@ export const compressImage = async (file: File, maxWidth = 1024, quality = 0.7):
 
         canvas.width = width;
         canvas.height = height;
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
         
         if (!ctx) {
-          resolve(file); // Fallback to original
+          resolve(file); // Fallback al original
           return;
         }
 
@@ -35,15 +41,15 @@ export const compressImage = async (file: File, maxWidth = 1024, quality = 0.7):
               });
               resolve(compressedFile);
             } else {
-              resolve(file); // Fallback
+              resolve(file);
             }
           },
           'image/jpeg',
           quality
         );
       };
-      img.onerror = (error) => reject(error);
+      img.onerror = () => resolve(file);
     };
-    reader.onerror = (error) => reject(error);
+    reader.onerror = () => resolve(file);
   });
 };

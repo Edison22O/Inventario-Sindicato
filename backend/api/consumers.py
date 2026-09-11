@@ -12,6 +12,11 @@ class InventoryConsumer(AsyncWebsocketConsumer):
         )
 
         await self.accept()
+        # Send initial confirmation connection message
+        await self.send(text_data=json.dumps({
+            'type': 'connection_established',
+            'message': 'Real-time WebSocket active'
+        }))
 
     async def disconnect(self, close_code):
         # Leave inventory group
@@ -19,6 +24,15 @@ class InventoryConsumer(AsyncWebsocketConsumer):
             self.group_name,
             self.channel_name
         )
+
+    async def receive(self, text_data=None, bytes_data=None):
+        if text_data:
+            try:
+                data = json.loads(text_data)
+                if data.get('type') == 'ping':
+                    await self.send(text_data=json.dumps({'type': 'pong'}))
+            except Exception:
+                pass
 
     # Receive message from room group
     async def inventory_update(self, event):
@@ -29,3 +43,4 @@ class InventoryConsumer(AsyncWebsocketConsumer):
             'type': 'inventory_update',
             'message': message
         }))
+

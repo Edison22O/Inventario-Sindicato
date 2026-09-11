@@ -185,3 +185,88 @@ try:
 except Exception as e:
     pass
 
+# Furniture Maintenance Signal
+try:
+    from .models.furniture import FurnitureMaintenanceLog
+    @receiver(post_save, sender=FurnitureMaintenanceLog)
+    @receiver(post_delete, sender=FurnitureMaintenanceLog)
+    def furniture_maintenance_changed(sender, instance, **kwargs):
+        action = 'delete' if 'created' not in kwargs else ('create' if kwargs['created'] else 'update')
+        broadcast_inventory_update('FurnitureMaintenanceLog', action)
+except Exception as e:
+    pass
+
+# Core & System Settings Signals
+try:
+    from .models.core import User, Role, SystemSettings
+    @receiver(post_save, sender=User)
+    @receiver(post_delete, sender=User)
+    def user_changed(sender, instance, **kwargs):
+        action = 'delete' if 'created' not in kwargs else ('create' if kwargs['created'] else 'update')
+        broadcast_inventory_update('User', action)
+
+    @receiver(post_save, sender=Role)
+    @receiver(post_delete, sender=Role)
+    def role_changed(sender, instance, **kwargs):
+        action = 'delete' if 'created' not in kwargs else ('create' if kwargs['created'] else 'update')
+        broadcast_inventory_update('Role', action)
+
+    @receiver(post_save, sender=SystemSettings)
+    def system_settings_changed(sender, instance, **kwargs):
+        broadcast_inventory_update('SystemSettings', 'update')
+except Exception as e:
+    pass
+
+# Learning & Education Signals
+try:
+    from .models.learning import (
+        LearningPhase, PhaseActivity, GradeTemplate, 
+        StudentEvaluation, PracticalAttendance, 
+        InstructorSchedule, WeeklyInstructorReport
+    )
+
+    @receiver(post_save, sender=LearningPhase)
+    @receiver(post_delete, sender=LearningPhase)
+    def learning_phase_changed(sender, instance, **kwargs):
+        action = 'delete' if 'created' not in kwargs else ('create' if kwargs['created'] else 'update')
+        broadcast_inventory_update('LearningPhase', action)
+
+    @receiver(post_save, sender=PhaseActivity)
+    @receiver(post_delete, sender=PhaseActivity)
+    def phase_activity_changed(sender, instance, **kwargs):
+        action = 'delete' if 'created' not in kwargs else ('create' if kwargs['created'] else 'update')
+        broadcast_inventory_update('PhaseActivity', action)
+
+    @receiver(post_save, sender=GradeTemplate)
+    @receiver(post_delete, sender=GradeTemplate)
+    def grade_template_changed(sender, instance, **kwargs):
+        action = 'delete' if 'created' not in kwargs else ('create' if kwargs['created'] else 'update')
+        broadcast_inventory_update('GradeTemplate', action)
+
+    @receiver(post_save, sender=StudentEvaluation)
+    @receiver(post_delete, sender=StudentEvaluation)
+    def student_evaluation_changed(sender, instance, **kwargs):
+        action = 'delete' if 'created' not in kwargs else ('create' if kwargs['created'] else 'update')
+        broadcast_inventory_update('StudentEvaluation', action)
+
+    @receiver(post_save, sender=PracticalAttendance)
+    @receiver(post_delete, sender=PracticalAttendance)
+    def practical_attendance_changed(sender, instance, **kwargs):
+        action = 'delete' if 'created' not in kwargs else ('create' if kwargs['created'] else 'update')
+        broadcast_inventory_update('PracticalAttendance', action)
+
+    @receiver(post_save, sender=InstructorSchedule)
+    @receiver(post_delete, sender=InstructorSchedule)
+    def instructor_schedule_changed(sender, instance, **kwargs):
+        action = 'delete' if 'created' not in kwargs else ('create' if kwargs['created'] else 'update')
+        broadcast_inventory_update('InstructorSchedule', action)
+
+    @receiver(post_save, sender=WeeklyInstructorReport)
+    @receiver(post_delete, sender=WeeklyInstructorReport)
+    def weekly_instructor_report_changed(sender, instance, **kwargs):
+        action = 'delete' if 'created' not in kwargs else ('create' if kwargs['created'] else 'update')
+        broadcast_inventory_update('WeeklyInstructorReport', action)
+except Exception as e:
+    pass
+
+

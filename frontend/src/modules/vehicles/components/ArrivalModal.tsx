@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { X, Upload, Camera } from 'lucide-react';
+import { X, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { VehicleTrip } from '@/shared/types';
-
-import { compressImage } from '@/shared/utils/imageCompressor';
+import { CameraInput } from '@/shared/components/CameraInput';
 
 interface ArrivalModalProps {
   isOpen: boolean;
@@ -11,8 +10,6 @@ interface ArrivalModalProps {
   onSave: (tripId: number, formData: FormData) => Promise<void>;
   trip: VehicleTrip | null;
 }
-
-import api from '@/shared/services/api';
 
 const ArrivalModal: React.FC<ArrivalModalProps> = ({ isOpen, onClose, onSave, trip }) => {
   const [formData, setFormData] = useState({
@@ -24,52 +21,24 @@ const ArrivalModal: React.FC<ArrivalModalProps> = ({ isOpen, onClose, onSave, tr
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isCompressing, setIsCompressing] = useState(false);
 
   React.useEffect(() => {
-    if (isOpen && trip) {
-      // Intentar jalar el odómetro del último vale de combustible creado durante el viaje
-      api.get(`/vehicle-fuel-logs/?vehicle=${trip.vehicle}`)
-        .then(res => {
-          const logs = res.data || [];
-          if (logs.length > 0) {
-            const latestFuelLog = logs[0];
-            if (latestFuelLog.odometro_recarga && latestFuelLog.odometro_recarga >= trip.kilometraje_salida) {
-              setFormData(prev => ({
-                ...prev,
-                kilometraje_llegada: latestFuelLog.odometro_recarga.toString(),
-                galones_recargados: (latestFuelLog.galones || '0').toString()
-              }));
-              toast.success(`Se jaló automáticamente el kilometraje (${latestFuelLog.odometro_recarga} km) registrado en el vale N.º ${latestFuelLog.numero_vale}`);
-            }
-          }
-        })
-        .catch(e => console.warn('Could not auto-fetch fuel log:', e));
+    if (isOpen) {
+      setFormData({
+        novedades_observaciones: '',
+        kilometraje_llegada: '',
+        galones_recargados: '0',
+      });
+      setImageFile(null);
+      setPreviewUrl(null);
     }
-  }, [isOpen, trip]);
+  }, [isOpen]);
 
   if (!isOpen || !trip) return null;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setIsCompressing(true);
-      try {
-        const compressed = await compressImage(file);
-        setImageFile(compressed);
-        setPreviewUrl(URL.createObjectURL(compressed));
-      } catch (error) {
-        setImageFile(file);
-        setPreviewUrl(URL.createObjectURL(file));
-      } finally {
-        setIsCompressing(false);
-      }
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -138,30 +107,14 @@ const ArrivalModal: React.FC<ArrivalModalProps> = ({ isOpen, onClose, onSave, tr
               <input required type="number" min={trip.kilometraje_salida} name="kilometraje_llegada" value={formData.kilometraje_llegada} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500" placeholder="Ej: 154150" />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Foto Evidencia del Tablero (Llegada) *</label>
-              <div className="flex flex-col gap-4">
-                <div className="w-full h-48 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden relative group">
-                  {previewUrl ? (
-                    <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="flex flex-col items-center text-gray-400">
-                      <Camera className="w-10 h-10 mb-2 group-hover:text-emerald-500 transition-colors" />
-                      <span className="font-medium group-hover:text-emerald-500 transition-colors">Tocar para abrir cámara</span>
-                    </div>
-                  )}
-                  {/* El atributo capture="environment" obliga a abrir la cámara trasera para evitar subir fotos viejas de la galería */}
-                  <input 
-                    type="file" 
-                    accept="image/*"
-                    capture="environment"
-                    required
-                    onChange={handleImageChange}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  />
-                </div>
-              </div>
-            </div>
+            <CameraInput
+              label="Foto Evidencia del Tablero (Llegada) *"
+              required
+              colorTheme="emerald"
+              previewUrl={previewUrl}
+              setPreviewUrl={setPreviewUrl}
+              onImageCaptured={(file) => setImageFile(file)}
+            />
 
           </form>
         </div>
@@ -170,8 +123,8 @@ const ArrivalModal: React.FC<ArrivalModalProps> = ({ isOpen, onClose, onSave, tr
           <button type="button" onClick={onClose} className="px-6 py-2.5 rounded-xl font-medium text-gray-700 hover:bg-gray-100 transition-colors">
             Cancelar
           </button>
-          <button type="submit" form="arrivalForm" disabled={isSubmitting || isCompressing} className="px-6 py-2.5 rounded-xl font-medium text-white bg-emerald-600 hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2">
-            {isSubmitting || isCompressing ? (
+          <button type="submit" form="arrivalForm" disabled={isSubmitting} className="px-6 py-2.5 rounded-xl font-medium text-white bg-emerald-600 hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2">
+            {isSubmitting ? (
               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             ) : (
               <Upload className="w-5 h-5" />

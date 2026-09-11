@@ -4,6 +4,8 @@ import toast from 'react-hot-toast';
 import api from '@/shared/services/api';
 import type { VehicleTrip } from '@/shared/types';
 import { getImageUrl } from '@/shared/utils/getImageUrl';
+import { useWebSocket } from '@/shared/context/WebSocketContext';
+
 
 const TripHistory = () => {
   const [trips, setTrips] = useState<VehicleTrip[]>([]);
@@ -34,6 +36,9 @@ const TripHistory = () => {
       setLoading(false);
     }
   };
+
+  useWebSocket(fetchTrips);
+
 
   const uniqueConductors = useMemo(() => {
     return Array.from(new Set(trips.map(t => t.conductor_name))).filter(Boolean).sort();

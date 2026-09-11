@@ -53,6 +53,9 @@ services:
       - "3000:3000"
     environment:
       - VITE_API_URL=${VITE_API_URL:-/api/}
+      - VITE_BACKEND_URL=${VITE_BACKEND_URL:-http://backend:8000}
+      - VITE_WS_BACKEND_URL=${VITE_WS_BACKEND_URL:-ws://backend:8000}
+
     depends_on:
       - backend
 

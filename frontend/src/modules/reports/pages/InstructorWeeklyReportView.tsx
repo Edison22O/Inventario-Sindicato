@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import api from '@/shared/services/api';
 import { 
-  FileText, Download, Printer, Calendar, User, Truck, CheckCircle2, ShieldCheck, Award
+  FileText, Printer
 } from 'lucide-react';
 import type { WeeklyInstructorReport, Vehicle } from '@/shared/types';
+import { useWebSocket } from '@/shared/context/WebSocketContext';
 
 interface UserItem {
   id: number;
@@ -13,23 +14,24 @@ interface UserItem {
 }
 
 export const InstructorWeeklyReportView: React.FC = () => {
-  const [reports, setReports] = useState<WeeklyInstructorReport[]>([]);
+  const [, setReports] = useState<WeeklyInstructorReport[]>([]);
   const [selectedReport, setSelectedReport] = useState<WeeklyInstructorReport | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [instructors, setInstructors] = useState<UserItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
 
   // Form State for new report
   const [instructorId, setInstructorId] = useState('');
   const [vehicleId, setVehicleId] = useState('');
   const [semanaNum, setSemanaNum] = useState(1);
-  const [fechaInicio, setFechaInicio] = useState('2026-02-01');
-  const [fechaFin, setFechaFin] = useState('2026-02-08');
-  const [periodo, setPeriodo] = useState('2025-2026');
+  const [fechaInicio] = useState('2026-02-01');
+  const [fechaFin] = useState('2026-02-08');
+  const [periodo] = useState('2025-2026');
   const [submitting, setSubmitting] = useState(false);
 
   // Sample activities rows based on informe semanal.docx
-  const [reportRows, setReportRows] = useState([
+  const [reportRows] = useState([
+
     { fecha: '01-02-2026', dia: 'Domingo', actividad: 'Incorporación a la circulación 2 Conducción en zona Urbana', ruta: 'Circuito 10 / Circuito 11', observacion: 'Práctica realizada con normalidad' },
     { fecha: '03-02-2026', dia: 'Martes', actividad: 'Incorporación a la circulación 2 Conducción en zona Urbana', ruta: 'Circuito 10 / Circuito 11', observacion: 'Práctica realizada con normalidad' },
     { fecha: '05-02-2026', dia: 'Jueves', actividad: 'Incorporación a la circulación 2 Técnica de conducción en autovías', ruta: 'Circuito 11', observacion: 'Excelente desenvolvimiento' },
@@ -70,12 +72,16 @@ export const InstructorWeeklyReportView: React.FC = () => {
     fetchData();
   }, []);
 
+  useWebSocket(fetchData);
+
+
   const handleCreateReport = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     try {
       const instObj = instructors.find(u => u.id.toString() === instructorId);
-      const instName = instObj ? `${instObj.first_name} ${instObj.last_name}`.strip() || instObj.username : 'Instructor';
+      const instName = instObj ? `${instObj.first_name} ${instObj.last_name}`.trim() || instObj.username : 'Instructor';
+
 
       const res = await api.post('/weekly-instructor-reports/', {
         instructor: parseInt(instructorId),

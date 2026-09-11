@@ -5,6 +5,8 @@ import toast from 'react-hot-toast';
 import api from '@/shared/services/api';
 import type { Vehicle, VehicleTrip, VehicleMaintenance, VehicleRegistrationRecord } from '@/shared/types';
 import { getImageUrl } from '@/shared/utils/getImageUrl';
+import { useWebSocket } from '@/shared/context/WebSocketContext';
+
 
 const VehicleProfile = () => {
   const { id } = useParams<{ id: string }>();
@@ -52,6 +54,9 @@ const VehicleProfile = () => {
       setLoading(false);
     }
   };
+
+  useWebSocket(fetchVehicleData);
+
 
   const loadRegistrations = async () => {
     setLoadingRegistrations(true);

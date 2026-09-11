@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from '@/shared/services/api';
 import { toast } from 'react-hot-toast';
 import { 
-  User, CheckCircle, AlertTriangle, XCircle, Star, Calendar, 
-  Award, Clock, ChevronRight, Save, BookOpen, Layers, Filter, RefreshCw
+  CheckCircle, Calendar, Award, Clock, Save, Layers
 } from 'lucide-react';
-import type { LearningPhase, StudentEvaluation, PracticalAttendance, GradeTemplate } from '@/shared/types';
+import type { LearningPhase, StudentEvaluation, GradeTemplate } from '@/shared/types';
+import { useWebSocket } from '@/shared/context/WebSocketContext';
 
 interface Student {
   id: number;
@@ -19,6 +20,9 @@ interface Student {
 }
 
 export const InstructorEvaluationView: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const studentIdParam = searchParams.get('studentId');
+
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [phases, setPhases] = useState<LearningPhase[]>([]);
@@ -45,11 +49,15 @@ export const InstructorEvaluationView: React.FC = () => {
 
       const studentList: Student[] = studentsRes.data || [];
       setStudents(studentList);
-      if (studentList.length > 0 && !selectedStudent) {
-        setSelectedStudent(studentList[0]);
+      if (studentList.length > 0) {
+        const matched = studentIdParam 
+          ? studentList.find(s => s.id === parseInt(studentIdParam)) 
+          : null;
+        setSelectedStudent(matched || studentList[0]);
       }
 
       setPhases(phasesRes.data || []);
+
 
       // Build grade template dictionary
       const tplDict: Record<number, GradeTemplate> = {};
@@ -106,11 +114,24 @@ export const InstructorEvaluationView: React.FC = () => {
     fetchData();
   }, []);
 
+  useWebSocket(fetchData);
+
+
+  useEffect(() => {
+    if (studentIdParam && students.length > 0) {
+      const matched = students.find(s => s.id === parseInt(studentIdParam));
+      if (matched) {
+        setSelectedStudent(matched);
+      }
+    }
+  }, [studentIdParam, students]);
+
   useEffect(() => {
     if (selectedStudent) {
       fetchStudentData(selectedStudent.id, selectedVehicleTypeE);
     }
   }, [selectedStudent, selectedDate, selectedVehicleTypeE]);
+
 
   // Handle rating button click with auto-fill
   const handleScoreChange = (activityId: number, score: number) => {
@@ -119,8 +140,8 @@ export const InstructorEvaluationView: React.FC = () => {
     const defaultRec = tpl ? tpl.recomendacion_predeterminada : '';
 
     setEvaluations(prev => {
-      const existing = prev[activityId] || { puntuacion: score, observaciones: '', recomendaciones: '' };
       return {
+
         ...prev,
         [activityId]: {
           puntuacion: score,
@@ -352,7 +373,8 @@ export const InstructorEvaluationView: React.FC = () => {
                       key={veh.code}
                       type="button"
                       disabled={!isUnlocked}
-                      onClick={() => setSelectedVehicleTypeE(veh.code)}
+                      onClick={() => setSelectedVehicleTypeE(veh.code as any)}
+
                       className={`p-2.5 rounded-2xl text-xs font-black transition-all border flex items-center justify-between ${
                         isSelected 
                           ? 'bg-amber-600 text-white border-amber-700 shadow-md ring-2 ring-amber-500' 

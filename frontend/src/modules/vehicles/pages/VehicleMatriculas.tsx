@@ -4,6 +4,8 @@ import toast from 'react-hot-toast';
 import api from '@/shared/services/api';
 import type { Vehicle, VehicleRegistrationRecord } from '@/shared/types';
 import { getImageUrl } from '@/shared/utils/getImageUrl';
+import { useWebSocket } from '@/shared/context/WebSocketContext';
+
 
 const VehicleMatriculas = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -56,6 +58,9 @@ const VehicleMatriculas = () => {
       setLoading(false);
     }
   };
+
+  useWebSocket(fetchData);
+
 
   // Abrir Modal Renovar
   const handleOpenRenewModal = (vehicle: Vehicle) => {

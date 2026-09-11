@@ -5,6 +5,8 @@ import toast from 'react-hot-toast';
 import api from '@/shared/services/api';
 import type { Supplier, VehicleMaintenanceRecord } from '@/shared/types';
 import { confirmDialog } from '@/shared/utils/confirmDialog';
+import { useWebSocket } from '@/shared/context/WebSocketContext';
+
 
 const VehicleSuppliersCatalog = () => {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -36,6 +38,9 @@ const VehicleSuppliersCatalog = () => {
       setLoading(false);
     }
   };
+
+  useWebSocket(fetchData);
+
 
   const handleOpenCreateModal = () => {
     setEditingSupplier(null);

@@ -6,6 +6,8 @@ import { authService } from '@/services/authService';
 import { getImageUrl } from '@/shared/utils/getImageUrl';
 import { confirmDialog } from '@/shared/utils/confirmDialog';
 import type { DriverVehicleHandover, Vehicle } from '@/shared/types';
+import { useWebSocket } from '@/shared/context/WebSocketContext';
+
 
 const VehicleHandovers = () => {
   const [handovers, setHandovers] = useState<DriverVehicleHandover[]>([]);
@@ -109,6 +111,9 @@ const VehicleHandovers = () => {
       setLoading(false);
     }
   };
+
+  useWebSocket(fetchData);
+
 
   const handleOpenCreateModal = () => {
     setEditingHandover(null);

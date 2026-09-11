@@ -3,10 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import api from '@/shared/services/api';
 import { authService } from '@/services/authService';
 import { 
-  Calendar as CalendarIcon, Clock, Truck, User, Award, 
-  ChevronLeft, ChevronRight, Filter, Layers, LayoutGrid, List
+  Calendar as CalendarIcon, Clock, Truck, ChevronLeft, ChevronRight, Layers, LayoutGrid, List, Award
 } from 'lucide-react';
+import { formatDateToLocalYYYYMMDD } from '@/shared/utils/dateUtils';
 import type { InstructorSchedule } from '@/shared/types';
+import { useWebSocket } from '@/shared/context/WebSocketContext';
+
+
 
 interface UserItem {
   id: number;
@@ -29,7 +32,6 @@ export const InstructorScheduleView: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   const currentUserId = authService.getUserId();
-  const isAdmin = authService.isGlobalAdmin() || authService.isVehicleAdmin();
 
   // Load data
   const loadData = async () => {
@@ -65,6 +67,9 @@ export const InstructorScheduleView: React.FC = () => {
     loadData();
   }, []);
 
+  useWebSocket(loadData);
+
+
   // Calculate Monday through Saturday of current week
   const weekDays = useMemo(() => {
     const current = new Date(baseDate);
@@ -74,7 +79,7 @@ export const InstructorScheduleView: React.FC = () => {
     const monday = new Date(current);
     monday.setDate(current.getDate() + distanceToMonday);
 
-    const days = [];
+    const days: Date[] = [];
     for (let i = 0; i < 6; i++) { // Monday to Saturday
       const day = new Date(monday);
       day.setDate(monday.getDate() + i);
@@ -90,6 +95,10 @@ export const InstructorScheduleView: React.FC = () => {
     const endStr = weekDays[weekDays.length - 1].toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
     return `Del ${startStr} al ${endStr}`;
   }, [weekDays]);
+
+
+
+
 
   // Navigate week
   const changeWeek = (offsetWeeks: number) => {
@@ -107,8 +116,6 @@ export const InstructorScheduleView: React.FC = () => {
     if (!selectedInstructorId) return schedules;
     return schedules.filter(s => s.instructor === parseInt(selectedInstructorId));
   }, [schedules, selectedInstructorId]);
-
-  const selectedInstructorObj = instructors.find(i => i.id.toString() === selectedInstructorId);
 
   // DYNAMIC TIME SLOTS: Automatically generated from actual assignment start/end times
   const dynamicTimeSlots = useMemo(() => {
@@ -149,7 +156,6 @@ export const InstructorScheduleView: React.FC = () => {
     return instructorSchedules.filter(s => {
       if (s.fecha !== dayDateStr) return false;
       const sStart = s.hora_inicio.slice(0, 5);
-      const sEnd = s.hora_fin.slice(0, 5);
       return sStart === slotStart || (sStart >= slotStart && sStart < slotEnd);
     });
   };
@@ -284,7 +290,7 @@ export const InstructorScheduleView: React.FC = () => {
                   const dayName = DAY_NAMES[idx];
                   const dayNum = dayDate.getDate();
                   const monthName = dayDate.toLocaleDateString('es-ES', { month: 'short' });
-                  const isToday = dayDate.toISOString().split('T')[0] === new Date().toISOString().split('T')[0];
+                  const isToday = formatDateToLocalYYYYMMDD(dayDate) === formatDateToLocalYYYYMMDD(new Date());
 
                   return (
                     <th 
@@ -313,8 +319,9 @@ export const InstructorScheduleView: React.FC = () => {
 
                   {/* Day Cells */}
                   {weekDays.map((dayDate, dayIdx) => {
-                    const dayDateStr = dayDate.toISOString().split('T')[0];
+                    const dayDateStr = formatDateToLocalYYYYMMDD(dayDate);
                     const matchedSchedules = getScheduleForSlot(dayDateStr, slot.start, slot.end);
+
                     const hasSchedule = matchedSchedules.length > 0;
 
                     return (
@@ -331,7 +338,8 @@ export const InstructorScheduleView: React.FC = () => {
                             <div>
                               <div className="flex items-center justify-between gap-1 mb-1">
                                 <span className="text-[9px] font-black uppercase px-2 py-0.5 bg-amber-100 text-amber-900 rounded-full border border-amber-200">
-                                  {matchedSchedules[0].student_tipo_licencia || matchedSchedules[0].tipo_licencia}
+                                  {(matchedSchedules[0] as any).student_tipo_licencia || matchedSchedules[0].tipo_licencia}
+
                                 </span>
                                 <span className="text-[9px] font-bold text-gray-500">
                                   {matchedSchedules[0].hora_inicio.slice(0, 5)} - {matchedSchedules[0].hora_fin.slice(0, 5)}
@@ -350,9 +358,10 @@ export const InstructorScheduleView: React.FC = () => {
 
                             <button
                               type="button"
-                              onClick={() => navigate('/evaluations')}
+                              onClick={() => navigate(`/evaluations?studentId=${matchedSchedules[0].student}`)}
                               className="w-full py-1 text-[9px] font-black bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl transition-all shadow-xs"
                             >
+
                               Calificar
                             </button>
                           </div>
@@ -397,13 +406,14 @@ export const InstructorScheduleView: React.FC = () => {
                       </span>
 
                       <span className="text-[10px] font-black uppercase px-2.5 py-0.5 bg-amber-100 text-amber-900 rounded-full border border-amber-200">
-                        {sched.student_tipo_licencia || sched.tipo_licencia}
+                        {(sched as any).student_tipo_licencia || sched.tipo_licencia}
                       </span>
                     </div>
 
                     <span className="text-[10px] font-extrabold uppercase text-gray-400 block">Estudiante:</span>
                     <h3 className="text-base font-black text-gray-900 mt-0.5 mb-1">{sched.student_name}</h3>
-                    <p className="text-xs text-gray-500 font-medium mb-3">C.I.: {sched.student_cedula || '---'}</p>
+                    <p className="text-xs text-gray-500 font-medium mb-3">C.I.: {(sched as any).student_cedula || '---'}</p>
+
 
                     <div className="p-3 bg-emerald-50/80 rounded-2xl border border-emerald-100 text-xs space-y-1.5 mb-4">
                       <div className="flex items-center gap-2 font-bold text-gray-800">
@@ -423,9 +433,10 @@ export const InstructorScheduleView: React.FC = () => {
 
                   <button
                     type="button"
-                    onClick={() => navigate('/evaluations')}
+                    onClick={() => navigate(`/evaluations?studentId=${sched.student}`)}
                     className="w-full py-2.5 px-4 bg-emerald-800 hover:bg-emerald-900 text-white rounded-2xl font-bold text-xs transition-all flex items-center justify-center gap-2 shadow-sm"
                   >
+
                     <Award className="w-4 h-4 text-emerald-300" />
                     <span>Ir a Calificar Alumno</span>
                   </button>

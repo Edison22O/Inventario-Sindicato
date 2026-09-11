@@ -10,7 +10,7 @@ from api.models.maintenance import VehicleMaintenance, VehicleMaintenanceRecord
 from api.serializers.vehicles import VehicleSerializer, VehicleTripSerializer, VehicleRegistrationRecordSerializer, VehicleFuelLogSerializer, FuelBudgetSerializer, DriverVehicleHandoverSerializer
 from api.mixins import AuditLogMixin
 from api.signals import broadcast_inventory_update
-from api.models.core import DriverProfile
+from api.models.core import DriverProfile, ActivityLog
 from api.models.suppliers import VehicleSupplier
 
 class VehicleViewSet(AuditLogMixin, viewsets.ModelViewSet):
@@ -39,6 +39,19 @@ class VehicleTripViewSet(AuditLogMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     audit_module_name = 'Viajes'
 
+    def get_object(self):
+        queryset = self.filter_queryset(self.get_queryset())
+        val = self.kwargs.get('public_id') or self.kwargs.get('pk')
+        if val is not None:
+            if str(val).isdigit():
+                obj = queryset.filter(pk=int(val)).first()
+                if obj:
+                    return obj
+            obj = queryset.filter(public_id=val).first()
+            if obj:
+                return obj
+        return super().get_object()
+
     def get_queryset(self):
         queryset = super().get_queryset()
         vehicle_id = self.request.query_params.get('vehicle', None)
@@ -53,16 +66,17 @@ class VehicleTripViewSet(AuditLogMixin, viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        # Al crear la salida
+        # Al crear la salida, save() en el modelo VehicleTrip ya actualiza el vehículo a 'Fuera del Sindicato'
+        # y emite las señales post_save correspondientes para WebSockets.
         trip = serializer.save(conductor=self.request.user, estado_viaje='En Curso')
-        
-        # Actualizar el vehículo a "Fuera del Sindicato"
-        vehicle = trip.vehicle
-        vehicle.estado_actual = 'Fuera del Sindicato'
-        vehicle.save()
-        
-        broadcast_inventory_update('Vehicle', 'update')
-        broadcast_inventory_update('VehicleTrip', 'create')
+
+        if self.request and hasattr(self.request, 'user') and self.request.user.is_authenticated:
+            ActivityLog.objects.create(
+                user=self.request.user,
+                action='CREATE',
+                module=self.audit_module_name,
+                description=f"Registró salida del vehículo {trip.vehicle.placa}"
+            )
 
     @action(detail=True, methods=['patch'])
     def register_arrival(self, request, pk=None):
@@ -103,11 +117,16 @@ class VehicleTripViewSet(AuditLogMixin, viewsets.ModelViewSet):
         trip.foto_evidencia_llegada = foto_evidencia_llegada
         trip.fecha_hora_llegada = timezone.now()
         trip.estado_viaje = 'Finalizado'
-        # El save() se encargará de toda la matemática y actualización del vehículo
+        # El save() se encargará de toda la matemática, actualización del vehículo y emisión de señales
         trip.save()
 
-        broadcast_inventory_update('Vehicle', 'update')
-        broadcast_inventory_update('VehicleTrip', 'update')
+        if request.user and request.user.is_authenticated:
+            ActivityLog.objects.create(
+                user=request.user,
+                action='UPDATE',
+                module=self.audit_module_name,
+                description=f"Registró llegada del vehículo {trip.vehicle.placa}"
+            )
 
         return Response(VehicleTripSerializer(trip).data)
 

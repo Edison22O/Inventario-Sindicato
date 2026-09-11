@@ -3,6 +3,8 @@ import { Plus, Edit2, Trash2, Key, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/shared/services/api';
 import { confirmDialog } from '@/shared/utils/confirmDialog';
+import { useWebSocket } from '@/shared/context/WebSocketContext';
+
 
 interface Role {
   id: number;
@@ -54,6 +56,9 @@ const UserManagement = () => {
       setIsLoading(false);
     }
   };
+
+  useWebSocket(fetchData);
+
 
   const handleOpenModal = (user?: User) => {
     if (user) {

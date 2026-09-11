@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Truck, Layers, ArrowRight, Monitor, Armchair, LayoutDashboard, UserCheck, Award, BookOpen, Clock } from 'lucide-react';
+import { Truck, Layers, ArrowRight, Monitor, Armchair, LayoutDashboard, UserCheck, Award, Clock } from 'lucide-react';
+
 import { authService } from '@/services/authService';
 import api from '@/shared/services/api';
 import DriverSelfProfileModal from '@/modules/vehicles/components/DriverSelfProfileModal';
