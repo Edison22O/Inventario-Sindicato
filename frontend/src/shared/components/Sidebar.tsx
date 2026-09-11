@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, Tags, Layers, LogOut, X, Truck, Wrench, FileBarChart, ChevronDown, Monitor, Armchair, Home as HomeIcon, Settings, Users, Store, Fuel, FileText } from 'lucide-react';
+import { LayoutDashboard, Package, Tags, Layers, LogOut, X, Truck, Wrench, FileBarChart, ChevronDown, Monitor, Armchair, Home as HomeIcon, Settings, Users, Store, Fuel, FileText, Award, Calendar, BookOpen, Clock } from 'lucide-react';
 import { authService } from '@/services/authService';
 import api from '@/shared/services/api';
 
@@ -13,6 +13,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const location = useLocation();
   const [isInventoryExpanded, setIsInventoryExpanded] = useState(false);
   const [isFurnitureExpanded, setIsFurnitureExpanded] = useState(false);
+  const [isDrivingSchoolExpanded, setIsDrivingSchoolExpanded] = useState(true);
   const [isVehiclesExpanded, setIsVehiclesExpanded] = useState(false);
   
   const [orgName, setOrgName] = useState('Sindicato de Choferes Profesionales del Cantón Espejo');
@@ -62,6 +63,14 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     { to: '/furniture/reports', icon: FileBarChart, label: 'Reportes' },
   ];
 
+  const drivingSchoolLinks = [
+    { to: '/students', icon: Users, label: 'Matrícula de Estudiantes' },
+    { to: '/schedules', icon: Calendar, label: 'Asignación de Horarios' },
+    { to: '/instructor-schedules', icon: Clock, label: 'Horario' },
+    { to: '/evaluations', icon: Award, label: 'Calificación por Fases' },
+    { to: '/instructor-reports', icon: FileText, label: 'Reportes de Instructores' },
+  ];
+
   const allVehiclesLinks = [
     { to: '/vehicles/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/vehicles/catalog', icon: Truck, label: 'Flota Vehicular' },
@@ -75,7 +84,6 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     { to: '/vehicles/history', icon: FileBarChart, label: 'Historial de Viajes' },
     { to: '/vehicles/reports', icon: FileBarChart, label: 'Reportes' },
   ];
-
 
   const vehiclesLinks = (isGlobalAdmin || isVehicleAdmin)
     ? allVehiclesLinks
@@ -137,6 +145,43 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           </Link>
 
           <div className="space-y-6">
+          {/* Módulo Independiente: Prácticas de Conducción */}
+          <div>
+            <button
+              onClick={() => setIsDrivingSchoolExpanded(!isDrivingSchoolExpanded)}
+              className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl transition-all duration-300 font-semibold group relative overflow-hidden bg-gradient-to-r from-amber-600/30 to-amber-800/30 text-white border border-amber-500/30 shadow-sm`}
+            >
+              <div className="flex items-center gap-3">
+                <BookOpen className="w-5 h-5 text-amber-400" />
+                <span className="text-left leading-tight text-sm font-black">Prácticas de<br/>Conducción</span>
+              </div>
+              <ChevronDown className={`w-5 h-5 text-amber-200 transition-transform duration-300 ${isDrivingSchoolExpanded ? 'rotate-180' : ''}`} />
+            </button>
+
+            <div className={`space-y-1 mt-2 overflow-hidden transition-all duration-300 ${isDrivingSchoolExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
+              {drivingSchoolLinks.map((link) => {
+                const Icon = link.icon;
+                const isActive = location.pathname === link.to || location.pathname.startsWith(`${link.to}/`);
+
+                return (
+                  <Link
+                    key={link.to}
+                    to={link.to}
+                    onClick={onClose}
+                    className={`flex items-center gap-3 px-4 py-3 ml-2 rounded-xl transition-all duration-300 font-medium group relative overflow-hidden ${
+                      isActive
+                        ? 'bg-amber-600 text-white shadow-sm border border-amber-500 font-bold'
+                        : 'text-emerald-100/80 hover:bg-white/5 hover:text-white border border-transparent'
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-amber-200' : 'text-amber-300/60 group-hover:text-amber-200'}`} />
+                    <span className="text-sm">{link.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+
           {showTech && (
             <div>
               <button

@@ -383,6 +383,20 @@ const VehicleMaintenances = () => {
     });
   }, [maintenances, vehicles, searchTerm, statusFilter, tipoFilter, vehicleFilter]);
 
+  // Paginación (10 elementos por página)
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, tipoFilter, vehicleFilter]);
+
+  const totalPages = Math.ceil(filteredMaintenances.length / itemsPerPage);
+  const paginatedMaintenances = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredMaintenances.slice(start, start + itemsPerPage);
+  }, [filteredMaintenances, currentPage, itemsPerPage]);
+
   // KPIs
   const totalRules = maintenances.length;
   const countPreventivos = maintenances.filter(m => m.tipo_mantenimiento === 'Preventivo').length;
@@ -593,13 +607,15 @@ const VehicleMaintenances = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 font-medium">
-                {filteredMaintenances.map((m, index) => {
+                {paginatedMaintenances.map((m, index) => {
                   const v = vehicles.find(vh => vh.id === m.vehicle);
                   if (!v) return null;
 
                   const isCorrective = m.tipo_mantenimiento === 'Correctivo';
                   const isUrgent = m.estado_alerta === 'CAMBIO URGENTE';
                   const isWarning = m.estado_alerta === 'PRÓXIMO';
+
+                  const rowNumber = (currentPage - 1) * itemsPerPage + index + 1;
 
                   return (
                     <tr 
@@ -608,7 +624,7 @@ const VehicleMaintenances = () => {
                         isCorrective ? 'bg-red-50/20' : isUrgent ? 'bg-amber-50/20' : ''
                       }`}
                     >
-                      <td className="px-4 py-3.5 text-center text-gray-400 font-bold">{index + 1}</td>
+                      <td className="px-4 py-3.5 text-center text-gray-400 font-bold">{rowNumber}</td>
                       
                       <td className="px-4 py-3.5">
                         <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
@@ -703,7 +719,7 @@ const VehicleMaintenances = () => {
       ) : (
         /* VISTA DE TARJETAS GRID */
         <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredMaintenances.map(m => {
+          {paginatedMaintenances.map(m => {
             const v = vehicles.find(vh => vh.id === m.vehicle);
             if (!v) return null;
 
@@ -820,6 +836,53 @@ const VehicleMaintenances = () => {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Control de Paginación (10 elementos por página) */}
+      {filteredMaintenances.length > 0 && (
+        <div className="relative z-10 bg-white rounded-3xl p-4 mt-6 border border-gray-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="text-xs font-semibold text-gray-500">
+            Mostrando <span className="font-bold text-gray-900">{(currentPage - 1) * itemsPerPage + 1}</span> a{' '}
+            <span className="font-bold text-gray-900">{Math.min(currentPage * itemsPerPage, filteredMaintenances.length)}</span> de{' '}
+            <span className="font-bold text-gray-900">{filteredMaintenances.length}</span> mantenimientos
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="px-3.5 py-1.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                Anterior
+              </button>
+
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`w-8 h-8 rounded-xl text-xs font-black transition-all ${
+                      currentPage === page
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="px-3.5 py-1.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                Siguiente
+              </button>
+            </div>
+          )}
         </div>
       )}
 

@@ -64,6 +64,7 @@ const VehicleTrips = () => {
   };
 
   const vehiclesInUnion = vehicles.filter(v => v.estado_actual === 'En Sindicato');
+  const vehiclesInRoute = vehicles.filter(v => v.estado_actual === 'Fuera del Sindicato');
   
   if (loading) {
     return (
@@ -128,8 +129,8 @@ const VehicleTrips = () => {
             <Clock className="w-6 h-6 animate-pulse" />
           </div>
           <div>
-            <p className="text-xs font-bold text-amber-800 uppercase tracking-wider">En Ruta Activa</p>
-            <p className="text-2xl font-black text-amber-600">{activeTrips.length}</p>
+            <p className="text-xs font-bold text-amber-800 uppercase tracking-wider">Fuera del Sindicato (En Ruta)</p>
+            <p className="text-2xl font-black text-amber-600">{vehiclesInRoute.length}</p>
           </div>
         </div>
       </div>

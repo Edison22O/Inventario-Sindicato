@@ -13,10 +13,16 @@ from .views import (
 )
 from api.views.maintenance import VehicleMaintenanceViewSet, VehicleMaintenanceRecordViewSet
 from api.views.vehicles import VehicleFuelLogViewSet, FuelBudgetViewSet, DriverVehicleHandoverViewSet
+from api.views.learning import (
+    StudentViewSet, GradeTemplateViewSet, LearningPhaseViewSet, PhaseActivityViewSet,
+    StudentEvaluationViewSet, PracticalAttendanceViewSet, InstructorScheduleViewSet,
+    WeeklyInstructorReportViewSet
+)
 
 router = DefaultRouter()
 router.register(r'roles', RoleViewSet)
 router.register(r'users', UserViewSet)
+router.register(r'students', StudentViewSet, basename='students')
 router.register(r'categories', CategoryViewSet)
 router.register(r'departments', DepartmentViewSet)
 router.register(r'suppliers', SupplierViewSet)
@@ -46,6 +52,16 @@ router.register(r'vehicle-fuel-logs', VehicleFuelLogViewSet, basename='vehicle-f
 router.register(r'vehicle-registrations', VehicleRegistrationRecordViewSet, basename='vehicle-registrations')
 router.register(r'fuel-budgets', FuelBudgetViewSet, basename='fuel-budgets')
 router.register(r'driver-handovers', DriverVehicleHandoverViewSet, basename='driver-handovers')
+
+# Learning & Evaluation Routes
+router.register(r'grade-templates', GradeTemplateViewSet, basename='grade-templates')
+router.register(r'learning-phases', LearningPhaseViewSet, basename='learning-phases')
+router.register(r'phase-activities', PhaseActivityViewSet, basename='phase-activities')
+router.register(r'student-evaluations', StudentEvaluationViewSet, basename='student-evaluations')
+router.register(r'practical-attendances', PracticalAttendanceViewSet, basename='practical-attendances')
+router.register(r'instructor-schedules', InstructorScheduleViewSet, basename='instructor-schedules')
+router.register(r'weekly-instructor-reports', WeeklyInstructorReportViewSet, basename='weekly-instructor-reports')
+
 
 
 urlpatterns = [

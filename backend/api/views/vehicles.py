@@ -429,14 +429,14 @@ class FuelBudgetViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='set-initial')
     def set_initial(self, request):
         budget = FuelBudget.load()
-        saldo_gasolina = request.data.get('saldo_gasolina')
-        saldo_diesel = request.data.get('saldo_diesel')
+        base_gas = request.data.get('base_gasolina') if request.data.get('base_gasolina') is not None else request.data.get('saldo_gasolina')
+        base_die = request.data.get('base_diesel') if request.data.get('base_diesel') is not None else request.data.get('saldo_diesel')
         
         import decimal
-        if saldo_gasolina is not None:
-            budget.base_gasolina = decimal.Decimal(str(saldo_gasolina))
-        if saldo_diesel is not None:
-            budget.base_diesel = decimal.Decimal(str(saldo_diesel))
+        if base_gas is not None:
+            budget.base_gasolina = decimal.Decimal(str(base_gas))
+        if base_die is not None:
+            budget.base_diesel = decimal.Decimal(str(base_die))
             
         budget.recalculate()
         broadcast_inventory_update('FuelBudget', 'update')

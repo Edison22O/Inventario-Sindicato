@@ -43,6 +43,12 @@ import VehicleFuelControl from '@/modules/vehicles/pages/VehicleFuelControl';
 import VehicleSuppliersCatalog from '@/modules/vehicles/pages/VehicleSuppliersCatalog';
 import VehicleSupplierProfile from '@/modules/vehicles/pages/VehicleSupplierProfile';
 import VehicleHandovers from '@/modules/vehicles/pages/VehicleHandovers';
+// Learning & Evaluation Modules
+import InstructorEvaluationView from '@/modules/evaluations/pages/InstructorEvaluationView';
+import AdminScheduleCalendar from '@/modules/schedules/pages/AdminScheduleCalendar';
+import InstructorScheduleView from '@/modules/schedules/pages/InstructorScheduleView';
+import InstructorWeeklyReportView from '@/modules/reports/pages/InstructorWeeklyReportView';
+import StudentCatalog from '@/modules/students/pages/StudentCatalog';
 
 function App() {
   return (
@@ -59,6 +65,13 @@ function App() {
         {/* Protected Routes */}
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<Home />} />
+
+          {/* Learning, Evaluations & Student Routes */}
+          <Route path="/students" element={<StudentCatalog />} />
+          <Route path="/evaluations" element={<InstructorEvaluationView />} />
+          <Route path="/schedules" element={<AdminScheduleCalendar />} />
+          <Route path="/instructor-schedules" element={<InstructorScheduleView />} />
+          <Route path="/instructor-reports" element={<InstructorWeeklyReportView />} />
           
           {/* Inventory Modules (Tecnologia) */}
           <Route element={<RoleGuard allowedRoles={['Tecnologico', 'Encargado de Tecnología', 'Administrador']} />}>
@@ -109,6 +122,7 @@ function App() {
             <Route path="/vehicles/trips" element={<VehicleTrips />} />
             <Route path="/vehicles/handovers" element={<VehicleHandovers />} />
           </Route>
+
 
 
           {/* Admin / Settings (Administrador General & Administrador de Flota Vehicular) */}

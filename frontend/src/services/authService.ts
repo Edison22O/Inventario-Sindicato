@@ -46,6 +46,18 @@ export const authService = {
     }
   },
 
+  getUserId: (): number | null => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return null;
+    try {
+      const decoded = jwtDecode<any>(token);
+      return decoded.user_id || decoded.id || null;
+    } catch (e) {
+      console.error("Error decoding JWT:", e);
+      return null;
+    }
+  },
+
   isGlobalAdmin: (): boolean => {
     const role = authService.getUserRole();
     if (!role) return false;

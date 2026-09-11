@@ -83,15 +83,48 @@
     <h2>1. Resumen del Proyecto</h2>
     <p>El presente documento detalla la propuesta para la implementación de un sistema de información de nivel empresarial. La plataforma está diseñada para automatizar y tener trazabilidad total sobre los activos del sindicato, control estricto de los viajes de la flota vehicular y gestión de mantenimientos, todo operando en tiempo real y con soporte nativo para dispositivos móviles.</p>
 
-    <h2>2. Características y Módulos del Sistema</h2>
-    <ul>
-        <li><strong>Control de Flota Vehicular (Entradas y Salidas):</strong> Monitoreo en tiempo real del estado de los vehículos, registro de kilometraje, niveles de combustible y novedades.</li>
-        <li><strong>Captura de Evidencia Fotográfica Inteligente:</strong> Integración directa con la cámara de teléfonos móviles para subir evidencia in situ, con optimización algorítmica de imágenes para ahorrar hasta un 90% de ancho de banda y almacenamiento.</li>
-        <li><strong>Sincronización en Tiempo Real (WebSockets):</strong> Los cambios realizados por los guardias en la puerta se reflejan instantáneamente en las pantallas de administración sin necesidad de recargar la página.</li>
-        <li><strong>Gestión de Inventario (Bienes, Muebles y Equipos):</strong> Control detallado de altas, bajas, reparaciones y asignaciones a custodios.</li>
-        <li><strong>Reportes PDF Automatizados:</strong> Generación instantánea de actas de entrega-recepción, reportes de bajas y resúmenes de flota.</li>
-        <li><strong>Bitácora de Auditoría de Alta Seguridad:</strong> Registro inmutable de cada acción realizada en el sistema (quién, cuándo y desde dónde).</li>
-    </ul>
+    <h2>2. Descripción Detallada de Módulos, Valor Tecnológico y Alcance</h2>
+    <div style="margin-bottom: 20px;">
+        <h3>Módulo 1: Control de Flota Vehicular & Garita (Módulo CORE - Principal Inversión Tecnológica)</h3>
+        <p><strong>¿Qué hace?:</strong> Registro operativo de entradas/salidas de vehículos en garita, kilometraje inicial/final, nivel de combustible, chofer asignado, novedades mecánicas y panel administrativo en vivo.</p>
+        <p><em>Justificación de Valor:</em> Es el núcleo operativo y de mayor complejidad del sistema. Integra arquitectura de <strong>WebSockets en tiempo real</strong> para alertas instantáneas en la central administrativa, prevención de errores en kilometraje e interfaz optimizada para celulares de guardias de garita.</p>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+        <h3>Módulo 2: Captura y Compresión Inteligente de Evidencia Fotográfica</h3>
+        <p><strong>¿Qué hace?:</strong> Fotografías in situ tomadas directamente desde el celular en garita para documentar el estado físico de los vehículos o novedades.</p>
+        <p><em>Justificación de Valor:</em> Motor algorítmico que comprime las imágenes en un <strong>90%</strong> antes del envío, garantizando carga ultra rápida en redes 3G/4G y un ahorro masivo en hosting/almacenamiento cloud.</p>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+        <h3>Módulo 3: Gestión Integral de Inventario (Bienes, Muebles y Equipos)</h3>
+        <p><strong>¿Qué hace?:</strong> Control de activos fijos institucionales, asignación oficial a custodios por departamento, registro de ubicaciones físicas y actas de baja.</p>
+        <p><em>Justificación de Valor:</em> Garantiza el control patrimonial del Sindicato, eliminando pérdidas de bienes y facilitando auditorías físicas en cualquier momento.</p>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+        <h3>Módulo 4: Reportes PDF Automatizados y Actas Oficiales</h3>
+        <p><strong>¿Qué hace?:</strong> Generación en 1 clic de actas de entrega-recepción de vehículos y actas de baja en PDF con formato institucional.</p>
+        <p><em>Justificación de Valor:</em> Genera documentos en formato PDF oficial para respaldo institucional, eliminando carpetas físicas en papel y agilizando trámites.</p>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+        <h3>Módulo 5: Capacitación y Documentación del Sistema</h3>
+        <p><strong>¿Qué hace?:</strong> Entrenamiento práctico presencial/virtual a guardias y administradores + Manual de Usuario e instructivo operativo digital.</p>
+        <p><em>Justificación de Valor:</em> Asegura la adopción fluida del software por parte del personal sin curva de aprendizaje ni interrupción operativa.</p>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+        <h3>Módulo 6: Bitácora de Auditoría e Historial de Alta Seguridad</h3>
+        <p><strong>¿Qué hace?:</strong> Registro inalterable de cada acción efectuada en el sistema (quién, cuándo, hora exacta, IP y datos modificados/previos).</p>
+        <p><em>Justificación de Valor:</em> Seguridad de nivel empresarial que otorga transparencia total ante auditorías internas y directivas.</p>
+    </div>
+
+    <div class="price-box" style="border-left-color: #d97706; background-color: #fef3c7;">
+        <h3 style="color: #92400e; margin-top: 0;">Desarrollos Futuros y Tarifas de Módulos Adicionales</h3>
+        <p style="color: #78350f;">Si en el futuro el Sindicato requiere incorporar nuevos módulos no contemplados en el alcance inicial (ej. Módulo de Mantenimientos Preventivos Avanzados, Control de Combustible/Gasolineras, Módulo de Sanciones, etc.), cada nuevo módulo personalizado se cotizará e implementará a partir de <strong>$200.00 USD en adelante</strong>, según su complejidad técnica, número de pantallas y reglas de negocio requeridas.</p>
+        <p style="color: #78350f; font-size: 13px; margin-bottom: 0;"><em>* Todo desarrollo adicional será contratado e implementado exclusivamente con el desarrollador original durante la vigencia de la licencia.</em></p>
+    </div>
 
     <h2>3. Arquitectura y Stack Tecnológico</h2>
     <p>El sistema ha sido construido utilizando los estándares más modernos de la industria del desarrollo de software:</p>
@@ -110,8 +143,8 @@
         <p>El modelo más utilizado por instituciones para garantizar el correcto funcionamiento del software a largo plazo sin riesgos técnicos. El sindicato adquiere el derecho de uso exclusivo del sistema y delega la responsabilidad técnica completa al desarrollador.</p>
         
         <ul>
-            <li><strong>Costo de Implementación e Instalación:</strong> <span class="price">$1,500.00 USD</span> (Pago Único)</li>
-            <li><strong>Póliza de Soporte, Hosting y Mantenimiento:</strong> <span class="price">$100.00 USD</span> (Mensual)</li>
+            <li><strong>Costo de Implementación e Instalación:</strong> <span class="price">$2,300.00 USD</span> (Pago Único)</li>
+            <li><strong>Póliza de Soporte, Hosting y Mantenimiento:</strong> <span class="price">$135.00 USD</span> (Mensual)</li>
         </ul>
         <p><em>* Incluye: Alojamiento del sistema, mantenimiento preventivo de la base de datos, copias de seguridad (backups) semanales, solución inmediata de cualquier fallo técnico y soporte a usuarios.</em></p>
     </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Truck, Layers, ArrowRight, Monitor, Armchair, LayoutDashboard, UserCheck } from 'lucide-react';
+import { Truck, Layers, ArrowRight, Monitor, Armchair, LayoutDashboard, UserCheck, Award, BookOpen, Clock } from 'lucide-react';
 import { authService } from '@/services/authService';
 import api from '@/shared/services/api';
 import DriverSelfProfileModal from '@/modules/vehicles/components/DriverSelfProfileModal';
@@ -66,6 +66,27 @@ const Home = () => {
     }
   ];
 
+  const drivingSchoolActions = [
+    {
+      title: 'Prácticas de Conducción (Evaluación)',
+      description: 'Calificaciones por 5 fases y rotación vehicular.',
+      icon: Award,
+      to: '/evaluations',
+      color: 'bg-amber-600',
+      lightColor: 'bg-amber-600/10',
+      textColor: 'text-amber-600'
+    },
+    {
+      title: 'Horario del Instructor',
+      description: 'Consulta visual e informativa de clases asignadas.',
+      icon: Clock,
+      to: '/instructor-schedules',
+      color: 'bg-emerald-600',
+      lightColor: 'bg-emerald-600/10',
+      textColor: 'text-emerald-600'
+    }
+  ];
+
   const conductorActions = [
     {
       title: 'Control de Salidas',
@@ -121,10 +142,11 @@ const Home = () => {
   let quickActions: any[] = [];
 
   if (isGlobalAdmin) {
-    quickActions = [...techActions, ...furnitureActions, ...vehicleAdminActions, ...vehicleActions];
+    quickActions = [...techActions, ...furnitureActions, ...drivingSchoolActions, ...vehicleAdminActions, ...vehicleActions];
   } else {
     if (isTech) quickActions.push(...techActions);
     if (isFurniture) quickActions.push(...furnitureActions);
+    quickActions.push(...drivingSchoolActions);
     if (isVehicleAdmin) quickActions.push(...vehicleAdminActions);
     if (isConductor) quickActions.push(...conductorActions);
   }

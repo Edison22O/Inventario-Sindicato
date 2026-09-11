@@ -346,6 +346,23 @@ const VehicleFuelControl = () => {
 
   useInventoryWebSocket(fetchAllFuelData);
 
+  const handleOpenInitialBudgetModal = () => {
+    if (fuelBudget) {
+      const bg = fuelBudget.base_gasolina !== undefined && fuelBudget.base_gasolina !== null 
+        ? fuelBudget.base_gasolina 
+        : fuelBudget.saldo_gasolina;
+      const bd = fuelBudget.base_diesel !== undefined && fuelBudget.base_diesel !== null 
+        ? fuelBudget.base_diesel 
+        : fuelBudget.saldo_diesel;
+      setInitialGasolina(bg !== undefined && bg !== null ? bg.toString() : '300');
+      setInitialDiesel(bd !== undefined && bd !== null ? bd.toString() : '1200');
+    } else {
+      setInitialGasolina('300');
+      setInitialDiesel('1200');
+    }
+    setIsBudgetInitialModalOpen(true);
+  };
+
   const handleSetInitialBudget = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -426,6 +443,18 @@ const VehicleFuelControl = () => {
   const totalGalones = filteredLogs.reduce((acc, l) => acc + parseFloat(l.galones?.toString() || '0'), 0);
   const totalCosto = filteredLogs.reduce((acc, l) => acc + parseFloat(l.costo_total?.toString() || '0'), 0);
 
+  const extraSpentTotal = useMemo(() => {
+    return fuelLogs
+      .filter(l => l.tipo_combustible === 'EXTRA')
+      .reduce((acc, l) => acc + parseFloat(l.costo_total?.toString() || '0'), 0);
+  }, [fuelLogs]);
+
+  const dieselSpentTotal = useMemo(() => {
+    return fuelLogs
+      .filter(l => l.tipo_combustible === 'DIESEL')
+      .reduce((acc, l) => acc + parseFloat(l.costo_total?.toString() || '0'), 0);
+  }, [fuelLogs]);
+
   const saldoTotalNum = parseFloat(fuelBudget?.saldo_total?.toString() || '0');
   const saldoGasolinaNum = parseFloat(fuelBudget?.saldo_gasolina?.toString() || '0');
   const saldoDieselNum = parseFloat(fuelBudget?.saldo_diesel?.toString() || '0');
@@ -485,7 +514,7 @@ const VehicleFuelControl = () => {
       {/* Banner de Alerta de Saldo Bajo ($40 o menos o Déficit Negativo) */}
       {(isLowBalance || saldoGasolinaNum < 0 || saldoDieselNum < 0) && (
         <div className={`relative z-10 mb-8 p-5 rounded-3xl shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4 ${
-          saldoGasolinaNum < 0 || saldoDieselNum < 0 ? 'bg-red-700 text-white animate-bounce' : 'bg-amber-600 text-white animate-pulse'
+          saldoGasolinaNum < 0 || saldoDieselNum < 0 ? 'bg-red-700 text-white' : 'bg-amber-600 text-white'
         }`}>
           <div className="flex items-center gap-3">
             <div className="p-3 bg-white/20 rounded-2xl">
@@ -541,7 +570,7 @@ const VehicleFuelControl = () => {
             <p className="text-[10px] font-semibold text-emerald-200 mt-1">Presupuesto Global de Vales</p>
           </div>
           <button
-            onClick={() => setIsBudgetInitialModalOpen(true)}
+            onClick={handleOpenInitialBudgetModal}
             className="p-2.5 bg-white/20 hover:bg-white/30 rounded-xl transition-colors text-xs font-bold"
             title="Ajustar Presupuesto Inicial"
           >
@@ -1455,16 +1484,18 @@ const VehicleFuelControl = () => {
           <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
             <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-emerald-800 to-teal-800 text-white">
               <h2 className="text-lg font-extrabold flex items-center gap-2">
-                <DollarSign className="w-5 h-5" /> Configurar Presupuesto Inicial
+                <DollarSign className="w-5 h-5" /> Configurar Presupuesto Base Inicial
               </h2>
               <button onClick={() => setIsBudgetInitialModalOpen(false)} className="p-1 hover:bg-white/20 rounded-lg">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <form onSubmit={handleSetInitialBudget} className="p-6 space-y-4">
-              <p className="text-xs font-medium text-gray-500">Define los saldos iniciales disponibles para despacho de combustible:</p>
+              <p className="text-xs font-medium text-gray-500">
+                Define el presupuesto base total para despachos. El saldo disponible resultará de restar los vales de combustible ya consumidos.
+              </p>
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Saldo Inicial Gasolina Extra ($)</label>
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Presupuesto Base Gasolina Extra ($)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -1474,9 +1505,15 @@ const VehicleFuelControl = () => {
                   onChange={e => setInitialGasolina(e.target.value)}
                   className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 font-bold text-gray-900"
                 />
+                <div className="mt-1 flex justify-between text-[11px] font-semibold text-gray-500">
+                  <span>Vales en Extra: -${extraSpentTotal.toFixed(2)}</span>
+                  <span className={(parseFloat(initialGasolina || '0') - extraSpentTotal) < 0 ? 'text-red-600 font-bold' : 'text-emerald-700 font-bold'}>
+                    Nuevo Saldo: ${((parseFloat(initialGasolina || '0')) - extraSpentTotal).toFixed(2)}
+                  </span>
+                </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Saldo Inicial Diésel ($)</label>
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Presupuesto Base Diésel ($)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -1486,11 +1523,25 @@ const VehicleFuelControl = () => {
                   onChange={e => setInitialDiesel(e.target.value)}
                   className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 font-bold text-gray-900"
                 />
+                <div className="mt-1 flex justify-between text-[11px] font-semibold text-gray-500">
+                  <span>Vales en Diésel: -${dieselSpentTotal.toFixed(2)}</span>
+                  <span className={(parseFloat(initialDiesel || '0') - dieselSpentTotal) < 0 ? 'text-red-600 font-bold' : 'text-amber-700 font-bold'}>
+                    Nuevo Saldo: ${((parseFloat(initialDiesel || '0')) - dieselSpentTotal).toFixed(2)}
+                  </span>
+                </div>
               </div>
-              <div className="pt-2 flex justify-between items-center text-xs font-black text-emerald-700">
-                <span>TOTAL PRESUPUESTO:</span>
-                <span className="text-base">${((parseFloat(initialGasolina || '0')) + (parseFloat(initialDiesel || '0'))).toFixed(2)}</span>
+              
+              <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-100 space-y-1 text-xs">
+                <div className="flex justify-between font-bold text-gray-700">
+                  <span>PRESUPUESTO BASE TOTAL:</span>
+                  <span>${((parseFloat(initialGasolina || '0')) + (parseFloat(initialDiesel || '0'))).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between font-extrabold text-emerald-800 pt-1 border-t border-emerald-200/60">
+                  <span>SALDO DISPONIBLE ESTIMADO:</span>
+                  <span>${(((parseFloat(initialGasolina || '0')) - extraSpentTotal) + ((parseFloat(initialDiesel || '0')) - dieselSpentTotal)).toFixed(2)}</span>
+                </div>
               </div>
+
               <div className="pt-3 flex justify-end gap-3 border-t border-gray-100">
                 <button type="button" onClick={() => setIsBudgetInitialModalOpen(false)} className="px-4 py-2 text-xs font-bold text-gray-600">Cancelar</button>
                 <button type="submit" disabled={submitting} className="px-5 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20">{submitting ? 'Guardando...' : 'Establecer Presupuesto'}</button>

@@ -7,3 +7,9 @@ from .vehicles import (
     VehicleViewSet, VehicleTripViewSet, VehicleRegistrationRecordViewSet,
     VehicleDashboardStatsView, VehicleFuelLogViewSet, FuelBudgetViewSet, DriverVehicleHandoverViewSet
 )
+from .learning import (
+    StudentViewSet, GradeTemplateViewSet, LearningPhaseViewSet, PhaseActivityViewSet,
+    StudentEvaluationViewSet, PracticalAttendanceViewSet, InstructorScheduleViewSet,
+    WeeklyInstructorReportViewSet
+)
+

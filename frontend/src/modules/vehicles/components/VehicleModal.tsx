@@ -234,7 +234,14 @@ const VehicleModal: React.FC<VehicleModalProps> = ({ isOpen, onClose, onSave, ve
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4 border-t border-gray-100 pt-6">
-              <h3 className="col-span-full text-lg font-bold text-gray-900">Estado Inicial</h3>
+              <h3 className="col-span-full text-lg font-bold text-gray-900">Estado Operativo</h3>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Estado Actual del Vehículo *</label>
+                <select name="estado_actual" value={formData.estado_actual || 'En Sindicato'} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500 font-semibold">
+                  <option value="En Sindicato">En Sindicato</option>
+                  <option value="Fuera del Sindicato">Fuera del Sindicato (En Ruta)</option>
+                </select>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Odómetro Actual (KM) *</label>
                 <input required type="number" name="odometro_actual" value={formData.odometro_actual || 0} onChange={handleChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-emerald-500 focus:border-emerald-500" />

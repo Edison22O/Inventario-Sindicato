@@ -244,6 +244,8 @@ export interface VehicleFuelLog {
 
 export interface FuelBudget {
   id: number;
+  base_gasolina?: string | number;
+  base_diesel?: string | number;
   saldo_total: string | number;
   saldo_gasolina: string | number;
   saldo_diesel: string | number;
@@ -266,6 +268,96 @@ export interface DriverVehicleHandover {
   documento_acta_firmada?: string | null;
   created_at?: string;
 }
+
+export interface PhaseActivity {
+  id: number;
+  phase: number;
+  numero: number;
+  nombre: string;
+  descripcion?: string;
+  ejemplo_practico?: string;
+}
+
+export interface LearningPhase {
+  id: number;
+  numero: number;
+  nombre: string;
+  descripcion?: string;
+  duracion_semanas?: string;
+  nota_minima_aprobacion: number;
+  activities?: PhaseActivity[];
+}
+
+export interface GradeTemplate {
+  puntuacion: number;
+  observacion_predeterminada: string;
+  recomendacion_predeterminada: string;
+}
+
+export interface StudentEvaluation {
+  id?: number;
+  student: number;
+  student_name?: string;
+  instructor: number;
+  instructor_name?: string;
+  activity: number;
+  activity_nombre?: string;
+  activity_numero?: number;
+  phase_numero?: number;
+  phase_nombre?: string;
+  puntuacion: number;
+  observaciones?: string;
+  recomendaciones?: string;
+  fecha: string;
+  created_at?: string;
+}
+
+export interface PracticalAttendance {
+  id?: number;
+  student: number;
+  student_name?: string;
+  instructor: number;
+  instructor_name?: string;
+  fecha: string;
+  estado: 'PRESENTE' | 'RETRASO' | 'AUSENTE';
+  observacion?: string;
+}
+
+export interface InstructorSchedule {
+  id: number;
+  instructor: number;
+  instructor_name?: string;
+  student: number;
+  student_name?: string;
+  vehicle: number;
+  vehicle_placa?: string;
+  vehicle_modelo?: string;
+  fecha: string;
+  hora_inicio: string;
+  hora_fin: string;
+  tipo_licencia: string;
+  circuito_ruta?: string;
+  completado: boolean;
+}
+
+export interface WeeklyInstructorReport {
+  id: number;
+  instructor: number;
+  instructor_name?: string;
+  vehicle?: number | null;
+  vehicle_placa?: string;
+  semana_numero: number;
+  fecha_inicio: string;
+  fecha_fin: string;
+  periodo_academico: string;
+  estado: 'BORRADOR' | 'ENVIADO' | 'REVISADO' | 'APROBADO';
+  elaborado_por_nombre: string;
+  revisado_por_nombre: string;
+  aprobado_por_nombre: string;
+  observaciones_generales?: string;
+  created_at?: string;
+}
+
 
 export interface DriverProfile {
   id: number;
