@@ -1,120 +1,77 @@
 import { useState } from 'react';
-import { Users, Database, Shield, LayoutDashboard, Settings as SettingsIcon, Tags } from 'lucide-react';
+import { Users, Database, Shield, LayoutDashboard, Settings as SettingsIcon, Activity, Gauge } from 'lucide-react';
 import UserManagement from '../components/UserManagement';
 import SystemBackups from '../components/SystemBackups';
 import GlobalDashboard from '../components/GlobalDashboard';
 import SystemSettingsPanel from '../components/SystemSettingsPanel';
-import GlobalCatalogs from '../components/GlobalCatalogs';
 import AuditLogs from '../components/AuditLogs';
-import VehicleMaintenanceAdmin from '../components/VehicleMaintenanceAdmin';
-import { Activity, Wrench } from 'lucide-react';
+import { SystemPerformanceMetrics } from '../components/SystemPerformanceMetrics';
 
 const SettingsDashboard = () => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'catalogs' | 'settings' | 'backups' | 'audit' | 'pm'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'performance' | 'users' | 'settings' | 'backups' | 'audit'>('dashboard');
+
+  const navTabs = [
+    { id: 'dashboard', label: 'Supervisión General', icon: LayoutDashboard },
+    { id: 'performance', label: 'Rendimiento del Sistema', icon: Gauge },
+    { id: 'users', label: 'Usuarios y Roles', icon: Users },
+    { id: 'audit', label: 'Auditoría del Sistema', icon: Activity },
+    { id: 'settings', label: 'Organización', icon: SettingsIcon },
+    { id: 'backups', label: 'Base de Datos y Respaldos', icon: Database },
+  ];
 
   return (
-    <div className="flex-1 p-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">
-            <Shield className="w-8 h-8 text-emerald-600" />
-            Panel de Control
-          </h1>
-          <p className="text-gray-500">
-            Administración centralizada de usuarios, roles y seguridad del sistema.
-          </p>
+    <div className="flex-1 p-4 sm:p-8 bg-gray-50/50 min-h-screen font-sans">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header Title */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-emerald-900 text-gold-400 rounded-2xl shadow-md border border-emerald-800">
+              <Shield className="w-8 h-8" />
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
+                Panel de Control & Supervisión
+              </h1>
+              <p className="text-xs sm:text-sm text-gray-500 font-medium">
+                Administración centralizada, monitoreo en tiempo real y seguridad del sistema.
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* Custom Tabs */}
-        <div className="flex space-x-2 border-b border-gray-200 mb-8 overflow-x-auto">
-          <button
-            onClick={() => setActiveTab('dashboard')}
-            className={`flex items-center gap-2 py-4 px-4 whitespace-nowrap border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'dashboard'
-                ? 'border-emerald-600 text-emerald-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            <LayoutDashboard className="w-5 h-5" />
-            Visión General
-          </button>
-          <button
-            onClick={() => setActiveTab('users')}
-            className={`flex items-center gap-2 py-4 px-4 whitespace-nowrap border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'users'
-                ? 'border-emerald-600 text-emerald-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            <Users className="w-5 h-5" />
-            Usuarios y Roles
-          </button>
-          <button
-            onClick={() => setActiveTab('catalogs')}
-            className={`flex items-center gap-2 py-4 px-4 whitespace-nowrap border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'catalogs'
-                ? 'border-emerald-600 text-emerald-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            <Tags className="w-5 h-5" />
-            Catálogos Globales
-          </button>
-          <button
-            onClick={() => setActiveTab('audit')}
-            className={`flex items-center gap-2 py-4 px-4 whitespace-nowrap border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'audit'
-                ? 'border-emerald-600 text-emerald-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            <Activity className="w-5 h-5" />
-            Auditoría
-          </button>
-          <button
-            onClick={() => setActiveTab('settings')}
-            className={`flex items-center gap-2 py-4 px-4 whitespace-nowrap border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'settings'
-                ? 'border-emerald-600 text-emerald-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            <SettingsIcon className="w-5 h-5" />
-            Organización
-          </button>
-          <button
-            onClick={() => setActiveTab('backups')}
-            className={`flex items-center gap-2 py-4 px-4 whitespace-nowrap border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'backups'
-                ? 'border-emerald-600 text-emerald-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            <Database className="w-5 h-5" />
-            Base de Datos y Respaldos
-          </button>
-          <button
-            onClick={() => setActiveTab('pm')}
-            className={`flex items-center gap-2 py-4 px-4 whitespace-nowrap border-b-2 font-medium text-sm transition-colors ${
-              activeTab === 'pm'
-                ? 'border-emerald-600 text-emerald-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            <Wrench className="w-5 h-5" />
-            PM Vehículos
-          </button>
+        {/* Custom Navigation Pills */}
+        <div className="bg-white p-2 rounded-2xl shadow-sm border border-gray-100 overflow-x-auto scrollbar-none">
+          <div className="flex items-center gap-1.5 min-w-max">
+            {navTabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex items-center gap-2 px-5 py-3 rounded-xl font-extrabold text-xs transition-all ${
+                    isActive
+                      ? 'bg-emerald-900 text-white shadow-md shadow-emerald-900/10'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  }`}
+                >
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-gold-400' : 'text-gray-400'}`} />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Tab Content */}
-        <div className="animate-fade-in-up">
+        <div className="animate-fade-in">
           {activeTab === 'dashboard' && <GlobalDashboard />}
+          {activeTab === 'performance' && <SystemPerformanceMetrics />}
           {activeTab === 'users' && <UserManagement />}
-          {activeTab === 'catalogs' && <GlobalCatalogs />}
           {activeTab === 'audit' && <AuditLogs />}
           {activeTab === 'settings' && <SystemSettingsPanel />}
           {activeTab === 'backups' && <SystemBackups />}
-          {activeTab === 'pm' && <VehicleMaintenanceAdmin />}
         </div>
       </div>
     </div>

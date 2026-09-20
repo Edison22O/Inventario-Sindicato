@@ -10,6 +10,6 @@ from .vehicles import (
 from .learning import (
     StudentViewSet, GradeTemplateViewSet, LearningPhaseViewSet, PhaseActivityViewSet,
     StudentEvaluationViewSet, PracticalAttendanceViewSet, InstructorScheduleViewSet,
-    WeeklyInstructorReportViewSet
+    WeeklyInstructorReportViewSet, InstructorViewSet
 )
 

@@ -221,7 +221,7 @@ except Exception as e:
 try:
     from .models.learning import (
         LearningPhase, PhaseActivity, GradeTemplate, 
-        StudentEvaluation, PracticalAttendance, 
+        StudentEvaluation, AcademicEvaluation, PracticalAttendance, 
         InstructorSchedule, WeeklyInstructorReport
     )
 
@@ -247,7 +247,19 @@ try:
     @receiver(post_delete, sender=StudentEvaluation)
     def student_evaluation_changed(sender, instance, **kwargs):
         action = 'delete' if 'created' not in kwargs else ('create' if kwargs['created'] else 'update')
+        try:
+            from api.views.learning import sync_student_academic_evaluations
+            sync_student_academic_evaluations(instance.student)
+        except Exception as err:
+            import traceback
+            traceback.print_exc()
         broadcast_inventory_update('StudentEvaluation', action)
+
+    @receiver(post_save, sender=AcademicEvaluation)
+    @receiver(post_delete, sender=AcademicEvaluation)
+    def academic_evaluation_changed(sender, instance, **kwargs):
+        action = 'delete' if 'created' not in kwargs else ('create' if kwargs['created'] else 'update')
+        broadcast_inventory_update('AcademicEvaluation', action)
 
     @receiver(post_save, sender=PracticalAttendance)
     @receiver(post_delete, sender=PracticalAttendance)

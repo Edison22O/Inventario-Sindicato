@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Truck, Layers, ArrowRight, Monitor, Armchair, LayoutDashboard, UserCheck, Award, Clock } from 'lucide-react';
+import { Truck, Layers, ArrowRight, Monitor, Armchair, LayoutDashboard, UserCheck, Award, Clock, FileText } from 'lucide-react';
 
 import { authService } from '@/services/authService';
 import api from '@/shared/services/api';
@@ -69,7 +69,16 @@ const Home = () => {
 
   const drivingSchoolActions = [
     {
-      title: 'Prácticas de Conducción (Evaluación)',
+      title: 'Horario del Instructor',
+      description: 'Consulta visual e informativa de clases asignadas.',
+      icon: Clock,
+      to: '/instructor-schedules',
+      color: 'bg-emerald-600',
+      lightColor: 'bg-emerald-600/10',
+      textColor: 'text-emerald-600'
+    },
+    {
+      title: 'Calificación por Fases',
       description: 'Calificaciones por 5 fases y rotación vehicular.',
       icon: Award,
       to: '/evaluations',
@@ -78,13 +87,13 @@ const Home = () => {
       textColor: 'text-amber-600'
     },
     {
-      title: 'Horario del Instructor',
-      description: 'Consulta visual e informativa de clases asignadas.',
-      icon: Clock,
-      to: '/instructor-schedules',
-      color: 'bg-emerald-600',
-      lightColor: 'bg-emerald-600/10',
-      textColor: 'text-emerald-600'
+      title: 'Reporte de Instructores',
+      description: 'Control semanal e informe de práctica.',
+      icon: FileText,
+      to: '/instructor-reports',
+      color: 'bg-teal-600',
+      lightColor: 'bg-teal-600/10',
+      textColor: 'text-teal-600'
     }
   ];
 

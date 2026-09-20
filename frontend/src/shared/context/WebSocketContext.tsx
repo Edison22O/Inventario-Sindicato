@@ -138,7 +138,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       };
 
       ws.onerror = (error) => {
-        console.error('[WebSocket Error]', error);
+        console.warn('[WebSocket Warning] Error de conexión o reconexión en curso:', error);
       };
 
       ws.onclose = () => {
@@ -146,13 +146,13 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setIsConnecting(false);
         if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
 
-        console.log('[WebSocket] Desconectado. Reconectando en 3 segundos...');
+        console.log('[WebSocket] Desconectado. Reconectando en 5 segundos...');
         reconnectTimeoutRef.current = setTimeout(() => {
           connect();
-        }, 3000);
+        }, 5000);
       };
     } catch (err) {
-      console.error('[WebSocket Connection Error]', err);
+      console.warn('[WebSocket Warning] No se pudo establecer conexión inicial:', err);
       setIsConnected(false);
       setIsConnecting(false);
       reconnectTimeoutRef.current = setTimeout(() => {

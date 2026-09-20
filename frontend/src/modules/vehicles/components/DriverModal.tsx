@@ -49,7 +49,7 @@ const DriverModal = ({ isOpen, onClose, onSuccess, driver }: DriverModalProps) =
       if (driver) {
         setFormData({
           user: String(driver.user),
-          estado: driver.estado,
+          estado: driver.estado || 'Activo',
           telefono: driver.telefono || '',
           direccion: driver.direccion || '',
           tipo_sangre: driver.tipo_sangre || '',

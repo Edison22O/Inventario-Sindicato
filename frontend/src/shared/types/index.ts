@@ -328,6 +328,7 @@ export interface InstructorSchedule {
   instructor: number;
   instructor_name?: string;
   student: number;
+  student_public_id?: string;
   student_name?: string;
   vehicle: number;
   vehicle_placa?: string;
@@ -359,20 +360,60 @@ export interface WeeklyInstructorReport {
 }
 
 
+export interface Student {
+  id: number;
+  public_id?: string;
+  cedula: string;
+  nombres: string;
+  apellidos: string;
+  tipo_licencia: string;
+  tipo_licencia_display?: string;
+  telefono?: string;
+  email?: string;
+  instructor?: number | null;
+  instructor_name?: string | null;
+  activo: boolean;
+  created_at?: string;
+}
+
+export interface Instructor {
+  id: number;
+  username: string;
+  first_name?: string;
+  last_name?: string;
+  full_name: string;
+  email?: string;
+  role_name?: string;
+  activo: boolean;
+  assigned_students_count: number;
+  assigned_vehicles?: Vehicle[];
+  assigned_vehicle_ids?: number[];
+  licencias_habilitadas?: string[];
+}
+
+
 export interface DriverProfile {
   id: number;
   public_id?: string;
   user: number;
-  licencia: string;
-  tipo_licencia: string;
-  estado: string;
+  user_name?: string;
+  nombres?: string;
+  apellidos?: string;
+  cedula?: string;
+  tipo_licencia?: string;
+  licencia?: string;
+  numero_licencia?: string;
   fecha_emision_licencia?: string;
+  fecha_expiracion_licencia?: string;
   fecha_vencimiento_licencia?: string;
-  foto?: string | null;
-  telefono?: string;
-  direccion?: string;
   tipo_sangre?: string;
   contacto_emergencia?: string;
+  telefono?: string;
+  email?: string;
+  direccion?: string;
+  estado?: string;
+  activo?: boolean;
+  foto?: string | null;
 }
 
 export const __vite_types_fix = true;

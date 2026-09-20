@@ -16,12 +16,13 @@ from api.views.vehicles import VehicleFuelLogViewSet, FuelBudgetViewSet, DriverV
 from api.views.learning import (
     StudentViewSet, GradeTemplateViewSet, LearningPhaseViewSet, PhaseActivityViewSet,
     StudentEvaluationViewSet, PracticalAttendanceViewSet, InstructorScheduleViewSet,
-    WeeklyInstructorReportViewSet
+    WeeklyInstructorReportViewSet, InstructorViewSet, ClassSessionLogViewSet, AcademicEvaluationViewSet
 )
 
 router = DefaultRouter()
 router.register(r'roles', RoleViewSet)
 router.register(r'users', UserViewSet)
+router.register(r'instructors', InstructorViewSet, basename='instructors')
 router.register(r'students', StudentViewSet, basename='students')
 router.register(r'categories', CategoryViewSet)
 router.register(r'departments', DepartmentViewSet)
@@ -61,6 +62,9 @@ router.register(r'student-evaluations', StudentEvaluationViewSet, basename='stud
 router.register(r'practical-attendances', PracticalAttendanceViewSet, basename='practical-attendances')
 router.register(r'instructor-schedules', InstructorScheduleViewSet, basename='instructor-schedules')
 router.register(r'weekly-instructor-reports', WeeklyInstructorReportViewSet, basename='weekly-instructor-reports')
+router.register(r'class-logs', ClassSessionLogViewSet, basename='class-logs')
+router.register(r'academic-evaluations', AcademicEvaluationViewSet, basename='academic-evaluations')
+
 
 
 

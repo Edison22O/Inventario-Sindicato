@@ -1,1 +1,49 @@
 @import "tailwindcss";
+
+@media print {
+  /* Hide sidebar, navigation bars, background overlays, buttons, select inputs during print */
+  aside,
+  nav,
+  .sidebar,
+  .print\:hidden,
+  button,
+  select,
+  input {
+    display: none !important;
+  }
+
+  /* Reset layout constraints for printing */
+  html, body, #root, main {
+    background: white !important;
+    color: black !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+    overflow: visible !important;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Target printable paper document */
+  .printable-paper {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    display: block !important;
+    page-break-inside: avoid !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 6mm;
+  }
+}

@@ -1,15 +1,17 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '@/shared/services/api';
 import { toast } from 'react-hot-toast';
 import { 
-  CheckCircle, Calendar, Award, Clock, Save, Layers
+  CheckCircle, Calendar, Award, Clock, Save, Layers, AlertCircle
 } from 'lucide-react';
-import type { LearningPhase, StudentEvaluation, GradeTemplate } from '@/shared/types';
+import type { LearningPhase, StudentEvaluation, GradeTemplate, Instructor } from '@/shared/types';
 import { useWebSocket } from '@/shared/context/WebSocketContext';
+import { formatDateToLocalYYYYMMDD } from '@/shared/utils/dateUtils';
 
 interface Student {
   id: number;
+  public_id?: string;
   cedula: string;
   nombres: string;
   apellidos: string;
@@ -20,10 +22,11 @@ interface Student {
 }
 
 export const InstructorEvaluationView: React.FC = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const studentIdParam = searchParams.get('studentId');
 
   const [students, setStudents] = useState<Student[]>([]);
+  const [, setInstructors] = useState<Instructor[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [phases, setPhases] = useState<LearningPhase[]>([]);
   const [activePhaseNum, setActivePhaseNum] = useState<number>(1);
@@ -35,31 +38,45 @@ export const InstructorEvaluationView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [studentSummary, setStudentSummary] = useState<any>(null);
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState<string>(formatDateToLocalYYYYMMDD(new Date()));
 
-  // Load initial data
-  const fetchData = async () => {
-    setLoading(true);
+  // Keep refs for callbacks & WS handler without triggering re-subscribes
+  const selectedStudentRef = useRef<Student | null>(null);
+  selectedStudentRef.current = selectedStudent;
+  const selectedVehicleTypeERef = useRef(selectedVehicleTypeE);
+  selectedVehicleTypeERef.current = selectedVehicleTypeE;
+  const isSavingRef = useRef(false);
+
+  // Load initial static data (students, instructors, phases, templates)
+  const fetchData = async (isInitial = false) => {
+    if (isInitial) setLoading(true);
     try {
-      const [studentsRes, phasesRes, templatesRes] = await Promise.all([
+      const [studentsRes, phasesRes, templatesRes, instRes] = await Promise.all([
         api.get('/students/'),
         api.get('/learning-phases/'),
-        api.get('/grade-templates/')
+        api.get('/grade-templates/'),
+        api.get('/instructors/').catch(() => ({ data: [] }))
       ]);
 
       const studentList: Student[] = studentsRes.data || [];
       setStudents(studentList);
+      setInstructors(instRes.data || []);
+
       if (studentList.length > 0) {
-        const matched = studentIdParam 
-          ? studentList.find(s => s.id === parseInt(studentIdParam)) 
-          : null;
-        setSelectedStudent(matched || studentList[0]);
+        setSelectedStudent(prev => {
+          if (!prev) {
+            const matched = studentIdParam 
+              ? studentList.find(s => s.public_id === studentIdParam || s.id === parseInt(studentIdParam)) 
+              : null;
+            return matched || studentList[0];
+          }
+          const existing = studentList.find(s => s.id === prev.id);
+          return existing || prev;
+        });
       }
 
       setPhases(phasesRes.data || []);
 
-
-      // Build grade template dictionary
       const tplDict: Record<number, GradeTemplate> = {};
       (templatesRes.data || []).forEach((t: GradeTemplate) => {
         tplDict[t.puntuacion] = t;
@@ -69,15 +86,16 @@ export const InstructorEvaluationView: React.FC = () => {
     } catch (err) {
       console.error('Error al cargar datos de evaluación:', err);
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   };
 
   // Load evaluations and summary when selected student changes
-  const fetchStudentData = async (studentId: number, vehicleCode?: string) => {
+  const fetchStudentData = async (studentId: string | number, vehicleCode?: string) => {
     try {
-      const isTipoE = selectedStudent ? selectedStudent.tipo_licencia.startsWith('E_') : false;
-      const targetVeh = isTipoE ? (vehicleCode || selectedVehicleTypeE) : 'ESTANDAR';
+      const currentSt = selectedStudentRef.current;
+      const isTipoE = currentSt ? currentSt.tipo_licencia.startsWith('E_') : false;
+      const targetVeh = isTipoE ? (vehicleCode || selectedVehicleTypeERef.current) : 'ESTANDAR';
 
       const [evalsRes, summaryRes, attRes] = await Promise.all([
         api.get(`/student-evaluations/?student=${studentId}&vehiculo_rotacion=${targetVeh}`),
@@ -111,16 +129,27 @@ export const InstructorEvaluationView: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchData();
+    fetchData(true);
   }, []);
 
-  useWebSocket(fetchData);
-
+  // WebSocket real-time updates handler with payload filtering
+  useWebSocket((payload) => {
+    if (isSavingRef.current) return;
+    const model = payload?.model;
+    if (model === 'StudentEvaluation' || model === 'PracticalAttendance') {
+      if (selectedStudentRef.current) {
+        const studentKey = selectedStudentRef.current.public_id || selectedStudentRef.current.id;
+        fetchStudentData(studentKey, selectedVehicleTypeERef.current);
+      }
+    } else if (model === 'Student' || model === 'LearningPhase' || model === 'GradeTemplate') {
+      fetchData(false);
+    }
+  });
 
   useEffect(() => {
     if (studentIdParam && students.length > 0) {
-      const matched = students.find(s => s.id === parseInt(studentIdParam));
-      if (matched) {
+      const matched = students.find(s => s.public_id === studentIdParam || s.id === parseInt(studentIdParam));
+      if (matched && matched.id !== selectedStudent?.id) {
         setSelectedStudent(matched);
       }
     }
@@ -128,10 +157,13 @@ export const InstructorEvaluationView: React.FC = () => {
 
   useEffect(() => {
     if (selectedStudent) {
-      fetchStudentData(selectedStudent.id, selectedVehicleTypeE);
+      const studentKey = selectedStudent.public_id || String(selectedStudent.id);
+      if (studentIdParam !== studentKey) {
+        setSearchParams({ studentId: studentKey }, { replace: true });
+      }
+      fetchStudentData(studentKey, selectedVehicleTypeE);
     }
-  }, [selectedStudent, selectedDate, selectedVehicleTypeE]);
-
+  }, [selectedStudent?.id, selectedDate, selectedVehicleTypeE]);
 
   // Handle rating button click with auto-fill
   const handleScoreChange = (activityId: number, score: number) => {
@@ -141,7 +173,6 @@ export const InstructorEvaluationView: React.FC = () => {
 
     setEvaluations(prev => {
       return {
-
         ...prev,
         [activityId]: {
           puntuacion: score,
@@ -154,10 +185,13 @@ export const InstructorEvaluationView: React.FC = () => {
 
   // Save evaluations for current student
   const handleSaveEvaluations = async () => {
-    if (!selectedStudent) return;
+    if (!selectedStudent || submitting) return;
     setSubmitting(true);
+    isSavingRef.current = true;
+
     const isTipoE = selectedStudent.tipo_licencia.startsWith('E_');
     const targetVeh = isTipoE ? selectedVehicleTypeE : 'ESTANDAR';
+    const studentKey = selectedStudent.public_id || selectedStudent.id;
 
     try {
       const evalArray = Object.entries(evaluations).map(([actId, data]) => ({
@@ -171,12 +205,12 @@ export const InstructorEvaluationView: React.FC = () => {
 
       await Promise.all([
         api.post('/student-evaluations/bulk-save/', {
-          student: selectedStudent.id,
+          student: studentKey,
           vehiculo_rotacion: targetVeh,
           evaluations: evalArray
         }),
         api.post('/practical-attendances/', {
-          student: selectedStudent.id,
+          student: studentKey,
           fecha: selectedDate,
           estado: attendance,
           observacion: attendanceObs
@@ -184,12 +218,15 @@ export const InstructorEvaluationView: React.FC = () => {
       ]);
 
       toast.success('Evaluación y asistencia guardadas correctamente');
-      fetchStudentData(selectedStudent.id, targetVeh);
+      await fetchStudentData(studentKey, targetVeh);
     } catch (e: any) {
       console.error('Error guardando evaluación:', e?.response?.data || e);
       toast.error('Error al guardar la evaluación');
     } finally {
       setSubmitting(false);
+      setTimeout(() => {
+        isSavingRef.current = false;
+      }, 1000);
     }
   };
 
@@ -206,6 +243,12 @@ export const InstructorEvaluationView: React.FC = () => {
   }
 
   const unlockedVehicles: string[] = studentSummary?.unlocked_vehicles || ['NPR'];
+  const isFullyCompleted = studentSummary?.is_fully_completed || (
+    studentSummary?.vehicle_status_map?.['NPR']?.is_passed &&
+    studentSummary?.vehicle_status_map?.['SINOTRUC_BLANCO']?.is_passed &&
+    studentSummary?.vehicle_status_map?.['SINOTRUC_GRIS']?.is_passed &&
+    studentSummary?.vehicle_status_map?.['TRAILER']?.is_passed
+  );
 
   return (
     <div className="p-3 sm:p-6 max-w-5xl mx-auto pb-32 font-sans">
@@ -236,44 +279,54 @@ export const InstructorEvaluationView: React.FC = () => {
       </div>
 
       {/* Student Carousel / Selection Tabs (Mobile Touch Friendly) */}
-      <div className="mb-6">
-        <label className="block text-xs font-black uppercase text-gray-500 mb-2">Alumnos Asignados:</label>
-        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none snap-x">
-          {students.map(st => {
-            const isSelected = selectedStudent?.id === st.id;
-            const isCurrentSemaforo = isSelected && studentSummary ? studentSummary.semaforo : null;
+      {students.length > 0 ? (
+        <div className="mb-6">
+          <label className="block text-xs font-black uppercase text-gray-500 mb-2">Alumnos Asignados:</label>
+          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none snap-x">
+            {students.map(st => {
+              const isSelected = selectedStudent?.id === st.id;
+              const isCurrentSemaforo = isSelected && studentSummary ? studentSummary.semaforo : null;
 
-            return (
-              <button
-                key={st.id}
-                onClick={() => {
-                  setSelectedStudent(st);
-                  if (st.tipo_licencia.startsWith('E_')) {
-                    setSelectedVehicleTypeE('NPR');
-                  }
-                }}
-                className={`snap-start shrink-0 px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center gap-2 shadow-sm border ${
-                  isSelected 
-                    ? 'bg-emerald-800 text-white border-emerald-900 ring-2 ring-emerald-600 shadow-emerald-900/20' 
-                    : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-                }`}
-              >
-                <div className={`w-3 h-3 rounded-full ${
-                  isCurrentSemaforo === 'VERDE' ? 'bg-emerald-400 ring-2 ring-emerald-200' :
-                  isCurrentSemaforo === 'AMARILLO' ? 'bg-amber-400 ring-2 ring-amber-200' :
-                  isCurrentSemaforo === 'ROJO' ? 'bg-red-500 ring-2 ring-red-200' : 'bg-gray-300'
-                }`} />
-                <span className="truncate max-w-[140px]">{st.apellidos} {st.nombres}</span>
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={st.id}
+                  onClick={() => {
+                    setSelectedStudent(st);
+                    if (st.tipo_licencia.startsWith('E_')) {
+                      setSelectedVehicleTypeE('NPR');
+                    }
+                  }}
+                  className={`snap-start shrink-0 px-4 py-3 rounded-2xl font-bold text-xs transition-all flex items-center gap-2 shadow-sm border ${
+                    isSelected 
+                      ? 'bg-emerald-800 text-white border-emerald-900 ring-2 ring-emerald-600 shadow-emerald-900/20' 
+                      : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  <div className={`w-3 h-3 rounded-full ${
+                    isCurrentSemaforo === 'VERDE' ? 'bg-emerald-400 ring-2 ring-emerald-200' :
+                    isCurrentSemaforo === 'AMARILLO' ? 'bg-amber-400 ring-2 ring-amber-200' :
+                    isCurrentSemaforo === 'ROJO' ? 'bg-red-500 ring-2 ring-red-200' : 'bg-gray-300'
+                  }`} />
+                  <span className="truncate max-w-[140px]">{st.apellidos} {st.nombres}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="bg-white p-8 rounded-3xl border border-gray-100 text-center my-6 shadow-sm">
+          <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-3" />
+          <h3 className="text-base font-black text-gray-800">No tienes alumnos asignados para calificar</h3>
+          <p className="text-xs text-gray-500 font-medium max-w-md mx-auto mt-1">
+            Actualmente no tienes estudiantes matriculados asignados a tu perfil de instructor. Solicita al Administrador que te inscriba alumnos en el Panel de Instructores.
+          </p>
+        </div>
+      )}
 
       {selectedStudent && (
         <>
           {/* Student Status Summary Card */}
-          <div className="mb-6 bg-gradient-to-br from-slate-900 to-emerald-950 text-white p-5 rounded-3xl shadow-lg relative overflow-hidden">
+          <div className="mb-6 bg-emerald-900 text-white p-5 rounded-3xl shadow-md border border-emerald-800 relative overflow-hidden">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
                 <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-400">Expediente de Evaluación Práctica</span>
@@ -374,7 +427,6 @@ export const InstructorEvaluationView: React.FC = () => {
                       type="button"
                       disabled={!isUnlocked}
                       onClick={() => setSelectedVehicleTypeE(veh.code as any)}
-
                       className={`p-2.5 rounded-2xl text-xs font-black transition-all border flex items-center justify-between ${
                         isSelected 
                           ? 'bg-amber-600 text-white border-amber-700 shadow-md ring-2 ring-amber-500' 
@@ -393,6 +445,32 @@ export const InstructorEvaluationView: React.FC = () => {
                   );
                 })}
               </div>
+
+              {isFullyCompleted ? (
+                <div className="mt-3 p-3.5 bg-gradient-to-r from-amber-600 via-emerald-600 to-teal-700 text-white rounded-2xl flex items-center justify-between gap-3 shadow-md">
+                  <div className="flex items-center gap-2">
+                    <Award className="w-5 h-5 text-amber-200 shrink-0" />
+                    <span className="text-xs font-black">
+                      ¡Ciclo E Finalizado 🎉! El estudiante completó exitosamente la instrucción práctica en los 4 vehículos.
+                    </span>
+                  </div>
+                  <span className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white rounded-xl font-extrabold text-[11px] shrink-0 border border-white/30">
+                    Ciclo E Completado
+                  </span>
+                </div>
+              ) : studentSummary?.vehicle_status_map?.[selectedVehicleTypeE]?.is_passed ? (
+                <div className="mt-3 p-3.5 bg-emerald-800 text-white rounded-2xl flex items-center justify-between gap-3 shadow-md border border-emerald-700">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-emerald-300 shrink-0" />
+                    <span className="text-xs font-black">
+                      ¡Estudiante aprobó las 5 fases en {selectedVehicleTypeE.replace('_', ' ')}! Notificación enviada al Administrador para realizar la transferencia de vehículo.
+                    </span>
+                  </div>
+                  <span className="px-3 py-1 bg-emerald-950/40 text-emerald-200 rounded-xl font-bold text-[10px] shrink-0 border border-emerald-600/50">
+                    Pendiente Transferencia por Admin
+                  </span>
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className="mb-6 bg-blue-500/10 p-3.5 rounded-2xl border border-blue-200 text-xs font-bold text-blue-900 flex items-center gap-2">
@@ -428,7 +506,7 @@ export const InstructorEvaluationView: React.FC = () => {
           {/* Current Phase Content & Activities */}
           {currentPhase && (
             <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mb-8">
-              <div className="p-5 bg-gradient-to-r from-gray-900 to-emerald-950 text-white flex justify-between items-center">
+              <div className="p-5 bg-emerald-900 text-white flex justify-between items-center">
                 <div>
                   <h3 className="text-base font-black flex items-center gap-2">
                     <Layers className="w-5 h-5 text-emerald-400" />
@@ -551,3 +629,4 @@ export const InstructorEvaluationView: React.FC = () => {
 };
 
 export default InstructorEvaluationView;
+

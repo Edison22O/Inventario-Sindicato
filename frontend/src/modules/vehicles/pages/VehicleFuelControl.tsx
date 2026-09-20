@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Fuel, Plus, Search, DollarSign, FileText, CheckCircle, X, Eye, Edit2, Upload, Image as ImageIcon, ExternalLink, Camera } from 'lucide-react';
+import { Fuel, Plus, Search, DollarSign, FileText, CheckCircle, X, Eye, Edit2, Upload, Image as ImageIcon, ExternalLink, Camera, Settings } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/shared/services/api';
 import type { Vehicle, VehicleFuelLog } from '@/shared/types';
@@ -22,6 +22,11 @@ const VehicleFuelControl = () => {
   const [isObserveModalOpen, setIsObserveModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Configuración directa de precios de combustible
+  const [sysSettingsId, setSysSettingsId] = useState<number | null>(null);
+  const [isFuelPricesModalOpen, setIsFuelPricesModalOpen] = useState(false);
+  const [editFuelPrices, setEditFuelPrices] = useState({ precio_gasolina: '2.40', precio_diesel: '1.75' });
+
   // Modal para ver imagen ampliada en pantalla (Lightbox)
   const [imageModal, setImageModal] = useState<{ isOpen: boolean; url: string; title: string }>({
     isOpen: false,
@@ -30,6 +35,11 @@ const VehicleFuelControl = () => {
   });
 
   const [selectedLog, setSelectedLog] = useState<VehicleFuelLog | null>(null);
+  // Auto-completado de Precios por Galón
+  const [sysPrices, setSysPrices] = useState<{ EXTRA: number; DIESEL: number }>({
+    EXTRA: 2.40,
+    DIESEL: 1.75
+  });
 
   const [formData, setFormData] = useState({
     vehicle: '',
@@ -51,12 +61,24 @@ const VehicleFuelControl = () => {
 
   const fetchData = async () => {
     try {
-      const [vehRes, logsRes] = await Promise.all([
+      const [vehRes, logsRes, sysRes] = await Promise.all([
         api.get('/vehicles/'),
-        api.get('/vehicle-fuel-logs/')
+        api.get('/vehicle-fuel-logs/'),
+        api.get('/system-settings/').catch(() => null)
       ]);
       setVehicles(vehRes.data || []);
       setFuelLogs(logsRes.data || []);
+      if (sysRes?.data) {
+        setSysSettingsId(sysRes.data.id);
+        setEditFuelPrices({
+          precio_gasolina: (sysRes.data.precio_gasolina || '2.40').toString(),
+          precio_diesel: (sysRes.data.precio_diesel || '1.75').toString()
+        });
+        setSysPrices({
+          EXTRA: Number(sysRes.data.precio_gasolina || 2.40),
+          DIESEL: Number(sysRes.data.precio_diesel || 1.75)
+        });
+      }
       if (vehRes.data && vehRes.data.length > 0 && !formData.vehicle) {
         setFormData(prev => ({ ...prev, vehicle: vehRes.data[0].id.toString() }));
       }
@@ -67,11 +89,42 @@ const VehicleFuelControl = () => {
     }
   };
 
+  const handleSaveFuelPrices = async () => {
+    if (!sysSettingsId) {
+      toast.error('No se pudo encontrar la configuración del sistema');
+      return;
+    }
+    try {
+      await api.patch(`/system-settings/${sysSettingsId}/`, {
+        precio_gasolina: editFuelPrices.precio_gasolina,
+        precio_diesel: editFuelPrices.precio_diesel
+      });
+      setSysPrices({
+        EXTRA: Number(editFuelPrices.precio_gasolina),
+        DIESEL: Number(editFuelPrices.precio_diesel)
+      });
+      toast.success('Precios de combustible actualizados exitosamente');
+      setIsFuelPricesModalOpen(false);
+    } catch (error) {
+      toast.error('Error al guardar precios de combustible');
+      console.error(error);
+    }
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
 
   useInventoryWebSocket(fetchData);
+
+  const getVehicleFuelType = (veh: Vehicle | undefined): 'EXTRA' | 'DIESEL' => {
+    if (!veh) return 'EXTRA';
+    const tc = (veh.tipo_combustible || '').toString().toUpperCase();
+    if (tc.includes('DIESEL') || tc.includes('DIÉSEL')) {
+      return 'DIESEL';
+    }
+    return 'EXTRA';
+  };
 
   const handleFotoValeChange = async (file: File | null) => {
     if (!file) return;
@@ -90,18 +143,21 @@ const VehicleFuelControl = () => {
   };
 
   const handleOpenModal = () => {
-    const defaultVeh = vehicles[0]?.id.toString() || '';
-    const currentVehObj = vehicles[0];
+    const defaultVehObj = vehicles[0];
+    const defaultVehId = defaultVehObj ? defaultVehObj.id.toString() : '';
+    const fuelType = getVehicleFuelType(defaultVehObj);
+    const unitPrice = sysPrices[fuelType] || (fuelType === 'DIESEL' ? 1.75 : 2.40);
+
     setFormData({
-      vehicle: defaultVeh,
+      vehicle: defaultVehId,
       fecha_vale: new Date().toISOString().split('T')[0],
       numero_vale: '',
       responsable: '',
       supervisado_por: '',
-      odometro_recarga: currentVehObj ? currentVehObj.odometro_actual?.toString() || '0' : '0',
-      tipo_combustible: 'EXTRA',
+      odometro_recarga: defaultVehObj ? defaultVehObj.odometro_actual?.toString() || '0' : '0',
+      tipo_combustible: fuelType,
       galones: '',
-      precio_por_galon: '',
+      precio_por_galon: unitPrice.toString(),
       costo_total: '',
       tipo_transaccion: 'EFECTIVO',
       concepto: ''
@@ -138,7 +194,6 @@ const VehicleFuelControl = () => {
     setIsObserveModalOpen(true);
   };
 
-  // Abrir imagen ampliada en modal flotante (sin abrir otra pestaña)
   const handleOpenImageModal = (url: string, title: string) => {
     setImageModal({
       isOpen: true,
@@ -149,14 +204,41 @@ const VehicleFuelControl = () => {
 
   const handleVehicleChange = (vehId: string) => {
     const selectedVeh = vehicles.find(v => v.id.toString() === vehId);
-    setFormData(prev => ({
-      ...prev,
-      vehicle: vehId,
-      odometro_recarga: selectedVeh ? selectedVeh.odometro_actual?.toString() || '0' : '0'
-    }));
+    const fuelType = getVehicleFuelType(selectedVeh);
+    const unitPrice = sysPrices[fuelType] || (fuelType === 'DIESEL' ? 1.75 : 2.40);
+
+    setFormData(prev => {
+      const p = unitPrice.toString();
+      const g = parseFloat(prev.galones || '0');
+      const pr = parseFloat(p || '0');
+      const total = (g > 0 && pr > 0) ? (g * pr).toFixed(2) : prev.costo_total;
+
+      return {
+        ...prev,
+        vehicle: vehId,
+        odometro_recarga: selectedVeh ? selectedVeh.odometro_actual?.toString() || '0' : '0',
+        tipo_combustible: fuelType,
+        precio_por_galon: p,
+        costo_total: total
+      };
+    });
   };
 
-  // Cálculo automático del Valor Pagado (Total Importe)
+  const handleFuelTypeChange = (newFuelType: 'EXTRA' | 'DIESEL') => {
+    const unitPrice = sysPrices[newFuelType] || (newFuelType === 'DIESEL' ? 1.75 : 2.40);
+    setFormData(prev => {
+      const g = parseFloat(prev.galones || '0');
+      const total = (g > 0 && unitPrice > 0) ? (g * unitPrice).toFixed(2) : prev.costo_total;
+
+      return {
+        ...prev,
+        tipo_combustible: newFuelType,
+        precio_por_galon: unitPrice.toString(),
+        costo_total: total
+      };
+    });
+  };
+
   const handleGalonesOrPrecioChange = (galonesVal: string, precioVal: string) => {
     const g = parseFloat(galonesVal || '0');
     const p = parseFloat(precioVal || '0');
@@ -488,6 +570,14 @@ const VehicleFuelControl = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => setIsFuelPricesModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-3 bg-amber-50 text-amber-900 border border-amber-200 rounded-2xl font-bold hover:bg-amber-100 transition-all text-xs shadow-sm"
+            title="Ajustar precio oficial por galón de Extra y Diésel"
+          >
+            <Settings className="w-4 h-4 text-amber-700" />
+            Precios $/Galón: Extra (${sysPrices.EXTRA.toFixed(2)}) | Diésel (${sysPrices.DIESEL.toFixed(2)})
+          </button>
           <button
             onClick={() => setIsAddFundsModalOpen(true)}
             className="flex items-center gap-2 px-5 py-3 bg-amber-600 text-white rounded-2xl font-bold hover:bg-amber-700 transition-all shadow-md shadow-amber-600/20 text-sm"
@@ -974,7 +1064,7 @@ const VehicleFuelControl = () => {
                   <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Producto / Combustible *</label>
                   <select
                     value={formData.tipo_combustible}
-                    onChange={e => setFormData({ ...formData, tipo_combustible: e.target.value as any })}
+                    onChange={e => handleFuelTypeChange(e.target.value as 'EXTRA' | 'DIESEL')}
                     className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 text-sm font-bold text-emerald-900 outline-none"
                   >
                     <option value="EXTRA">Gasolina EXTRA</option>
@@ -1691,6 +1781,74 @@ const VehicleFuelControl = () => {
                   className="max-h-[70vh] w-auto object-contain rounded-xl shadow-lg" 
                 />
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Configurar Precios de Combustible */}
+      {isFuelPricesModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-emerald-900 text-white">
+              <div className="flex items-center gap-2.5">
+                <Fuel className="w-6 h-6 text-emerald-400" />
+                <h2 className="text-xl font-extrabold">Configurar Precios de Combustible</h2>
+              </div>
+              <button onClick={() => setIsFuelPricesModalOpen(false)} className="p-1 hover:bg-white/20 rounded-lg transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <p className="text-xs text-gray-500 font-medium">
+                Ajusta los precios globales de referencia por galón de combustible. Los precios ingresados se aplicarán automáticamente a los nuevos vales de despacho.
+              </p>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Precio Gasolina Extra ($ / Galón)</label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editFuelPrices.precio_gasolina}
+                    onChange={e => setEditFuelPrices({ ...editFuelPrices, precio_gasolina: e.target.value })}
+                    className="w-full pl-8 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl font-bold text-sm"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Precio Diésel ($ / Galón)</label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editFuelPrices.precio_diesel}
+                    onChange={e => setEditFuelPrices({ ...editFuelPrices, precio_diesel: e.target.value })}
+                    className="w-full pl-8 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl font-bold text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-4 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsFuelPricesModalOpen(false)}
+                  className="flex-1 py-2.5 bg-gray-100 text-gray-700 font-bold text-xs rounded-xl hover:bg-gray-200 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveFuelPrices}
+                  className="flex-1 py-2.5 bg-emerald-800 text-white font-bold text-xs rounded-xl hover:bg-emerald-900 transition-colors shadow-sm"
+                >
+                  Guardar Precios
+                </button>
+              </div>
             </div>
           </div>
         </div>

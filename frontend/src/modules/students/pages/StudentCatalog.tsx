@@ -2,14 +2,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import api from '@/shared/services/api';
 import { toast } from 'react-hot-toast';
 import { 
-  Users, UserPlus, Search, Phone, Mail, Edit, Tag, IdCard
+  Users, UserPlus, Search, Phone, Mail, Edit, Tag, IdCard, Upload, RefreshCw
 } from 'lucide-react';
-
 
 import { useWebSocket } from '@/shared/context/WebSocketContext';
 
 interface Student {
-
   id: number;
   cedula: string;
   nombres: string;
@@ -28,6 +26,11 @@ export const StudentCatalog: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [licenseFilter, setLicenseFilter] = useState<string>('todos');
 
+  // Excel Import Modal State
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
@@ -41,6 +44,32 @@ export const StudentCatalog: React.FC = () => {
     activo: true
   });
   const [submitting, setSubmitting] = useState(false);
+
+  const handleImportSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!importFile) {
+      toast.error('Por favor seleccione un archivo Excel (.xlsx) o CSV');
+      return;
+    }
+
+    const data = new FormData();
+    data.append('file', importFile);
+
+    setImporting(true);
+    try {
+      const res = await api.post('/students/import_excel/', data, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      toast.success(res.data.message || 'Estudiantes importados con éxito');
+      setShowImportModal(false);
+      setImportFile(null);
+      fetchStudents();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Error al importar archivo');
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const fetchStudents = async () => {
     setLoading(true);
@@ -160,12 +189,20 @@ export const StudentCatalog: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={() => handleOpenModal()}
-          className="flex items-center gap-2 px-5 py-3 bg-emerald-600 text-white rounded-2xl font-bold text-xs hover:bg-emerald-700 transition-all shadow-md shadow-emerald-600/20 w-full sm:w-auto justify-center"
-        >
-          <UserPlus className="w-4 h-4" /> Matricular Nuevo Estudiante
-        </button>
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="flex-1 sm:flex-none flex items-center gap-2 px-4 py-3 bg-emerald-800 text-white rounded-2xl font-bold text-xs hover:bg-emerald-900 transition-all shadow-md justify-center"
+          >
+            <Upload className="w-4 h-4" /> Importar Excel
+          </button>
+          <button
+            onClick={() => handleOpenModal()}
+            className="flex-1 sm:flex-none flex items-center gap-2 px-5 py-3 bg-emerald-600 text-white rounded-2xl font-bold text-xs hover:bg-emerald-700 transition-all shadow-md shadow-emerald-600/20 justify-center"
+          >
+            <UserPlus className="w-4 h-4" /> Matricular Nuevo Estudiante
+          </button>
+        </div>
       </div>
 
       {/* Filter and Search Bar */}
@@ -403,6 +440,68 @@ export const StudentCatalog: React.FC = () => {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* Excel Import Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <form onSubmit={handleImportSubmit} className="bg-white rounded-3xl border border-gray-100 w-full max-w-md p-6 space-y-5 shadow-2xl text-gray-900">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
+                <Upload className="w-5 h-5 text-emerald-700" />
+                Importar Lista de Estudiantes (Excel)
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowImportModal(false)}
+                className="text-gray-400 hover:text-gray-700 text-lg font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-xs text-gray-600 leading-relaxed font-medium">
+                Seleccione un archivo Excel (<code>.xlsx</code>) o CSV preparado por secretaría con los campos: 
+                <strong> Cédula, Nombres, Apellidos, Tipo Licencia, Correo, Teléfono</strong>.
+              </p>
+
+              <div className="border-2 border-dashed border-gray-300 hover:border-emerald-600 rounded-2xl p-6 text-center bg-gray-50/60 cursor-pointer transition-colors">
+                <input
+                  type="file"
+                  accept=".xlsx, .xls, .csv"
+                  onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                  className="hidden"
+                  id="excel_file_catalog_input"
+                />
+                <label htmlFor="excel_file_catalog_input" className="cursor-pointer block">
+                  <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                  <span className="text-xs text-gray-700 font-bold block">
+                    {importFile ? importFile.name : 'Haz clic para seleccionar o arrastra tu archivo aquí'}
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setShowImportModal(false)}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={importing || !importFile}
+                className="px-5 py-2 bg-emerald-800 hover:bg-emerald-900 disabled:opacity-50 text-white rounded-xl text-xs font-black flex items-center gap-2 shadow-sm"
+              >
+                {importing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                Importar Estudiantes
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>

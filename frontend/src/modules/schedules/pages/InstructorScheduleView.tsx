@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import api from '@/shared/services/api';
 import { authService } from '@/services/authService';
 import { 
-  Calendar as CalendarIcon, Clock, Truck, ChevronLeft, ChevronRight, Layers, LayoutGrid, List, Award
+  Calendar as CalendarIcon, Clock, Truck, ChevronLeft, ChevronRight, Layers, LayoutGrid, List, Award,
+  Zap, CheckCircle, AlertTriangle, XCircle, BookOpen, Star, X
 } from 'lucide-react';
 import { formatDateToLocalYYYYMMDD } from '@/shared/utils/dateUtils';
 import type { InstructorSchedule } from '@/shared/types';
 import { useWebSocket } from '@/shared/context/WebSocketContext';
+
 
 
 
@@ -16,6 +19,7 @@ interface UserItem {
   first_name: string;
   last_name: string;
   username: string;
+  full_name?: string;
   email?: string;
   role?: string;
 }
@@ -31,29 +35,34 @@ export const InstructorScheduleView: React.FC = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [loading, setLoading] = useState(true);
 
+  const isGlobalAdmin = authService.isGlobalAdmin();
+  const isVehicleAdmin = authService.isVehicleAdmin();
+  const isAdmin = isGlobalAdmin || isVehicleAdmin;
   const currentUserId = authService.getUserId();
 
   // Load data
   const loadData = async () => {
     setLoading(true);
     try {
-      const [usersRes, schedRes] = await Promise.all([
-        api.get('/users/'),
-        api.get('/instructor-schedules/')
+      const [instRes, schedRes] = await Promise.all([
+        api.get('/instructors/').catch(() => ({ data: [] })),
+        api.get('/instructor-schedules/').catch(() => ({ data: [] }))
       ]);
 
-      const usersList: UserItem[] = usersRes.data || [];
-      setInstructors(usersList);
+      const instList: UserItem[] = instRes.data || [];
+      setInstructors(instList);
 
       let activeInstId = selectedInstructorId;
-      if (!activeInstId) {
-        if (currentUserId && usersList.some(u => u.id === currentUserId)) {
+      if (!isAdmin && currentUserId) {
+        activeInstId = currentUserId.toString();
+      } else if (!activeInstId) {
+        if (currentUserId && instList.some(u => u.id === currentUserId)) {
           activeInstId = currentUserId.toString();
-        } else if (usersList.length > 0) {
-          activeInstId = usersList[0].id.toString();
+        } else if (instList.length > 0) {
+          activeInstId = instList[0].id.toString();
         }
-        setSelectedInstructorId(activeInstId);
       }
+      setSelectedInstructorId(activeInstId);
 
       setSchedules(schedRes.data || []);
     } catch (e) {
@@ -111,11 +120,12 @@ export const InstructorScheduleView: React.FC = () => {
     setBaseDate(new Date());
   };
 
-  // Filtered schedules for selected instructor
+  // Filtered schedules for selected instructor (for non-admins, backend already filters to current user's schedules)
   const instructorSchedules = useMemo(() => {
+    if (!isAdmin) return schedules;
     if (!selectedInstructorId) return schedules;
     return schedules.filter(s => s.instructor === parseInt(selectedInstructorId));
-  }, [schedules, selectedInstructorId]);
+  }, [schedules, selectedInstructorId, isAdmin]);
 
   // DYNAMIC TIME SLOTS: Automatically generated from actual assignment start/end times
   const dynamicTimeSlots = useMemo(() => {
@@ -158,6 +168,101 @@ export const InstructorScheduleView: React.FC = () => {
       const sStart = s.hora_inicio.slice(0, 5);
       return sStart === slotStart || (sStart >= slotStart && sStart < slotEnd);
     });
+  };
+
+  // Action Modal State for Schedule Item
+  const [activeSchedule, setActiveSchedule] = useState<InstructorSchedule | null>(null);
+  const [attendanceChoice, setAttendanceChoice] = useState<'PRESENTE' | 'AUSENTE' | 'RETRASO' | null>(null);
+  const [classTopic, setClassTopic] = useState('');
+  const [classNotes, setClassNotes] = useState('');
+  const [submittingAction, setSubmittingAction] = useState(false);
+
+  const handleQuickAttendanceAndClassGiven = async () => {
+    if (!activeSchedule) return;
+    setSubmittingAction(true);
+    try {
+      await api.post(`/instructor-schedules/${activeSchedule.id}/mark-attendance/`, {
+        estado: 'PRESENTE',
+        observacion: classNotes
+      });
+
+      const finalTopic = classTopic.trim() || (activeSchedule.circuito_ruta ? `Práctica en ${activeSchedule.circuito_ruta}` : 'Práctica de Conducción');
+      await api.post(`/instructor-schedules/${activeSchedule.id}/class-given/`, {
+        tema_actividad: finalTopic,
+        observaciones: classNotes.trim()
+      });
+
+      toast.success('⚡ ¡Asistencia (Presente) y Clase Dada asentadas en 1 clic!');
+      setActiveSchedule(null);
+      loadData();
+    } catch (err: any) {
+      toast.error('Error al procesar la asistencia rápida');
+    } finally {
+      setSubmittingAction(false);
+    }
+  };
+
+  const handleMarkAttendanceOnly = async (statusVal: 'PRESENTE' | 'AUSENTE' | 'RETRASO') => {
+    if (!activeSchedule) return;
+    setSubmittingAction(true);
+    try {
+      await api.post(`/instructor-schedules/${activeSchedule.id}/mark-attendance/`, {
+        estado: statusVal,
+        observacion: classNotes
+      });
+      if (statusVal === 'AUSENTE') {
+        toast.error(`Inasistencia registrada para ${activeSchedule.student_name}. Registrada en la Matriz Académica.`);
+        setActiveSchedule(null);
+        loadData();
+      } else {
+        setAttendanceChoice(statusVal);
+        toast.success(`Asistencia registrada como ${statusVal}.`);
+      }
+    } catch (err: any) {
+      toast.error('Error al registrar la asistencia');
+    } finally {
+      setSubmittingAction(false);
+    }
+  };
+
+  const handleRegisterClassGiven = async () => {
+    if (!activeSchedule) return;
+    const finalTopic = classTopic.trim() || 'Práctica de Conducción';
+    const finalNotes = classNotes.trim();
+
+    setSubmittingAction(true);
+    try {
+      await api.post(`/instructor-schedules/${activeSchedule.id}/class-given/`, {
+        tema_actividad: finalTopic,
+        observaciones: finalNotes
+      });
+      toast.success('¡Clase Dada registrada con éxito! Asentado en el reporte del instructor.');
+      setActiveSchedule(null);
+      loadData();
+    } catch (err: any) {
+      toast.error('Error al registrar la clase dada');
+    } finally {
+      setSubmittingAction(false);
+    }
+  };
+
+  const handleGoToGrades = async () => {
+    if (!activeSchedule) return;
+    if (classTopic.trim() || classNotes.trim()) {
+      setSubmittingAction(true);
+      try {
+        await api.post(`/instructor-schedules/${activeSchedule.id}/class-given/`, {
+          tema_actividad: classTopic.trim() || 'Práctica de Conducción',
+          observaciones: classNotes.trim()
+        });
+        toast.success('¡Clase Dada asentada en el reporte del instructor!');
+      } catch (err: any) {
+        console.error('Error al asentar clase dada:', err);
+      } finally {
+        setSubmittingAction(false);
+      }
+    }
+    navigate(`/evaluations?studentId=${activeSchedule.student_public_id || activeSchedule.student}`);
   };
 
   return (
@@ -207,7 +312,7 @@ export const InstructorScheduleView: React.FC = () => {
       </div>
 
       {/* Top Control Banner (Emerald / Slate System Theme) */}
-      <div className="mb-6 bg-gradient-to-r from-emerald-900 via-slate-900 to-emerald-900 text-white p-5 rounded-3xl shadow-md border border-emerald-800/60">
+      <div className="mb-6 bg-emerald-900 text-white p-5 rounded-3xl shadow-md border border-emerald-800">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           
           {/* Week Info & Navigator */}
@@ -245,23 +350,35 @@ export const InstructorScheduleView: React.FC = () => {
           </div>
 
           {/* Instructor Dropdown Filter */}
-          <div className="w-full lg:w-72">
-            <label className="block text-[10px] font-black uppercase text-emerald-300 tracking-wider mb-1">
-              Instructor Asignado:
-            </label>
-            <select
-              value={selectedInstructorId}
-              onChange={e => setSelectedInstructorId(e.target.value)}
-              className="w-full bg-white text-gray-900 text-xs font-black py-2.5 px-3 rounded-2xl border border-emerald-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              <option value="">-- Todos los Instructores --</option>
-              {instructors.map(inst => (
-                <option key={inst.id} value={inst.id}>
-                  {inst.first_name || inst.last_name ? `${inst.last_name} ${inst.first_name}`.trim() : inst.username}
-                </option>
-              ))}
-            </select>
-          </div>
+          {isAdmin ? (
+            <div className="w-full lg:w-72">
+              <label className="block text-[10px] font-black uppercase text-emerald-300 tracking-wider mb-1">
+                Filtrar Instructor (Vista Admin):
+              </label>
+              <select
+                value={selectedInstructorId}
+                onChange={e => setSelectedInstructorId(e.target.value)}
+                className="w-full bg-white text-gray-900 text-xs font-black py-2.5 px-3 rounded-2xl border border-emerald-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="">-- Todos los Instructores --</option>
+                {instructors.map(inst => (
+                  <option key={inst.id} value={inst.id}>
+                    {inst.first_name || inst.last_name ? `${inst.last_name} ${inst.first_name}`.trim() : inst.username}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div className="w-full lg:w-72">
+              <span className="block text-[10px] font-black uppercase text-emerald-300 tracking-wider mb-1">
+                Instructor Autenticado:
+              </span>
+              <div className="bg-white/10 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-white/20 text-xs font-black text-white flex items-center justify-between">
+                <span>{instructors.find(u => u.id === currentUserId)?.full_name || authService.getUserName() || 'Mi Horario Personal'}</span>
+                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 bg-emerald-500/30 text-emerald-200 rounded-md">Personal</span>
+              </div>
+            </div>
+          )}
 
         </div>
       </div>
@@ -321,7 +438,6 @@ export const InstructorScheduleView: React.FC = () => {
                   {weekDays.map((dayDate, dayIdx) => {
                     const dayDateStr = formatDateToLocalYYYYMMDD(dayDate);
                     const matchedSchedules = getScheduleForSlot(dayDateStr, slot.start, slot.end);
-
                     const hasSchedule = matchedSchedules.length > 0;
 
                     return (
@@ -339,7 +455,6 @@ export const InstructorScheduleView: React.FC = () => {
                               <div className="flex items-center justify-between gap-1 mb-1">
                                 <span className="text-[9px] font-black uppercase px-2 py-0.5 bg-amber-100 text-amber-900 rounded-full border border-amber-200">
                                   {(matchedSchedules[0] as any).student_tipo_licencia || matchedSchedules[0].tipo_licencia}
-
                                 </span>
                                 <span className="text-[9px] font-bold text-gray-500">
                                   {matchedSchedules[0].hora_inicio.slice(0, 5)} - {matchedSchedules[0].hora_fin.slice(0, 5)}
@@ -358,11 +473,16 @@ export const InstructorScheduleView: React.FC = () => {
 
                             <button
                               type="button"
-                              onClick={() => navigate(`/evaluations?studentId=${matchedSchedules[0].student}`)}
+                              onClick={() => {
+                                const sched = matchedSchedules[0];
+                                setActiveSchedule(sched);
+                                setAttendanceChoice('PRESENTE');
+                                setClassTopic(sched.circuito_ruta ? `Práctica en ${sched.circuito_ruta}` : 'Práctica de Conducción');
+                                setClassNotes('');
+                              }}
                               className="w-full py-1 text-[9px] font-black bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl transition-all shadow-xs"
                             >
-
-                              Calificar
+                              Gestionar Cita
                             </button>
                           </div>
                         ) : (
@@ -414,7 +534,6 @@ export const InstructorScheduleView: React.FC = () => {
                     <h3 className="text-base font-black text-gray-900 mt-0.5 mb-1">{sched.student_name}</h3>
                     <p className="text-xs text-gray-500 font-medium mb-3">C.I.: {(sched as any).student_cedula || '---'}</p>
 
-
                     <div className="p-3 bg-emerald-50/80 rounded-2xl border border-emerald-100 text-xs space-y-1.5 mb-4">
                       <div className="flex items-center gap-2 font-bold text-gray-800">
                         <Truck className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -433,12 +552,16 @@ export const InstructorScheduleView: React.FC = () => {
 
                   <button
                     type="button"
-                    onClick={() => navigate(`/evaluations?studentId=${sched.student}`)}
+                    onClick={() => {
+                      setActiveSchedule(sched);
+                      setAttendanceChoice('PRESENTE');
+                      setClassTopic(sched.circuito_ruta ? `Práctica en ${sched.circuito_ruta}` : 'Práctica de Conducción');
+                      setClassNotes('');
+                    }}
                     className="w-full py-2.5 px-4 bg-emerald-800 hover:bg-emerald-900 text-white rounded-2xl font-bold text-xs transition-all flex items-center justify-center gap-2 shadow-sm"
                   >
-
                     <Award className="w-4 h-4 text-emerald-300" />
-                    <span>Ir a Calificar Alumno</span>
+                    <span>Gestionar Cita</span>
                   </button>
                 </div>
               ))}
@@ -446,8 +569,161 @@ export const InstructorScheduleView: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* Action Modal for Attendance & Class Given (Mobile Responsive Touch-Friendly) */}
+      {activeSchedule && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl border border-gray-200 w-full max-w-lg p-4 sm:p-6 space-y-4 shadow-2xl text-gray-900 max-h-[92vh] overflow-y-auto my-auto">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div>
+                <h3 className="text-base sm:text-lg font-black text-gray-900 flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-emerald-700 shrink-0" />
+                  Gestionar Cita de Práctica
+                </h3>
+                <p className="text-xs text-gray-500 font-medium mt-0.5">
+                  {activeSchedule.fecha} [{activeSchedule.hora_inicio.slice(0, 5)} - {activeSchedule.hora_fin.slice(0, 5)}]
+                </p>
+              </div>
+              <button
+                onClick={() => setActiveSchedule(null)}
+                className="p-2 text-gray-400 hover:text-gray-700 text-lg font-bold rounded-full hover:bg-gray-100 transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="bg-emerald-50 p-3.5 rounded-2xl border border-emerald-100">
+              <span className="text-[10px] font-black uppercase text-emerald-800 tracking-wider">Estudiante Asignado:</span>
+              <p className="text-sm font-black text-gray-900">{activeSchedule.student_name}</p>
+              <p className="text-xs text-gray-600 font-medium">Licencia: {(activeSchedule as any).student_tipo_licencia || activeSchedule.tipo_licencia}</p>
+            </div>
+
+            {/* ULTRA-FAST 1-CLICK ACTION BANNER */}
+            <div className="bg-emerald-900 text-white p-3.5 rounded-2xl border border-emerald-800 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase text-emerald-300 tracking-wider flex items-center gap-1.5">
+                  <Zap className="w-4 h-4 text-emerald-400 fill-emerald-400 animate-pulse" />
+                  Asentamiento Rápido (1 Clic)
+                </span>
+                <span className="text-[9px] font-bold bg-emerald-700 text-white px-2 py-0.5 rounded-full">
+                  Presente + Clase Dada
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleQuickAttendanceAndClassGiven}
+                disabled={submittingAction}
+                className="w-full py-3 px-3 bg-emerald-400 hover:bg-emerald-300 active:scale-[0.99] text-gray-950 font-black text-xs sm:text-sm rounded-xl transition-all shadow-md flex items-center justify-center gap-2"
+              >
+                <Zap className="w-4 h-4 fill-current" />
+                <span>Registrar Presente y Clase Dada (1 Clic)</span>
+              </button>
+            </div>
+
+            {/* STEP 1: ATTENDANCE CONTROL */}
+            <div className="space-y-2">
+              <label className="block text-xs font-black text-gray-800 uppercase tracking-wider">
+                1. ¿El estudiante asistió a la cita? (Paso Obligatorio)
+              </label>
+
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleMarkAttendanceOnly('PRESENTE')}
+                  disabled={submittingAction}
+                  className={`py-3 px-2 rounded-2xl text-xs font-black transition-all border flex flex-col sm:flex-row items-center justify-center gap-1.5 ${
+                    attendanceChoice === 'PRESENTE'
+                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
+                      : 'bg-emerald-50 text-emerald-900 border-emerald-200 hover:bg-emerald-100'
+                  }`}
+                >
+                  <CheckCircle className="w-4 h-4 shrink-0" />
+                  <span>Presente</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleMarkAttendanceOnly('RETRASO')}
+                  disabled={submittingAction}
+                  className={`py-3 px-2 rounded-2xl text-xs font-black transition-all border flex flex-col sm:flex-row items-center justify-center gap-1.5 ${
+                    attendanceChoice === 'RETRASO'
+                      ? 'bg-amber-600 text-white border-amber-600 shadow-md'
+                      : 'bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100'
+                  }`}
+                >
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  <span>Retraso</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleMarkAttendanceOnly('AUSENTE')}
+                  disabled={submittingAction}
+                  className="py-3 px-2 rounded-2xl text-xs font-black transition-all border border-rose-200 bg-rose-50 text-rose-900 hover:bg-rose-100 flex flex-col sm:flex-row items-center justify-center gap-1.5"
+                >
+                  <XCircle className="w-4 h-4 shrink-0" />
+                  <span>No Asistió</span>
+                </button>
+              </div>
+            </div>
+
+            {/* STEP 2: REGISTER CLASS GIVEN (SOLO REPORTE INSTRUCTOR) */}
+            {attendanceChoice && (
+              <div className="space-y-3 pt-3 border-t border-gray-100">
+                <label className="block text-xs font-black text-gray-800 uppercase tracking-wider">
+                  2. Registrar Clase Dada (Reporte del Instructor)
+                </label>
+
+                <div>
+                  <input
+                    type="text"
+                    placeholder="Tema o actividad impartida (Ej. Estacionamiento en reversa)..."
+                    value={classTopic}
+                    onChange={(e) => setClassTopic(e.target.value)}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs sm:text-sm text-gray-900 font-medium focus:ring-2 focus:ring-emerald-500 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <textarea
+                    rows={2}
+                    placeholder="Observaciones de la sesión..."
+                    value={classNotes}
+                    onChange={(e) => setClassNotes(e.target.value)}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs sm:text-sm text-gray-900 font-medium focus:ring-2 focus:ring-emerald-500 outline-none"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    onClick={handleRegisterClassGiven}
+                    disabled={submittingAction}
+                    className="w-full py-3 bg-emerald-800 hover:bg-emerald-900 text-white text-xs sm:text-sm font-black rounded-2xl transition-all shadow-sm flex items-center justify-center gap-2"
+                  >
+                    <BookOpen className="w-4 h-4 text-emerald-300 shrink-0" />
+                    <span>Registrar Clase Dada (Sin alterar notas)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleGoToGrades}
+                    disabled={submittingAction}
+                    className="w-full py-3 bg-blue-700 hover:bg-blue-800 text-white text-xs sm:text-sm font-black rounded-2xl transition-all shadow-sm flex items-center justify-center gap-2"
+                  >
+                    <Star className="w-4 h-4 text-amber-300 shrink-0 fill-amber-300" />
+                    <span>Ir a Calificar Notas del Alumno</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default InstructorScheduleView;
+

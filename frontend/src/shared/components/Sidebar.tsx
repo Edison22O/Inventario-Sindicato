@@ -66,13 +66,25 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     { to: '/furniture/reports', icon: FileBarChart, label: 'Reportes' },
   ];
 
-  const drivingSchoolLinks = [
+  const allDrivingSchoolLinks = [
     { to: '/students', icon: Users, label: 'Matrícula de Estudiantes' },
+    { to: '/instructors', icon: Users, label: 'Panel de Instructores' },
     { to: '/schedules', icon: Calendar, label: 'Asignación de Horarios' },
+    { to: '/instructor-schedules', icon: Clock, label: 'Horario' },
+    { to: '/academic-matrix', icon: BookOpen, label: 'Notas & Matriz Académica' },
+    { to: '/evaluations', icon: Award, label: 'Calificación por Fases' },
+    { to: '/instructor-reports', icon: FileText, label: 'Reportes de Instructores' },
+  ];
+
+  const conductorDrivingSchoolLinks = [
     { to: '/instructor-schedules', icon: Clock, label: 'Horario' },
     { to: '/evaluations', icon: Award, label: 'Calificación por Fases' },
     { to: '/instructor-reports', icon: FileText, label: 'Reportes de Instructores' },
   ];
+
+  const drivingSchoolLinks = (isGlobalAdmin || isVehicleAdmin)
+    ? allDrivingSchoolLinks
+    : conductorDrivingSchoolLinks;
 
   const allVehiclesLinks = [
     { to: '/vehicles/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -152,13 +164,13 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           <div>
             <button
               onClick={() => setIsDrivingSchoolExpanded(!isDrivingSchoolExpanded)}
-              className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl transition-all duration-300 font-semibold group relative overflow-hidden bg-gradient-to-r from-amber-600/30 to-amber-800/30 text-white border border-amber-500/30 shadow-sm`}
+              className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl transition-all duration-300 font-semibold group relative overflow-hidden bg-white/10 text-white border border-white/10 shadow-sm`}
             >
               <div className="flex items-center gap-3">
-                <BookOpen className="w-5 h-5 text-amber-400" />
-                <span className="text-left leading-tight text-sm font-black">Prácticas de<br/>Conducción</span>
+                <BookOpen className="w-5 h-5 text-emerald-400" />
+                <span className="text-left leading-tight text-sm font-semibold">Prácticas de<br/>Conducción</span>
               </div>
-              <ChevronDown className={`w-5 h-5 text-amber-200 transition-transform duration-300 ${isDrivingSchoolExpanded ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-5 h-5 text-emerald-200 transition-transform duration-300 ${isDrivingSchoolExpanded ? 'rotate-180' : ''}`} />
             </button>
 
             <div className={`space-y-1 mt-2 overflow-hidden transition-all duration-300 ${isDrivingSchoolExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
@@ -173,11 +185,11 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                     onClick={onClose}
                     className={`flex items-center gap-3 px-4 py-3 ml-2 rounded-xl transition-all duration-300 font-medium group relative overflow-hidden ${
                       isActive
-                        ? 'bg-amber-600 text-white shadow-sm border border-amber-500 font-bold'
-                        : 'text-emerald-100/80 hover:bg-white/5 hover:text-white border border-transparent'
+                        ? 'bg-white/10 text-white shadow-sm border border-white/10'
+                        : 'text-emerald-100/70 hover:bg-white/5 hover:text-white border border-transparent'
                     }`}
                   >
-                    <Icon className={`w-4 h-4 ${isActive ? 'text-amber-200' : 'text-amber-300/60 group-hover:text-amber-200'}`} />
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-emerald-400' : 'text-emerald-200/50 group-hover:text-emerald-200'}`} />
                     <span className="text-sm">{link.label}</span>
                   </Link>
                 );

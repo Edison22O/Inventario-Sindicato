@@ -45,10 +45,12 @@ import VehicleSupplierProfile from '@/modules/vehicles/pages/VehicleSupplierProf
 import VehicleHandovers from '@/modules/vehicles/pages/VehicleHandovers';
 // Learning & Evaluation Modules
 import InstructorEvaluationView from '@/modules/evaluations/pages/InstructorEvaluationView';
+import AcademicGradesMatrixPage from '@/modules/evaluations/pages/AcademicGradesMatrixPage';
 import AdminScheduleCalendar from '@/modules/schedules/pages/AdminScheduleCalendar';
 import InstructorScheduleView from '@/modules/schedules/pages/InstructorScheduleView';
 import InstructorWeeklyReportView from '@/modules/reports/pages/InstructorWeeklyReportView';
 import StudentCatalog from '@/modules/students/pages/StudentCatalog';
+import InstructorManagement from '@/modules/instructors/pages/InstructorManagement';
 import { WebSocketProvider } from '@/shared/context/WebSocketContext';
 
 function App() {
@@ -71,10 +73,13 @@ function App() {
 
           {/* Learning, Evaluations & Student Routes */}
           <Route path="/students" element={<StudentCatalog />} />
+          <Route path="/instructors" element={<InstructorManagement />} />
           <Route path="/evaluations" element={<InstructorEvaluationView />} />
+          <Route path="/academic-matrix" element={<AcademicGradesMatrixPage />} />
           <Route path="/schedules" element={<AdminScheduleCalendar />} />
           <Route path="/instructor-schedules" element={<InstructorScheduleView />} />
           <Route path="/instructor-reports" element={<InstructorWeeklyReportView />} />
+
           
           {/* Inventory Modules (Tecnologia) */}
           <Route element={<RoleGuard allowedRoles={['Tecnologico', 'Encargado de Tecnología', 'Administrador']} />}>

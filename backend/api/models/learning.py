@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from django.contrib.auth import get_user_model
 
@@ -39,7 +40,21 @@ class GradeTemplate(models.Model):
     def __str__(self):
         return f"Puntuación {self.puntuacion}"
 
+class InstructorProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='instructor_profile')
+    activo = models.BooleanField(default=True)
+    assigned_vehicles = models.ManyToManyField('api.Vehicle', blank=True, related_name='responsible_instructors')
+    licencias_habilitadas = models.JSONField(default=list, blank=True) # ej: ['C', 'D_REGULAR', 'D_CONVALIDADA', 'E_REGULAR', 'E_CONVALIDADA']
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        name = f"{self.user.first_name} {self.user.last_name}".strip() or self.user.username
+        return f"Instructor: {name} ({'Activo' if self.activo else 'Inactivo'})"
+
+
 class Student(models.Model):
+    public_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     TIPO_LICENCIA_CHOICES = [
         ('C', 'Licencia Tipo C'),
         ('D_REGULAR', 'Licencia Tipo D (Regular)'),
@@ -54,6 +69,7 @@ class Student(models.Model):
     tipo_licencia = models.CharField(max_length=50, choices=TIPO_LICENCIA_CHOICES, default='C')
     telefono = models.CharField(max_length=30, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
+    instructor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_students')
     activo = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -169,3 +185,45 @@ class WeeklyInstructorReport(models.Model):
 
     def __str__(self):
         return f"Reporte Semanal #{self.semana_numero} - {self.instructor} ({self.fecha_inicio} a {self.fecha_fin})"
+
+class ClassSessionLog(models.Model):
+    schedule = models.ForeignKey(InstructorSchedule, on_delete=models.SET_NULL, null=True, blank=True, related_name='class_logs')
+    instructor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='conducted_classes')
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='class_logs')
+    fecha = models.DateField()
+    tema_actividad = models.CharField(max_length=255)
+    observaciones = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-fecha', '-created_at']
+
+    def __str__(self):
+        return f"Clase Dada ({self.fecha}) - {self.student} por {self.instructor}: {self.tema_actividad}"
+
+class AcademicEvaluation(models.Model):
+    CATEGORIA_CHOICES = [
+        ('DEBERES', 'Deberes (Fase 1)'),
+        ('TRABAJO_GRUPO', 'Trabajo en Grupo (Fase 2)'),
+        ('TRABAJOS_INDIVIDUALES', 'Trabajos Individuales (Fase 3)'),
+        ('PRUEBA', 'Pruebas (Fase 4)'),
+        ('EXAMEN', 'Examen (Fase 5)'),
+        ('ROTACION_VEHICULO', 'Rotación Vehicular'),
+    ]
+
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='academic_evaluations')
+    categoria = models.CharField(max_length=50, choices=CATEGORIA_CHOICES)
+    nombre_evaluacion = models.CharField(max_length=255, blank=True, null=True)
+    nota = models.DecimalField(max_digits=5, decimal_places=2, default=0.00) # Escala sobre 20 (o sobre 100)
+    observaciones = models.TextField(blank=True, null=True)
+    vehiculo_rotacion = models.CharField(max_length=50, blank=True, null=True) # Para Licencia Tipo E
+    fecha = models.DateField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['student', 'categoria', 'fecha']
+
+    def __str__(self):
+        return f"Nota Académica {self.student} - {self.categoria}: {self.nota}"
+

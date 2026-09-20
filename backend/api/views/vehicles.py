@@ -513,10 +513,22 @@ class DriverVehicleHandoverViewSet(AuditLogMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        driver_id = self.request.query_params.get('driver', None)
+        user = self.request.user
+
+        is_admin = (
+            user.is_staff or 
+            user.is_superuser or 
+            (getattr(user, 'role', None) and user.role.name in ['Administrador', 'Administrador de Flota Vehicular', 'vehiculo_admin'])
+        )
+
+        if not is_admin:
+            queryset = queryset.filter(driver=user)
+        else:
+            driver_id = self.request.query_params.get('driver', None)
+            if driver_id:
+                queryset = queryset.filter(driver_id=driver_id)
+
         vehicle_id = self.request.query_params.get('vehicle', None)
-        if driver_id:
-            queryset = queryset.filter(driver_id=driver_id)
         if vehicle_id:
             if str(vehicle_id).isdigit():
                 queryset = queryset.filter(vehicle_id=int(vehicle_id))
