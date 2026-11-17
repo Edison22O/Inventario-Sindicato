@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FileBarChart, CheckSquare, Square, Download, Package, AlertTriangle, TrendingUp, Hash } from 'lucide-react';
+import { FileBarChart, CheckSquare, Square, Download, Package, AlertTriangle, TrendingUp, Hash, FileText } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import jsPDF from 'jspdf';
 import { applyAutoTable } from '@/shared/utils/pdfHelper';
@@ -9,6 +9,7 @@ import api from '@/shared/services/api';
 import { useInventoryWebSocket } from '@/modules/inventory/hooks/useInventoryWebSocket';
 import type { Product, Department, Category } from '@/shared/types';
 import { exportToExcel } from '@/shared/utils/exportHelpers';
+import { generateTablePDF } from '@/modules/inventory/utils/productPdfGenerator';
 
 const Reports = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -18,6 +19,7 @@ const Reports = () => {
   const [isExporting, setIsExporting] = useState(false);
 
   // Selecciones
+  const [includeAllProducts, setIncludeAllProducts] = useState(true);
   const [includeDepEquipos, setIncludeDepEquipos] = useState(true);
   const [includeDepCostos, setIncludeDepCostos] = useState(true);
   const [includeCatEquipos, setIncludeCatEquipos] = useState(true);
@@ -90,7 +92,7 @@ const Reports = () => {
   ].filter(d => d.value > 0);
 
   const handleExportPDF = async () => {
-    if (!includeDepEquipos && !includeDepCostos && !includeCatEquipos && !includeCatCostos && !includeStatus && !includeAlerts) {
+    if (!includeDepEquipos && !includeDepCostos && !includeCatEquipos && !includeCatCostos && !includeStatus && !includeAlerts && !includeAllProducts) {
       toast.error('Selecciona al menos un reporte');
       return;
     }
@@ -263,26 +265,60 @@ const Reports = () => {
         currentY = (doc as any).lastAutoTable.finalY + 15;
       }
 
-      // 6. Alertas
+      // 6. Alertas con Fecha de Compra
       if (includeAlerts) {
         if (currentY > doc.internal.pageSize.getHeight() - 60) { doc.addPage(); currentY = 20; }
-        addPageHeader('Alertas y Equipos que Requieren Atención', 'Listado de equipos en estado Regular y Malo.');
+        addPageHeader('Alertas y Equipos que Requieren Atención', 'Listado de equipos en estado Regular y Malo con su fecha de compra.');
         
         const tableData = alertProducts.map(p => [
           p.codigo,
           p.nombre,
           p.department_name || '',
           p.estado || '',
+          p.fecha_compra ? new Date(`${p.fecha_compra}T12:00:00`).toLocaleDateString('es-EC') : '-',
           p.fecha_ultimo_mantenimiento || 'N/A'
         ]);
 
         applyAutoTable(doc, {
           startY: currentY,
-          head: [['Código', 'Equipo', 'Ubicación', 'Estado', 'Última Revisión']],
+          head: [['Código', 'Equipo', 'Ubicación', 'Estado', 'Fecha Compra', 'Última Revisión']],
           body: tableData,
           theme: 'grid',
           headStyles: { fillColor: [245, 158, 11] }, // amber-500
-          styles: { fontSize: 9 }
+          styles: { fontSize: 8.5 },
+          columnStyles: { 4: { halign: 'center' }, 5: { halign: 'center' } }
+        });
+        currentY = (doc as any).lastAutoTable.finalY + 15;
+      }
+
+      // 7. Listado General de Equipos (con Fecha de Compra)
+      if (includeAllProducts) {
+        if (currentY > doc.internal.pageSize.getHeight() - 60) { doc.addPage(); currentY = 20; }
+        addPageHeader('Listado Detallado de Equipos Tecnológicos', 'Inventario completo con código, producto, ubicación, estado, fecha de compra y costos.');
+        
+        const tableData = products.map(p => [
+          p.codigo,
+          p.nombre,
+          p.department_name || '-',
+          p.category_name || '-',
+          p.estado || '-',
+          p.fecha_compra ? new Date(`${p.fecha_compra}T12:00:00`).toLocaleDateString('es-EC') : '-',
+          p.cantidad.toString(),
+          `$${Number(p.costo || 0).toLocaleString('es-EC', { minimumFractionDigits: 2 })}`
+        ]);
+
+        applyAutoTable(doc, {
+          startY: currentY,
+          head: [['Código', 'Producto', 'Ubicación', 'Categoría', 'Estado', 'Fecha Compra', 'Cant.', 'Precio Unit.']],
+          body: tableData,
+          theme: 'grid',
+          headStyles: { fillColor: [5, 150, 105], textColor: 255 },
+          styles: { fontSize: 8 },
+          columnStyles: {
+            5: { halign: 'center' },
+            6: { halign: 'center' },
+            7: { halign: 'right' }
+          }
         });
         currentY = (doc as any).lastAutoTable.finalY + 15;
       }
@@ -301,85 +337,43 @@ const Reports = () => {
     const excelData = products.map(p => ({
       'Código': p.codigo,
       'Nombre del Equipo': p.nombre,
-      'Categoría': p.category_name,
-      'Ubicación / Depto': p.department_name,
+      'Marca': p.marca || 'N/A',
+      'Modelo': p.modelo || 'N/A',
+      'Serie': p.serie || 'N/A',
+      'Categoría': p.category_name || 'N/A',
+      'Ubicación / Depto': p.department_name || 'N/A',
       'Cantidad': p.cantidad,
       'Costo Unitario ($)': p.costo,
       'Costo Total ($)': (Number(p.costo) * p.cantidad).toFixed(2),
-      'Estado Físico': p.estado,
+      'Estado Físico': p.estado || 'N/A',
+      'Fecha de Compra': p.fecha_compra ? new Date(`${p.fecha_compra}T12:00:00`).toLocaleDateString('es-EC') : (p.fecha_compra || 'N/A'),
       'Último Mantenimiento': p.fecha_ultimo_mantenimiento || 'N/A'
     }));
     exportToExcel(excelData, 'Reporte_Inventario_General', 'Inventario');
     toast.success('Reporte de inventario exportado a Excel');
   };
 
-  const handleExportFuelExcel = async () => {
-    try {
-      const res = await api.get('/vehicle-fuel-logs/');
-      const logs = res.data || [];
-      const excelData = logs.map((l: any) => ({
-        'N.º Vale': l.numero_vale,
-        'Fecha Despacho': l.fecha_vale,
-        'Vehículo Placa': l.vehicle_placa,
-        'Marca/Modelo': `${l.vehicle_marca} ${l.vehicle_modelo}`,
-        'Tipo Combustible': l.tipo_combustible,
-        'Galones': l.galones,
-        'Precio / Galón ($)': l.precio_por_galon,
-        'Costo Total ($)': l.costo_total,
-        'Responsable': l.responsable,
-        'KM Odómetro': l.odometro_recarga,
-        'Concepto / Detalle': l.concepto
-      }));
-      exportToExcel(excelData, 'Reporte_Vales_Combustible', 'Vales_Combustible');
-      toast.success('Vales de combustible exportados a Excel');
-    } catch (e) {
-      toast.error('Error al exportar vales de combustible');
-    }
+  const handleExportInventoryTablePDF = async () => {
+    await generateTablePDF(products, `Inventario_Tabla_Equipos_${new Date().toISOString().split('T')[0]}.pdf`, 'INVENTARIO DE EQUIPOS TECNOLÓGICOS');
   };
 
-  const handleExportMaintenancesExcel = async () => {
+  const handleExportEquiposMaintenancesExcel = async () => {
     try {
-      const res = await api.get('/vehicle-maintenances/');
+      const res = await api.get('/maintenances/');
       const records = res.data || [];
       const excelData = records.map((m: any) => ({
-        'Tipo Mantenimiento': m.tipo_mantenimiento,
-        'Vehículo Placa': m.vehicle_placa,
-        'Actividad / Falla': m.actividad,
-        'Estado': m.estado_alerta || m.estado_correctivo,
-        'Frecuencia (KM)': m.frecuencia_km || 'N/A',
-        'Falla (KM)': m.kilometraje_falla || 'N/A',
-        'Último Cambio': m.fecha_ultimo_cambio,
-        'Próximo Cambio': m.fecha_proximo_cambio || 'N/A',
-        'N.º Factura': m.numero_factura || 'N/A'
+        'Código Producto': m.product_codigo || m.product,
+        'Equipo': m.product_name || 'N/A',
+        'Fecha': m.fecha ? new Date(`${m.fecha}T12:00:00`).toLocaleDateString('es-EC') : (m.fecha || 'N/A'),
+        'Técnico / Responsable': m.realizado_por,
+        'Estado Resultante': m.estado_resultante,
+        'Costo ($)': m.costo,
+        'Descripción': m.descripcion
       }));
-      exportToExcel(excelData, 'Reporte_Mantenimientos_Vehiculares', 'Mantenimientos');
+      exportToExcel(excelData, 'Reporte_Mantenimientos_Tecnologicos', 'Mantenimientos');
       toast.success('Mantenimientos exportados a Excel');
     } catch (e) {
       toast.error('Error al exportar mantenimientos');
-    }
-  };
-
-  const handleExportTripsExcel = async () => {
-    try {
-      const res = await api.get('/vehicle-trips/');
-      const trips = res.data || [];
-      const excelData = trips.map((t: any) => ({
-        'Vehículo Placa': t.vehicle_placa,
-        'Conductor': t.conductor_name,
-        'Motivo / Tipo': t.tipo_motivo || 'N/A',
-        'Ruta / Destino': t.ruta_practica || t.descripcion_salida,
-        'Estado Viaje': t.estado_viaje,
-        'Fecha Salida': t.fecha_hora_salida,
-        'Fecha Llegada': t.fecha_hora_llegada || 'En Curso',
-        'KM Salida': t.kilometraje_salida,
-        'KM Llegada': t.kilometraje_llegada || 'N/A',
-        'KM Recorridos': t.km_recorridos || 'N/A',
-        'Novedades': t.novedades_observaciones || 'Sin novedades'
-      }));
-      exportToExcel(excelData, 'Reporte_Viajes_Entradas_Salidas', 'Viajes');
-      toast.success('Historial de viajes exportado a Excel');
-    } catch (e) {
-      toast.error('Error al exportar historial de viajes');
     }
   };
 
@@ -425,7 +419,7 @@ const Reports = () => {
         </div>
         <button 
           onClick={handleExportPDF}
-          disabled={isExporting || (!includeDepEquipos && !includeDepCostos && !includeCatEquipos && !includeCatCostos && !includeStatus && !includeAlerts)}
+          disabled={isExporting || (!includeDepEquipos && !includeDepCostos && !includeCatEquipos && !includeCatCostos && !includeStatus && !includeAlerts && !includeAllProducts)}
           className="flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all font-bold shadow-lg shadow-emerald-200 disabled:opacity-50 disabled:cursor-not-allowed text-base w-full md:w-auto"
         >
           <Download className="w-5 h-5" />
@@ -433,47 +427,46 @@ const Reports = () => {
         </button>
       </div>
 
-      {/* Exportación Rápida a Excel */}
+      {/* Exportación Rápida a Excel y PDF */}
       <div className="mb-8 p-6 bg-gradient-to-r from-emerald-900 to-teal-900 text-white rounded-3xl shadow-md">
         <h2 className="text-xl font-black mb-2 flex items-center gap-2">
-          <Download className="w-5 h-5 text-emerald-400" /> Exportación Directa a Excel (.XLSX)
+          <Download className="w-5 h-5 text-emerald-400" /> Exportación Rápida de Inventario Tecnológico
         </h2>
         <p className="text-xs text-emerald-200 font-medium mb-4">
-          Descarga los reportes oficiales en formato Excel para auditorías contables y control administrativo.
+          Descarga los reportes oficiales con fecha de compra, costos y detalles para auditorías contables y control administrativo.
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <button
             onClick={handleExportInventoryExcel}
             className="px-4 py-3 bg-white/10 hover:bg-white/20 rounded-2xl font-bold text-xs text-white border border-white/20 transition-all flex items-center justify-center gap-2 shadow-sm"
           >
-            📊 Excel Inventario General
+            📊 Excel General (con Fecha de Compra)
           </button>
 
           <button
-            onClick={handleExportFuelExcel}
+            onClick={handleExportInventoryTablePDF}
             className="px-4 py-3 bg-white/10 hover:bg-white/20 rounded-2xl font-bold text-xs text-white border border-white/20 transition-all flex items-center justify-center gap-2 shadow-sm"
           >
-            ⛽ Excel Vales Combustible
+            📄 PDF Tabla Completa (con Foto y Fecha)
           </button>
 
           <button
-            onClick={handleExportMaintenancesExcel}
+            onClick={handleExportEquiposMaintenancesExcel}
             className="px-4 py-3 bg-white/10 hover:bg-white/20 rounded-2xl font-bold text-xs text-white border border-white/20 transition-all flex items-center justify-center gap-2 shadow-sm"
           >
             🔧 Excel Mantenimientos
-          </button>
-
-          <button
-            onClick={handleExportTripsExcel}
-            className="px-4 py-3 bg-white/10 hover:bg-white/20 rounded-2xl font-bold text-xs text-white border border-white/20 transition-all flex items-center justify-center gap-2 shadow-sm"
-          >
-            🚚 Excel Entradas / Salidas
           </button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+        <CheckOption 
+          checked={includeAllProducts} onChange={setIncludeAllProducts} 
+          title="Listado General de Equipos" 
+          description="Tabla completa de productos con fecha de compra y costos." 
+          icon={FileText} color="emerald" 
+        />
         <CheckOption 
           checked={includeDepEquipos} onChange={setIncludeDepEquipos} 
           title="Equipos por Ubicación" 
@@ -507,7 +500,7 @@ const Reports = () => {
         <CheckOption 
           checked={includeAlerts} onChange={setIncludeAlerts} 
           title="Alertas (Regular/Malo)" 
-          description="Equipos marcados como Regular o Malo." 
+          description="Equipos con fecha de compra que requieren atención." 
           icon={AlertTriangle} color="amber" 
         />
       </div>

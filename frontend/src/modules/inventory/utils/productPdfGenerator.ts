@@ -340,6 +340,7 @@ export const generateTablePDF = async (products: Product[], filename: string, ti
           `${p.marca || '-'}${p.modelo ? ' / ' + p.modelo : ''}`,
           p.category_name || '-',
           p.estado || '-',
+          p.fecha_compra ? new Date(`${p.fecha_compra}T12:00:00`).toLocaleDateString('es-EC') : '-',
           p.cantidad,
           `$${unitCost.toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
           `$${totalCost.toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -354,6 +355,7 @@ export const generateTablePDF = async (products: Product[], filename: string, ti
         '',
         '',
         '',
+        '',
         deptEquipos,
         '',
         `$${deptCosto.toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -363,21 +365,22 @@ export const generateTablePDF = async (products: Product[], filename: string, ti
 
       applyAutoTable(doc, {
         startY: currentY,
-        head: [['Foto', 'Código', 'Producto', 'Marca / Modelo', 'Categoría', 'Estado', 'Cant.', 'Precio Unit.', 'Precio Total']],
+        head: [['Foto', 'Código', 'Producto', 'Marca / Modelo', 'Categoría', 'Estado', 'F. Compra', 'Cant.', 'Precio Unit.', 'Precio Total']],
         body: tableBody,
         theme: 'grid',
         headStyles: { fillColor: [5, 150, 105], textColor: 255, fontStyle: 'bold', fontSize: 8.5, halign: 'center' },
         styles: { cellPadding: 2, fontSize: 8, minCellHeight: 14, valign: 'middle' },
         columnStyles: {
-          0: { cellWidth: 18, halign: 'center' },
-          1: { cellWidth: 28 },
+          0: { cellWidth: 16, halign: 'center' },
+          1: { cellWidth: 26 },
           2: { cellWidth: 'auto' },
-          3: { cellWidth: 38 },
-          4: { cellWidth: 30 },
-          5: { cellWidth: 22 },
-          6: { cellWidth: 15, halign: 'right' },
-          7: { cellWidth: 26, halign: 'right' },
-          8: { cellWidth: 30, halign: 'right' }
+          3: { cellWidth: 34 },
+          4: { cellWidth: 28 },
+          5: { cellWidth: 20 },
+          6: { cellWidth: 24, halign: 'center' },
+          7: { cellWidth: 15, halign: 'right' },
+          8: { cellWidth: 24, halign: 'right' },
+          9: { cellWidth: 26, halign: 'right' }
         },
         didParseCell: (data: any) => {
           if (data.section === 'body' && data.row.index === subtotalRowIndex) {

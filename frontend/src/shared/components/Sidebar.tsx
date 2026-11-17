@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, Tags, Layers, LogOut, X, Truck, Wrench, FileBarChart, ChevronDown, Monitor, Armchair, Home as HomeIcon, Settings, Users, Store, Fuel, FileText, Award, Calendar, BookOpen, Clock } from 'lucide-react';
+import { LayoutDashboard, Package, Tags, Layers, LogOut, X, Truck, Wrench, FileBarChart, ChevronDown, Monitor, Home as HomeIcon } from 'lucide-react';
 import { authService } from '@/services/authService';
 import api from '@/shared/services/api';
 import { useWebSocket } from '@/shared/context/WebSocketContext';
@@ -14,10 +14,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const wsState = useWebSocket();
   const location = useLocation();
 
-  const [isInventoryExpanded, setIsInventoryExpanded] = useState(false);
-  const [isFurnitureExpanded, setIsFurnitureExpanded] = useState(false);
-  const [isDrivingSchoolExpanded, setIsDrivingSchoolExpanded] = useState(true);
-  const [isVehiclesExpanded, setIsVehiclesExpanded] = useState(false);
+  const [isInventoryExpanded, setIsInventoryExpanded] = useState(true);
   
   const [orgName, setOrgName] = useState('Sindicato de Choferes Profesionales del Cantón Espejo');
   const [logoUrl, setLogoUrl] = useState('/logo.png');
@@ -37,13 +34,6 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     fetchSettings();
   }, []);
 
-  const isGlobalAdmin = authService.isGlobalAdmin();
-  const isVehicleAdmin = authService.isVehicleAdmin();
-  const isConductor = authService.isConductor();
-  const showTech = isGlobalAdmin || authService.isTech();
-  const showFurniture = isGlobalAdmin || authService.isFurniture();
-  const showVehicles = isGlobalAdmin || isVehicleAdmin || isConductor;
-
   const inventoryLinks = [
     { to: '/inventory-dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/departments', icon: Layers, label: 'Departamentos' },
@@ -54,58 +44,6 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     { to: '/discarded', icon: Package, label: 'De Baja' },
     { to: '/reports', icon: FileBarChart, label: 'Reportes' },
   ];
-
-  const furnitureLinks = [
-    { to: '/furniture/inventory-dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/furniture/departments', icon: Layers, label: 'Departamentos' },
-    { to: '/furniture/categories', icon: Tags, label: 'Categorías' },
-    { to: '/furniture/suppliers', icon: Truck, label: 'Proveedores' },
-    { to: '/furniture/products', icon: Package, label: 'Todo el Inventario' },
-    { to: '/furniture/maintenances', icon: Wrench, label: 'Mantenimientos' },
-    { to: '/furniture/discarded', icon: Package, label: 'De Baja' },
-    { to: '/furniture/reports', icon: FileBarChart, label: 'Reportes' },
-  ];
-
-  const allDrivingSchoolLinks = [
-    { to: '/students', icon: Users, label: 'Matrícula de Estudiantes' },
-    { to: '/instructors', icon: Users, label: 'Panel de Instructores' },
-    { to: '/schedules', icon: Calendar, label: 'Asignación de Horarios' },
-    { to: '/instructor-schedules', icon: Clock, label: 'Horario' },
-    { to: '/academic-matrix', icon: BookOpen, label: 'Notas & Matriz Académica' },
-    { to: '/evaluations', icon: Award, label: 'Calificación por Fases' },
-    { to: '/instructor-reports', icon: FileText, label: 'Reportes de Instructores' },
-  ];
-
-  const conductorDrivingSchoolLinks = [
-    { to: '/instructor-schedules', icon: Clock, label: 'Horario' },
-    { to: '/evaluations', icon: Award, label: 'Calificación por Fases' },
-    { to: '/instructor-reports', icon: FileText, label: 'Reportes de Instructores' },
-  ];
-
-  const drivingSchoolLinks = (isGlobalAdmin || isVehicleAdmin)
-    ? allDrivingSchoolLinks
-    : conductorDrivingSchoolLinks;
-
-  const allVehiclesLinks = [
-    { to: '/vehicles/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/vehicles/catalog', icon: Truck, label: 'Flota Vehicular' },
-    { to: '/vehicles/drivers', icon: Users, label: 'Conductores' },
-    { to: '/vehicles/suppliers', icon: Store, label: 'Proveedores' },
-    { to: '/vehicles/fuel-control', icon: Fuel, label: 'Vales de Combustible' },
-    { to: '/vehicles/matriculas', icon: FileBarChart, label: 'Matrícula Vehicular' },
-    { to: '/vehicles/handovers', icon: FileText, label: 'Actas de Entrega' },
-    { to: '/vehicles/trips', icon: Layers, label: 'Control de Salidas' },
-    { to: '/vehicles/maintenances', icon: Wrench, label: 'Mantenimiento Vehicular' },
-    { to: '/vehicles/history', icon: FileBarChart, label: 'Historial de Viajes' },
-    { to: '/vehicles/reports', icon: FileBarChart, label: 'Reportes' },
-  ];
-
-  const vehiclesLinks = (isGlobalAdmin || isVehicleAdmin)
-    ? allVehiclesLinks
-    : [
-        { to: '/vehicles/trips', icon: Layers, label: 'Control de Salidas' },
-        { to: '/vehicles/handovers', icon: FileText, label: 'Actas de Entrega / Recepción' }
-      ];
 
   return (
     <>
@@ -160,44 +98,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           </Link>
 
           <div className="space-y-6">
-          {/* Módulo Independiente: Prácticas de Conducción */}
-          <div>
-            <button
-              onClick={() => setIsDrivingSchoolExpanded(!isDrivingSchoolExpanded)}
-              className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl transition-all duration-300 font-semibold group relative overflow-hidden bg-white/10 text-white border border-white/10 shadow-sm`}
-            >
-              <div className="flex items-center gap-3">
-                <BookOpen className="w-5 h-5 text-emerald-400" />
-                <span className="text-left leading-tight text-sm font-semibold">Prácticas de<br/>Conducción</span>
-              </div>
-              <ChevronDown className={`w-5 h-5 text-emerald-200 transition-transform duration-300 ${isDrivingSchoolExpanded ? 'rotate-180' : ''}`} />
-            </button>
-
-            <div className={`space-y-1 mt-2 overflow-hidden transition-all duration-300 ${isDrivingSchoolExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
-              {drivingSchoolLinks.map((link) => {
-                const Icon = link.icon;
-                const isActive = location.pathname === link.to || location.pathname.startsWith(`${link.to}/`);
-
-                return (
-                  <Link
-                    key={link.to}
-                    to={link.to}
-                    onClick={onClose}
-                    className={`flex items-center gap-3 px-4 py-3 ml-2 rounded-xl transition-all duration-300 font-medium group relative overflow-hidden ${
-                      isActive
-                        ? 'bg-white/10 text-white shadow-sm border border-white/10'
-                        : 'text-emerald-100/70 hover:bg-white/5 hover:text-white border border-transparent'
-                    }`}
-                  >
-                    <Icon className={`w-4 h-4 ${isActive ? 'text-emerald-400' : 'text-emerald-200/50 group-hover:text-emerald-200'}`} />
-                    <span className="text-sm">{link.label}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-
-          {showTech && (
+            {/* Módulo Único: Equipos Tecnológicos */}
             <div>
               <button
                 onClick={() => setIsInventoryExpanded(!isInventoryExpanded)}
@@ -205,7 +106,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
               >
                 <div className="flex items-center gap-3">
                   <Monitor className="w-5 h-5 text-emerald-400" />
-                  <span className="text-left leading-tight text-sm">Equipos<br/>Tecnológicos</span>
+                  <span className="text-left leading-tight text-sm font-semibold">Equipos<br/>Tecnológicos</span>
                 </div>
                 <ChevronDown className={`w-5 h-5 text-emerald-200 transition-transform duration-300 ${isInventoryExpanded ? 'rotate-180' : ''}`} />
               </button>
@@ -233,96 +134,6 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                 })}
               </div>
             </div>
-          )}
-
-          {showFurniture && (
-            <div>
-              <button
-                onClick={() => setIsFurnitureExpanded(!isFurnitureExpanded)}
-                className={`w-full flex items-center justify-between px-4 py-3.5 mt-4 rounded-2xl transition-all duration-300 font-semibold group relative overflow-hidden bg-white/10 text-white border border-white/10 shadow-sm`}
-              >
-                <div className="flex items-center gap-3">
-                  <Armchair className="w-5 h-5 text-amber-400" />
-                  <span className="text-left leading-tight text-sm">Inventario de<br/>Mobiliario</span>
-                </div>
-                <ChevronDown className={`w-5 h-5 text-emerald-200 transition-transform duration-300 ${isFurnitureExpanded ? 'rotate-180' : ''}`} />
-              </button>
-
-              <div className={`space-y-1 mt-2 overflow-hidden transition-all duration-300 ${isFurnitureExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                {furnitureLinks.map((link) => {
-                  const Icon = link.icon;
-                  const isActive = location.pathname === link.to || location.pathname.startsWith(`${link.to}/`);
-
-                  return (
-                    <Link
-                      key={link.to}
-                      to={link.to}
-                      onClick={onClose}
-                      className={`flex items-center gap-3 px-4 py-3 ml-2 rounded-xl transition-all duration-300 font-medium group relative overflow-hidden ${
-                        isActive
-                          ? 'bg-white/10 text-white shadow-sm border border-white/10'
-                          : 'text-emerald-100/70 hover:bg-white/5 hover:text-white border border-transparent'
-                      }`}
-                    >
-                      <Icon className={`w-4 h-4 ${isActive ? 'text-amber-400' : 'text-emerald-200/50 group-hover:text-emerald-200'}`} />
-                      <span className="text-sm">{link.label}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {showVehicles && (
-            <div>
-              <button
-                onClick={() => setIsVehiclesExpanded(!isVehiclesExpanded)}
-                className={`w-full flex items-center justify-between px-4 py-3.5 mt-4 rounded-2xl transition-all duration-300 font-semibold group relative overflow-hidden bg-white/10 text-white border border-white/10 shadow-sm`}
-              >
-                <div className="flex items-center gap-3">
-                  <Truck className="w-5 h-5 text-blue-400" />
-                  <span className="text-left leading-tight text-sm">Gestión de<br/>Vehículos</span>
-                </div>
-                <ChevronDown className={`w-5 h-5 text-emerald-200 transition-transform duration-300 ${isVehiclesExpanded ? 'rotate-180' : ''}`} />
-              </button>
-
-              <div className={`space-y-1 mt-2 overflow-hidden transition-all duration-300 ${isVehiclesExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                {vehiclesLinks.map((link) => {
-                  const Icon = link.icon;
-                  const isActive = location.pathname === link.to || location.pathname.startsWith(`${link.to}/`);
-
-                  return (
-                    <Link
-                      key={link.to}
-                      to={link.to}
-                      onClick={onClose}
-                      className={`flex items-center gap-3 px-4 py-3 ml-2 rounded-xl transition-all duration-300 font-medium group relative overflow-hidden ${
-                        isActive
-                          ? 'bg-white/10 text-white shadow-sm border border-white/10'
-                          : 'text-emerald-100/70 hover:bg-white/5 hover:text-white border border-transparent'
-                      }`}
-                    >
-                      <Icon className={`w-4 h-4 ${isActive ? 'text-blue-400' : 'text-emerald-200/50 group-hover:text-emerald-200'}`} />
-                      <span className="text-sm">{link.label}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {(isGlobalAdmin || isVehicleAdmin) && (
-            <div>
-              <Link
-                to="/control-panel"
-                onClick={onClose}
-                className={`w-full flex items-center gap-3 px-4 py-3.5 mt-8 rounded-2xl transition-all duration-300 font-semibold group relative overflow-hidden bg-white/5 text-gray-300 hover:text-white hover:bg-white/10 border border-white/5 shadow-sm`}
-              >
-                <Settings className={`w-5 h-5 text-gray-400 group-hover:text-white transition-colors ${location.pathname === '/control-panel' ? 'text-white' : ''}`} />
-                <span className="text-left leading-tight text-sm">Panel de<br/>Control</span>
-              </Link>
-            </div>
-          )}
           </div>
         </nav>
 
